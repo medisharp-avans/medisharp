@@ -7,7 +7,7 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: ${MSSQL_PRODUCT_ID:-Developer}
-      SA_PASSWORD: "${MSSQL_SA_PASSWORD:-MediSharp@123}"
+      SA_PASSWORD: "${MSSQL_SA_PASSWORD:-Medisharp@123}"
     volumes:
       - mssqlsystem:/var/opt/mssql
       - mssqluser:/var/opt/sqlserver
