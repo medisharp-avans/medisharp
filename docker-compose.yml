@@ -23,7 +23,6 @@ services:
 
 networks:
   env_net:
-    external: true
     driver: bridge
 
 volumes:
