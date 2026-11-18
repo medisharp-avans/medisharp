@@ -19,7 +19,7 @@ services:
       retries: 10
       start_period: 30s
     ports:
-      - "${MSSQL_PORT:-1433}:1433"
+      - "127.0.0.1:${MSSQL_PORT:-1433}:1433"
     networks:
       - env_net
     restart: unless-stopped
