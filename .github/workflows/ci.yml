@@ -34,4 +34,4 @@ jobs:
           dotnet-version: 10.0.x
       - run: dotnet restore Server.slnx
       - run: dotnet build Server.slnx --no-restore --configuration Release
-      - run: dotnet test Server.slnx --no-build --configuration Release
+      - run: dotnet test --no-build --configuration Release
