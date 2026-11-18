@@ -7,14 +7,14 @@
 
 ## 📋 Gegevens user story
 
-| Onderdeel | Gegevens |
-| --- | --- |
-| **User Story ID** | <!-- bijv. HUI-1 --> |
-| **Titel** | |
-| **Sprint** | |
-| **Branchnaam** | <!-- bijv. Feature/HUI-1-verwijsbrief --> |
-| **Jira/Trello-ticket** | <!-- link --> |
-| **Reviewers (min. 2 teamleden)** | <!-- @naam1, @naam2 --> |
+| Onderdeel                        | Gegevens                                  |
+| -------------------------------- | ----------------------------------------- |
+| **User Story ID**                | <!-- bijv. HUI-1 -->                      |
+| **Titel**                        |                                           |
+| **Sprint**                       |                                           |
+| **Branchnaam**                   | <!-- bijv. Feature/HUI-1-verwijsbrief --> |
+| **Jira/Trello-ticket**           | <!-- link -->                             |
+| **Reviewers (min. 2 teamleden)** | <!-- @naam1, @naam2 -->                   |
 
 ## 📝 Beschrijving
 
@@ -28,7 +28,6 @@
 - [ ] 🗄️ Databasewijziging / migratie
 - [ ] 📚 Documentatie
 - [ ] ⚙️ Configuratie / CI/CD
-
 
 ### Persoonsgegevens (AVG)
 
@@ -127,13 +126,13 @@
 
 ## 🏁 Afronding
 
-| Onderdeel | Gegevens |
-| --- | --- |
-| **Alle criteria afgevinkt** | ☐ Ja ☐ Nee |
-| **Status user story** | ☐ Done ☐ Niet Done |
-| **Naam teamlid (auteur)** | |
-| **Reviewer 1** | |
-| **Reviewer 2** | |
-| **Naam Projectleider** | |
-| **Datum afronding** | |
-| **Opmerkingen** | |
+| Onderdeel                   | Gegevens           |
+| --------------------------- | ------------------ |
+| **Alle criteria afgevinkt** | ☐ Ja ☐ Nee         |
+| **Status user story**       | ☐ Done ☐ Niet Done |
+| **Naam teamlid (auteur)**   |                    |
+| **Reviewer 1**              |                    |
+| **Reviewer 2**              |                    |
+| **Naam Projectleider**      |                    |
+| **Datum afronding**         |                    |
+| **Opmerkingen**             |                    |
