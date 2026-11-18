@@ -1,1 +1,76 @@
-.env*
+# =========================================================
+# MediSharp - root .gitignore
+# Client/ heeft een eigen .gitignore voor Vue/Node.
+# =========================================================
+
+# ---------- Geheimen & omgevingsvariabelen ----------
+# .env / acceptatie.env bevatten wachtwoorden en connection strings
+# (zie risico R12 in het projectplan). Commit alleen voorbeeldbestanden.
+.env
+.env.*
+*.env
+!.env.example
+!*.env.example
+secrets.json
+appsettings.*.local.json
+
+# ---------- .NET build-output ----------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+
+# ---------- Visual Studio ----------
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.rsuser
+*.userprefs
+*.pdb
+*.cache
+*.vsidx
+_ReSharper*/
+*.DotSettings.user
+
+# ---------- Rider / VS Code ----------
+.idea/
+*.sln.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# ---------- Tests & coverage ----------
+[Tt]est[Rr]esult*/
+*.trx
+coverage/
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+
+# ---------- Node (vangnet buiten Client/) ----------
+node_modules/
+
+# ---------- Database ----------
+*.mdf
+*.ldf
+*.ndf
+*.bak
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+desktop.ini
