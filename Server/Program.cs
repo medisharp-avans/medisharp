@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using Server.Data;
 using System.Reflection;
 
 namespace Server
@@ -10,6 +13,24 @@ namespace Server
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+
+            // Locally via dotnet user-secrets, in Docker via ConnectionStrings__DefaultConnection (see README).
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException(
+                    "Connection string 'DefaultConnection' is missing. Set it locally with: " +
+                    "dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"Server=localhost,1433;...\"");
+
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlServer(connectionString));
+
+            // HTTPS is handled by the reverse proxy; take the scheme and client IP from the X-Forwarded-* headers.
+            builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                // The proxy runs in a Docker network with a changing IP, so do not restrict this to localhost.
+                options.KnownIPNetworks.Clear();
+                options.KnownProxies.Clear();
+            });
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -39,14 +60,22 @@ namespace Server
 
             var app = builder.Build();
 
+            // Apply pending EF Core migrations on startup (replaces Database/index.sql and db-init).
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                db.Database.Migrate();
+            }
+
+            app.UseForwardedHeaders();
+
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            // Swagger in Development and Staging (acceptance), not in Production.
+            if (!app.Environment.IsProduction())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
-            app.UseHttpsRedirection();
 
             app.UseAuthorization();
 

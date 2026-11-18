@@ -31,8 +31,8 @@ services:
       dockerfile: Dockerfile
       target: final
     depends_on:
-      db-init:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
