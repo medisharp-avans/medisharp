@@ -1,12 +1,12 @@
-<script setup>
+<script setup lang="ts">
     import ErrorTemplate from './ErrorTemplate.vue';
 </script>
 
 <template>
     <ErrorTemplate>
         <template #title>
-            404 - Pagina niet gevonden
+            403 - Toegang geweigerd
         </template>
-        <p>Het verwachte zoekresultaat of pagina kan niet worden gevonden!</p>
+        <p>Dit verwachte zoekresultaat, pagina of actie is verboden uit te voeren voor u als gebruiker!</p>
     </ErrorTemplate>
 </template>

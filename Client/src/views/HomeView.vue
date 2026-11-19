@@ -2,5 +2,5 @@
 </script>
 
 <template>
-  
+  <p>Hallo</p>
 </template>

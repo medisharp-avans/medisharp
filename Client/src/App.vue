@@ -9,20 +9,26 @@ const route = useRoute()
 </script>
 
 <template>
-  <header>
-    <template v-if="route.meta.hideLayout">
-      <AppMain>
-        <RouterView />
-      </AppMain>
-    </template>
+  <div v-if="route.meta.hideLayout" class="min-h-screen bg-white">
+    <AppMain>
+      <RouterView />
+    </AppMain>
+  </div>
 
-    <template v-else>
-      <AppHeader />
-      <AppNavigation />
-      <AppMain>
-        <RouterView />
-      </AppMain>
-    </template>
-  </header>
+  <div v-else class="min-h-screen flex flex-col bg-white">
+    <AppHeader />
+    
+    <div class="flex flex-1">
+      <aside class="w-1/4 min-w-62.5 max-w-[25%] bg-[#F3F4F6] border-r border-[#E5E7EB]">
+        <AppNavigation />
+      </aside>
+
+      
+        <AppMain>
+          <RouterView />
+        </AppMain>
+      
+    </div>
+  </div>
 </template>
 
