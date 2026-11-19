@@ -13,7 +13,7 @@
 
         <!-- Rechterkant: Profiel knop -->
         <div>
-            <RouterLink :to="{ name: 'Profile' }" class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-[#E5E7EB] transition-colors cursor-pointer" aria-label="Profiel">
+            <RouterLink :to="{ name: 'Profile' }" class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-[#E5E7EB] transition-colors cursor-pointer" aria-label="Profiel" id="profile-button">
                 <IconProfile class="w-8 h-8 text-[#111827]" />
             </RouterLink>
         </div>

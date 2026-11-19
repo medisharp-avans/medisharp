@@ -1,11 +1,23 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
-import { useRoute } from 'vue-router';
 import AppHeader from '@/components/Layout/AppHeader.vue';
 import AppMain from '@/components/Layout/AppMain.vue';
 import AppNavigation from '@/components/Layout/AppNavigation.vue';
+import { RouterView } from 'vue-router'
+import { useRoute } from 'vue-router';
+import { onMounted, onUnmounted } from 'vue';
+import useKeyboardShortcuts from '@/composables/useKeyboardShortcuts';
 
 const route = useRoute()
+
+const handleKeyboardShortCuts = useKeyboardShortcuts
+
+onMounted(() => {
+    window.addEventListener('keydown', handleKeyboardShortCuts);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyboardShortCuts);
+});
 </script>
 
 <template>

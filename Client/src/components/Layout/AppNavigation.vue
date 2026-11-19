@@ -17,7 +17,7 @@
 </script>
 
 <template>
-    <nav class="h-full py-4 text-[#111827]">
+    <nav id="main-navigation" class="h-full py-4 text-[#111827]">
         <ul class="flex flex-col gap-1 px-2">
             <AppNavigationItem :define-route="'Home'" :icon="MyHome">Home</AppNavigationItem>
             <AppNavigationItem :define-route="'Appointments'" :icon="MyCalendar">Afspraken</AppNavigationItem>
