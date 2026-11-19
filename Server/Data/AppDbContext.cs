@@ -1,12 +1,21 @@
 using Microsoft.EntityFrameworkCore;
+using Server.Models;
 
 namespace Server.Data
 {
     /// <summary>
-    /// EF Core database context for MediSharp. Add the DbSets for the entities here,
-    /// then create a migration with: dotnet ef migrations add &lt;Name&gt;
+    /// EF Core database context for MediSharp.
     /// </summary>
     public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
     {
+        public DbSet<Referral> Referrals => Set<Referral>();
+
+        public DbSet<ReferralAttachment> ReferralAttachments => Set<ReferralAttachment>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        }
     }
 }
