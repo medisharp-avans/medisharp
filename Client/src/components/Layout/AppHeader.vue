@@ -7,13 +7,11 @@ import { RouterLink } from 'vue-router'
   <header
     class="flex justify-between items-center px-6 py-4 bg-[#F3F4F6] border-b border-[#E5E7EB] text-[#111827]"
   >
-    <!-- Linkerkant: Logo en Titel -->
     <div class="flex items-center gap-3">
       <IconLogo class="w-10 h-10 text-[#111827]" />
       <h1 class="text-lg font-semibold">De Zachte Heelmeesters</h1>
     </div>
 
-    <!-- Rechterkant: Profiel knop -->
     <div>
       <RouterLink
         :to="{ name: 'Profile' }"
