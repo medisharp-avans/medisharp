@@ -4,7 +4,7 @@ import ErrorTemplate from './ErrorTemplate.vue'
 
 <template>
   <ErrorTemplate>
-    <template #title> 401 - Niet geautoriseerd </template>
-    <p>Je bent niet geautoriseerd om deze pagina te bekijken.</p>
+    <template #title> 401 - Niet ingelogd </template>
+    <p>U moet ingelogd zijn om deze pagina te bekijken.</p>
   </ErrorTemplate>
 </template>

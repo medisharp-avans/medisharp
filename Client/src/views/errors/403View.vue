@@ -5,8 +5,6 @@ import ErrorTemplate from './ErrorTemplate.vue'
 <template>
   <ErrorTemplate>
     <template #title> 403 - Toegang geweigerd </template>
-    <p>
-      Dit verwachte zoekresultaat, pagina of actie is verboden uit te voeren voor u als gebruiker!
-    </p>
+    <p>U heeft geen rechten om deze pagina te bekijken of deze actie uit te voeren.</p>
   </ErrorTemplate>
 </template>

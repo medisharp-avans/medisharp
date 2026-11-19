@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import useKeyboardShortcuts from '@/composables/useKeyboardShortcuts'
+import { handleKeyboardShortcut } from '@/composables/useKeyboardShortcuts'
 
-describe('useKeyboardShortcuts', () => {
+describe('handleKeyboardShortcut', () => {
   beforeEach(() => {
     document.body.innerHTML = `
             <header>
@@ -25,7 +25,7 @@ describe('useKeyboardShortcuts', () => {
     const event = new KeyboardEvent('keydown', { key: 'n', altKey: true })
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-    useKeyboardShortcuts(event)
+    handleKeyboardShortcut(event)
 
     const navLink = document.getElementById('first-nav-link')
     expect(preventDefaultSpy).toHaveBeenCalled()
@@ -36,7 +36,7 @@ describe('useKeyboardShortcuts', () => {
     const event = new KeyboardEvent('keydown', { key: 'P', altKey: true })
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-    useKeyboardShortcuts(event)
+    handleKeyboardShortcut(event)
 
     const profileButton = document.getElementById('profile-button')
     expect(preventDefaultSpy).toHaveBeenCalled()
@@ -47,7 +47,7 @@ describe('useKeyboardShortcuts', () => {
     const event = new KeyboardEvent('keydown', { key: 'm', altKey: true })
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-    useKeyboardShortcuts(event)
+    handleKeyboardShortcut(event)
 
     const mainContent = document.getElementById('main-content')
     expect(preventDefaultSpy).toHaveBeenCalled()
@@ -58,7 +58,7 @@ describe('useKeyboardShortcuts', () => {
     const event = new KeyboardEvent('keydown', { key: 'n', altKey: false })
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
-    useKeyboardShortcuts(event)
+    handleKeyboardShortcut(event)
 
     expect(preventDefaultSpy).not.toHaveBeenCalled()
     expect(document.activeElement).toBe(document.body)

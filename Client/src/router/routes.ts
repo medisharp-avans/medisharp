@@ -11,7 +11,7 @@ const routes = [
     path: '/profiel',
     name: 'Profile',
     component: () => import('@/views/profile/ProfileView.vue'),
-    meta: { requiresAuth: true, hideLayout: true },
+    meta: { requiresAuth: true },
   },
 
   // Main routes
@@ -40,8 +40,8 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/patiënten',
-    name: 'Patiënts',
+    path: '/patienten',
+    name: 'Patients',
     component: () => import('@/views/patients/PatientsView.vue'),
     meta: { requiresAuth: true },
   },

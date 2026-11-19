@@ -1,19 +1,31 @@
-const useKeyboardShortcuts = (event: KeyboardEvent) => {
-  if (event.altKey) {
-    if (event.key.toLowerCase() === 'n') {
-      event.preventDefault()
-      const navElement = document.getElementById('main-navigation')?.querySelector('a, button')
-      ;(navElement as HTMLElement)?.focus()
-    } else if (event.key.toLowerCase() === 'p') {
-      event.preventDefault()
-      const profileElement = document.getElementById('profile-button')
-      ;(profileElement as HTMLElement)?.focus()
-    } else if (event.key.toLowerCase() === 'm') {
-      event.preventDefault()
-      const mainElement = document.getElementById('main-content')
-      ;(mainElement as HTMLElement)?.focus()
-    }
-  }
+import { onMounted, onUnmounted } from 'vue'
+
+// Per sneltoets (Alt + letter) het element dat focus moet krijgen.
+const shortcutTargets: Record<string, () => HTMLElement | null | undefined> = {
+  n: () => document.getElementById('main-navigation')?.querySelector<HTMLElement>('a, button'),
+  p: () => document.getElementById('profile-button'),
+  m: () => document.getElementById('main-content'),
 }
 
-export default useKeyboardShortcuts
+/**
+ * Verwerkt een keydown-event: bij Alt + N/P/M krijgt respectievelijk de navigatie,
+ * de profielknop of de hoofdinhoud focus. Andere toetsen worden genegeerd.
+ */
+export function handleKeyboardShortcut(event: KeyboardEvent): void {
+  if (!event.altKey) return
+
+  const getTarget = shortcutTargets[event.key.toLowerCase()]
+  if (!getTarget) return
+
+  event.preventDefault()
+  getTarget()?.focus()
+}
+
+/**
+ * Registreert de toetsenbord-sneltoetsen zolang het aanroepende component gemount is.
+ * Roep aan vanuit <script setup>.
+ */
+export function useKeyboardShortcuts(): void {
+  onMounted(() => window.addEventListener('keydown', handleKeyboardShortcut))
+  onUnmounted(() => window.removeEventListener('keydown', handleKeyboardShortcut))
+}
