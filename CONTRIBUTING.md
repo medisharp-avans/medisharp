@@ -84,8 +84,8 @@ More examples:
 A merged PR does not mean the story is done. The **Definition of Done** is checked per user story, on the Trello card, and is the gate to the **Done** column.
 
 1. Work through the DoD checklist on the Trello card: test on `development` (end-to-end, regression, devices, accessibility), update the documentation, and create new cards for any remaining non-blocking issues.
-2. The project lead reviews and accepts the story, usually during the sprint review.
-3. Only when **all** DoD items are ticked off does the card move to **Don**
+2. The project lead reviews and accepts the story.
+3. Only when **all** DoD items are ticked off does the card move to **Done**
 
 # Contributing to MediSharp
 
