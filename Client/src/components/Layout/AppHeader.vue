@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import IconProfile from '@/components/icons/IconProfile.vue'
 import IconLogo from '@/components/icons/IconLogo.vue'
 import { RouterLink } from 'vue-router'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { UserCircleIcon } from '@hugeicons/core-free-icons'
 </script>
 <template>
   <header
@@ -19,7 +20,7 @@ import { RouterLink } from 'vue-router'
         aria-label="Profiel"
         id="profile-button"
       >
-        <IconProfile class="w-8 h-8 text-[#111827]" />
+        <HugeiconsIcon :icon="UserCircleIcon" class="w-8 h-8 text-[#111827]" aria-hidden="true" />
       </RouterLink>
     </div>
   </header>

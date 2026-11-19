@@ -1,36 +1,32 @@
 <script setup lang="ts">
 import AppNavigationItem from '@/components/Layout/AppNavigationItem.vue'
-import IconHome from '@/components/icons/IconHome.vue'
-import IconCalendar from '@/components/icons/IconCalendar.vue'
-import IconFolder from '@/components/icons/IconFolder.vue'
-import IconDocumentArrow from '@/components/icons/IconDocumentArrow.vue'
-import IconUsers from '@/components/icons/IconUsers.vue'
-import IconClipboard from '@/components/icons/IconClipboard.vue'
-import { markRaw } from 'vue'
-
-const MyFolder = markRaw(IconFolder)
-const MyClipboard = markRaw(IconClipboard)
-const MyUsers = markRaw(IconUsers)
-const MyDocumentArrow = markRaw(IconDocumentArrow)
-const MyCalendar = markRaw(IconCalendar)
-const MyHome = markRaw(IconHome)
+import {
+  Home01Icon,
+  Calendar03Icon,
+  MedicalFileIcon,
+  FileExportIcon,
+  UserGroupIcon,
+  ClipboardIcon,
+} from '@hugeicons/core-free-icons'
 </script>
 
 <template>
   <nav id="main-navigation" class="h-full py-4 text-[#111827]">
     <ul class="flex flex-col gap-1 px-2">
-      <AppNavigationItem :define-route="'Home'" :icon="MyHome">Home</AppNavigationItem>
-      <AppNavigationItem :define-route="'Appointments'" :icon="MyCalendar"
+      <AppNavigationItem :define-route="'Home'" :icon="Home01Icon">Home</AppNavigationItem>
+      <AppNavigationItem :define-route="'Appointments'" :icon="Calendar03Icon"
         >Afspraken</AppNavigationItem
       >
-      <AppNavigationItem :define-route="'MedicalFile'" :icon="MyFolder"
+      <AppNavigationItem :define-route="'MedicalFile'" :icon="MedicalFileIcon"
         >Medisch Dossier</AppNavigationItem
       >
-      <AppNavigationItem :define-route="'Referrals'" :icon="MyDocumentArrow"
+      <AppNavigationItem :define-route="'Referrals'" :icon="FileExportIcon"
         >Verwijsbrieven</AppNavigationItem
       >
-      <AppNavigationItem :define-route="'Patiënts'" :icon="MyUsers">Patiënten</AppNavigationItem>
-      <AppNavigationItem :define-route="'MedicalResults'" :icon="MyClipboard"
+      <AppNavigationItem :define-route="'Patiënts'" :icon="UserGroupIcon"
+        >Patiënten</AppNavigationItem
+      >
+      <AppNavigationItem :define-route="'MedicalResults'" :icon="ClipboardIcon"
         >Onderzoeksuitslagen</AppNavigationItem
       >
     </ul>

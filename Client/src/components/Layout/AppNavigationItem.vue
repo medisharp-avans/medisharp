@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import type { Component } from 'vue'
+import type { PropType } from 'vue'
 import { RouterLink } from 'vue-router'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import type { Home01Icon } from '@hugeicons/core-free-icons'
+
+// Alle Hugeicons hebben hetzelfde type; de package exporteert dat type niet los.
+type IconSvgObject = typeof Home01Icon
 
 defineProps({
   defineRoute: {
@@ -8,7 +13,7 @@ defineProps({
     required: true,
   },
   icon: {
-    type: Object as () => Component,
+    type: Array as PropType<IconSvgObject>,
     required: true,
   },
 })
@@ -22,7 +27,7 @@ defineProps({
       active-class="!bg-blue-100 hover:!bg-blue-200 !text-blue-900 font-semibold shadow-sm"
       :id="defineRoute + 'Route-link'"
     >
-      <component :is="icon" class="w-6 h-6" />
+      <HugeiconsIcon :icon="icon" class="w-6 h-6" aria-hidden="true" />
       <slot></slot>
     </RouterLink>
   </li>
