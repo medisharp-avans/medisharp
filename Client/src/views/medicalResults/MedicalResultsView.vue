@@ -1,3 +1,3 @@
 <template>
-    <p>Dit is de onderzoeksresultaten pagina</p>
+  <p>Dit is de onderzoeksresultaten pagina</p>
 </template>

@@ -1,3 +1,3 @@
 <template>
-    <p>Dit is de patiënten pagina</p>
+  <p>Dit is de patiënten pagina</p>
 </template>
