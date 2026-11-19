@@ -1,4 +1,3 @@
-
 <!--
   MediSharp – Pull Request
   Vink alleen aan wat je echt hebt gecontroleerd. Niet van toepassing? Laat leeg en zet "n.v.t." erachter.
@@ -41,8 +40,6 @@
 
 <!-- Welke persoonsgegevens worden verwerkt, waarom, en wat is de bewaartermijn? Anders: "Geen". -->
 
----
-
 ## ✅ Checklist auteur
 
 ### Altijd
@@ -65,7 +62,7 @@
 - [ ] **DoD 7** – Database: EF Core-migratie toegevoegd en getest
 - [ ] **DoD 13** – API: integratietests voor nieuwe of gewijzigde endpoints
 - [ ] **DoD 16, 21** – Autorisatie: getest dat gebruikers zonder de juiste rechten geen toegang krijgen
-- [ ] **DoD 23–24** – UI: getest op mobiel, tablet en desktop en sluit aan bij Figma
+- [ ] **DoD 23–24** – UI: getest op mobiel, tablet en desktop en sluit aan bij Wireframes
 - [ ] **DoD 25–26** – UI: voldoet aan WCAG 2.2 AA, gecontroleerd met Lighthouse/axe en met alleen het toetsenbord
 - [ ] **DoD 27** – UI: foutmeldingen zijn duidelijk en tonen geen technische details
 - [ ] **DoD 28** – API: Swagger/OpenAPI is bijgewerkt
