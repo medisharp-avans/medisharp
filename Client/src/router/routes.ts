@@ -2,15 +2,14 @@
 //Add following meta information for routes:
 // - requiresAuth: for routes where authentication is required
 // - requiresRol(roltype): for routes that are only accessible for specific user roles
-// - hideLayout: for routes that do not or should not inquire the base layout of the application
+// - hideLayout: for routes that do not or should not inquire the base layout of the application, see App.vue
 
 const routes = [
     //Auth routes
-    // { path: '/login', name: 'login', component: () => import("@/Login.vue"), meta: { hideLayout: true }},
+    // { path: '/login', name: 'Login', component: () => import("@/Login.vue"), meta: { hideLayout: true }},
 
     // Main routes
     { path: '/', name: 'Home', component: () => import('@/views/HomeView.vue') },
-    { path: '/about', name: 'About', component: () => import('@/views/HomeView.vue') },
 
     // Error routes
     { path: '/400', name: '400', component: () => import('@/views/errors/400.vue'), meta: { hideLayout: true }},
