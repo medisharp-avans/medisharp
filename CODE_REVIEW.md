@@ -51,6 +51,7 @@ Gebruik deze lijst als reviewer bij **elke pull request**. Het is een naslagdocu
 - **4.1** De wijziging staat in een eigen branch voor deze feature of user story.
 - **4.2** De branchnaam volgt de afspraken in [CONTRIBUTING.md](CONTRIBUTING.md#naming): `type/<STORY-ID>-korte-beschrijving`, bijv. `feature/AFS-03-schedule-appointment`.
 - **4.3** Commitberichten zijn duidelijk en beschrijvend (bijv. _"Voeg validatie toe aan verwijsbriefformulier"_).
+- **4.4** De PR gaat naar `development` en wordt pas gemerged met twee goedkeuringen en een groene CI.
 
 ## 5. UI/UX
 
@@ -61,6 +62,6 @@ Gebruik deze lijst als reviewer bij **elke pull request**. Het is een naslagdocu
 
 ## 6. AVG
 
-- **6.1** Er staan geen persoonsgegevens in URL's, logs, foutmeldingen of browseropslag.
-- **6.2** Er wordt alleen fictieve testdata gebruikt (ook in seeders en tests).
-- **6.3** De AVG-sectie in de PR is ingevuld en klopt met wat de code doet (welke gegevens, waarom, bewaartermijn).
+- **6.1** Er staan geen persoonsgegevens in URL's, logs, foutmeldingen of browseropslag (DoD 18).
+- **6.2** Er wordt alleen fictieve testdata gebruikt, ook in seeders en tests (DoD 19).
+- **6.3** De AVG-sectie in de PR is ingevuld en klopt met wat de code doet: welke gegevens, waarom, bewaartermijn (DoD 20).
