@@ -26,13 +26,14 @@ services:
 
   server:
     container_name: medisharp_server
+    image: ghcr.io/medisharp-avans/medisharp-server:${IMAGE_TAG:-main}
     build:
       context: ./Server
       dockerfile: Dockerfile
       target: final
     depends_on:
-      db-init:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
@@ -44,6 +45,7 @@ services:
 
   client:
     container_name: medisharp_client
+    image: ghcr.io/medisharp-avans/medisharp-client:${IMAGE_TAG:-main}
     build:
       context: ./Client
       dockerfile: Dockerfile
