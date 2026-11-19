@@ -9,7 +9,14 @@ import { UserCircleIcon } from '@hugeicons/core-free-icons'
     class="flex justify-between items-center px-6 py-4 bg-[#F3F4F6] border-b border-[#E5E7EB] text-[#111827]"
   >
     <div class="flex items-center gap-3">
-      <IconLogo class="w-10 h-10 text-[#111827]" />
+      <RouterLink
+        :to="{ name: 'Home' }"
+        class="flex items-center justify-center w-12 h-12 rounded-full cursor-pointer"
+        aria-label="Home"
+        id="home-button"
+      >
+        <IconLogo class="w-10 h-10 text-[#111827]" />
+      </RouterLink>
       <h1 class="text-lg font-semibold">De Zachte Heelmeesters</h1>
     </div>
 

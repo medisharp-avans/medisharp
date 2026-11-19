@@ -31,7 +31,7 @@ onUnmounted(() => {
     <AppHeader />
 
     <div class="flex flex-1">
-      <aside class="w-1/4 min-w-62.5 max-w-[25%] bg-[#F3F4F6] border-r border-[#E5E7EB]">
+      <aside class="w-1/8 min-w-62.5 max-w-[25%] bg-[#F3F4F6] border-r border-[#E5E7EB]">
         <AppNavigation />
       </aside>
 
