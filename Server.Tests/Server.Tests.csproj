@@ -43,13 +43,8 @@
 
   <ItemGroup>
     <None Update="appsettings.test.json">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>appsettings.test.cs</LastGenOutput>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
 
 </Project>
