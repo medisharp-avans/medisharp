@@ -6,6 +6,7 @@ using Server.Data;
 using Server.Data.Repositories;
 using Server.Filters;
 using Server.Services.Referrals;
+using Server.Services.Treatments;
 using System.Reflection;
 
 namespace Server
@@ -30,6 +31,8 @@ namespace Server
                 options.UseSqlServer(connectionString));
             builder.Services.AddScoped<IReferralRepository, ReferralRepository>();
             builder.Services.AddScoped<IReferralService, ReferralService>();
+            builder.Services.AddScoped<ITreatmentCatalogRepository, TreatmentCatalogRepository>();
+            builder.Services.AddScoped<ITreatmentCatalogService, TreatmentCatalogService>();
             builder.Services.AddScoped<DevelopmentOnlyFilter>();
 
             // HTTPS is handled by the reverse proxy; take the scheme and client IP from the X-Forwarded-* headers.

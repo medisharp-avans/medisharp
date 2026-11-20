@@ -12,6 +12,8 @@ namespace Server.Data
 
         public DbSet<ReferralAttachment> ReferralAttachments => Set<ReferralAttachment>();
 
+        public DbSet<Treatment> Treatments => Set<Treatment>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

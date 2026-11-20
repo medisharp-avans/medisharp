@@ -15,8 +15,9 @@ Het team heeft bevestigd dat er nog geen gezamenlijk patientmodel is afgesproken
   Status en aanmaaktijd zijn geen invoervelden voor het toekomstige formulier.
 - Alleen de bevestigde urgentie `Regular` (weergave: `Regulier`) is opgenomen.
   Andere urgenties en vervolgstatussen moeten nog worden afgestemd.
-- Specialisme en behandelcode zijn voorlopig tekstvelden. Er worden nog geen
-  gedeelde keuzetabellen of verzonnen behandelcodes ingevoerd.
+- Specialisme en behandelcode worden voor nieuwe verwijzingen gecontroleerd tegen
+  de meegeleverde behandelcatalogus. De verwijzing bewaart de bijbehorende namen
+  en codes als momentopname; bestaande verwijzingen worden niet herschreven.
 
 ## Gegevens van een verwijzing
 
@@ -83,8 +84,8 @@ Nog af te stemmen:
 
 1. De koppeling met het huisartsaccount en eventueel een gezamenlijke patient.
    De identiteit van de verwijzer moet straks uit de ingelogde gebruiker komen.
-2. De bron van de lijsten met specialismen, behandelcodes en eventuele aanvullende
-   urgenties. Ook de routering naar het bevoegde ziekenhuis moet worden bepaald.
+2. Eventuele aanvullende urgenties en de routering naar het bevoegde ziekenhuis.
+   De bron voor specialismen en behandelcodes is inmiddels de aangeleverde CSV.
 3. De opslagvoorziening, toegestane afbeeldingstypen en limieten voor bijlagen.
 
 ## Verwijzingen aanmaken (fase 2)
@@ -103,8 +104,15 @@ geweigerd met HTTP 400 en veldfouten onder `errors` (camelCase veldnamen).
 De meldingen voor `bsn`, `specialty` en `treatmentCode` zijn respectievelijk
 `Vul het BSN in`, `Kies een specialisme` en `Kies een behandelcode`.
 Bij ongeldige invoer wordt niets opgeslagen. De veldlengtes volgen het datamodel;
-een urgentie moet een bekende waarde zijn. BSN-controlecijfer, overige
-formaatregels en cataloguscontroles zijn nog geen onderdeel van deze stap.
+een urgentie moet een bekende waarde zijn. BSN-controlecijfer en overige
+formaatregels zijn nog geen onderdeel van deze stap.
+
+Een onbekende behandelcode geeft `Kies een geldige behandelcode`. Een bestaande
+code bij een ander of onbekend specialisme geeft `De behandelcode hoort niet bij
+het gekozen specialisme`. Beide meldingen staan onder `errors.treatmentCode` en
+er wordt niets opgeslagen. Bij geldige keuzes worden code en specialisme volgens
+de catalogusspelling opgeslagen; hoofdletterverschillen en omliggende spaties in
+de verwijzingsaanvraag worden daarbij genormaliseerd.
 
 Onverwachte fouten worden centraal afgehandeld met HTTP 500 en `ProblemDetails`,
 ook in Development. De foutmelding bevat een vaste Nederlandse uitleg en een
@@ -129,6 +137,52 @@ huisartsaccounts, autorisatie, auditlogging en bijlagenopslag volgen in de volge
 stappen. De zes acceptatiecriteria van AFS-01a zijn daarmee nog niet alle voltooid.
 Bij de frontendkoppeling moet ook de proxyroute worden afgestemd: het endpoint
 heeft zelf het `/api`-prefix, terwijl de bestaande nginx-configuratie dat verwijdert.
+
+## Behandelcatalogus
+
+De 100 zorgbehandelingen uit `zorgbehandelingen (1).csv` zijn overgenomen in
+`Server/Data/SeedData/treatments.json`. Dit bestand is de versiebeheerbare bron
+voor de tabel `Treatments` en wordt ingebed in de applicatie; de Downloads-map
+van de ontwikkelaar is niet nodig bij opstarten of publiceren.
+
+| CSV-kolom | Model / API-veld | Betekenis |
+| --- | --- | --- |
+| Zorgcode | `Code` / `code` | Unieke behandelcode, bijvoorbeeld `Z0005` |
+| Omschrijving | `Description` / `description` | Zichtbare omschrijving |
+| Specialisme | `Specialty` / `specialty` | Een van de 12 aangeleverde specialismen |
+| Tijdsduur (kwartieren) | `DurationInQuarters` / `durationInQuarters` | Aantal kwartieren, dus 3 betekent 45 minuten |
+| Kosten (€) | `CostEuro` / `costEuro` | Bedrag in euro, opgeslagen als `decimal(18,2)` |
+
+Gelijke omschrijvingen met verschillende zorgcodes blijven afzonderlijke keuzes.
+Zo hebben `Z0005` en `Z0072` allebei de omschrijving `Consult oren`, maar een
+verschillende tijdsduur en prijs. Er wordt met deze gegevens geen afspraak of
+factuur aangemaakt.
+
+De migratie `AddTreatmentCatalog` voegt uitsluitend de tabel, een index op
+specialisme en de referentiegegevens toe. De bestaande opstartmigraties passen
+dit toe wanneer de backend opnieuw start. Omdat EF Core deze vaste gegevens met
+`HasData` beheert, worden ze niet bij iedere opstart opnieuw ingevoegd.
+Maak bij toekomstige wijzigingen in `treatments.json` een nieuwe migratie;
+bewerk reeds toegepaste migraties niet. Pas de catalogus niet los hiervan
+handmatig in de database aan.
+
+Beschikbare endpoints voor het toekomstige formulier:
+
+- `GET /api/treatments/specialties`: alfabetische lijst met beschikbare specialismen.
+- `GET /api/treatments?specialty=KNO`: behandelingen voor het geselecteerde
+  specialisme, gesorteerd op omschrijving en vervolgens code. Gebruik de
+  specialismenaam zoals teruggegeven door het eerste endpoint.
+
+Een ontbrekend of leeg specialisme geeft HTTP 400. Een onbekend specialisme geeft
+een lege lijst. De endpoints bevatten uitsluitend referentiegegevens en zijn
+ook buiten Development beschikbaar. De beperkingen voor het aanmaken van
+verwijzingen blijven gelden. Voorbeelden staan in `Server/Server.http` en Swagger.
+
+De verwijzingsaanvraag houdt de bestaande velden `specialty` en `treatmentCode`.
+Voor KNO kan bijvoorbeeld `Z0005` worden gebruikt; de oude voorbeeldcode `TEST-KNO`
+is geen geldige cataloguskeuze meer. Er is bewust geen foreign key vanuit oude
+verwijzingen toegevoegd: hun historische gegevens moeten intact blijven wanneer
+de catalogus later verandert.
 
 ## Privacy en oplevering
 
@@ -170,6 +224,15 @@ exception en controleren dat de HTTP-respons en de centrale foutlog deze niet
 overnemen, ook wanneer een browser een HTML-foutpagina vraagt.
 De testhost schrijft uitsluitend naar de testuitvoer en vereist geen toegang
 tot het Windows-systeemlogboek.
+
+`TreatmentCatalogApiTests` controleert alle 100 codes via de 12 specialismen,
+behoud van omschrijvingen, tijdsduur en bedragen, filters en ontbrekende invoer.
+De tests controleren ook dat onbekende codes en onjuiste code-specialismecombinaties
+worden geweigerd en een gecorrigeerde verwijzing daarna wel opgeslagen kan worden.
+De migratie `AddTreatmentCatalog` is daarnaast gecontroleerd op een afzonderlijke
+SQL Server-database: upgrade vanaf `InitialCreate`, behoud van een bestaande
+verwijzing met een oude code, herhaald uitvoeren en terugdraaien/opnieuw toepassen.
+De tijdelijke controledatabase is na afloop verwijderd.
 
 De browserbasis `TestBase` is abstract. Alleen afgeleide EndToEnd-tests voeren
 de initialisatie van SQL Server, een externe app en Chrome uit. Die tests draaien

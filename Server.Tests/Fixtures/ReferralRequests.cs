@@ -14,7 +14,7 @@ namespace Server.Tests.Fixtures
             PatientPhoneNumber = "0000000000",
             PatientEmailAddress = "patient@example.test",
             Specialty = "KNO",
-            TreatmentCode = "TEST-KNO",
+            TreatmentCode = "Z0005",
             ReasonForReferral = "Aanhoudende oorpijn",
             ClinicalQuestion = "Wat is de oorzaak?",
             Medication = "Geen",

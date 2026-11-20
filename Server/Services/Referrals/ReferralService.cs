@@ -7,7 +7,8 @@ using System.Text.Json;
 namespace Server.Services.Referrals
 {
     /// <summary>Creates a patient snapshot after validating the referral's required fields.</summary>
-    public class ReferralService(IReferralRepository repository) : IReferralService
+    public class ReferralService(IReferralRepository repository, ITreatmentCatalogRepository treatmentCatalog)
+        : IReferralService
     {
         /// <inheritdoc />
         public async Task<CreateReferralResult> CreateAsync(
@@ -33,6 +34,24 @@ namespace Server.Services.Referrals
                 };
             }
 
+            var treatment = await treatmentCatalog.FindByCodeAsync(
+                request.TreatmentCode!.Trim().ToUpperInvariant(), cancellationToken);
+            if (treatment is null)
+            {
+                return new CreateReferralResult
+                {
+                    Errors = new() { ["treatmentCode"] = ["Kies een geldige behandelcode"] }
+                };
+            }
+
+            if (!string.Equals(treatment.Specialty, request.Specialty!.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return new CreateReferralResult
+                {
+                    Errors = new() { ["treatmentCode"] = ["De behandelcode hoort niet bij het gekozen specialisme"] }
+                };
+            }
+
             var referral = new Referral
             {
                 Bsn = request.Bsn!,
@@ -41,8 +60,8 @@ namespace Server.Services.Referrals
                 PatientCity = request.PatientCity!,
                 PatientPhoneNumber = request.PatientPhoneNumber!,
                 PatientEmailAddress = request.PatientEmailAddress!,
-                Specialty = request.Specialty!,
-                TreatmentCode = request.TreatmentCode!,
+                Specialty = treatment.Specialty,
+                TreatmentCode = treatment.Code,
                 ReasonForReferral = request.ReasonForReferral!,
                 ClinicalQuestion = request.ClinicalQuestion!,
                 Medication = request.Medication!,

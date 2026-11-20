@@ -23,7 +23,7 @@ namespace Server.Tests
             StringAssert.Contains(script, "CREATE TABLE [ReferralAttachments]");
             StringAssert.Contains(script, "FOREIGN KEY ([ReferralId]) REFERENCES [Referrals] ([Id])");
 
-            Assert.HasCount(2, context.Model.GetEntityTypes().ToArray());
+            Assert.HasCount(3, context.Model.GetEntityTypes().ToArray());
         }
 
         [TestMethod]
@@ -75,7 +75,7 @@ namespace Server.Tests
             PatientPhoneNumber = "0000000000",
             PatientEmailAddress = "patient@example.test",
             Specialty = "KNO",
-            TreatmentCode = "TEST-KNO",
+            TreatmentCode = "Z0005",
             ReasonForReferral = "Oorpijn sinds twee weken",
             ClinicalQuestion = "Wat is de oorzaak van de oorpijn?",
             Medication = "Geen",

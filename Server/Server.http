@@ -19,7 +19,7 @@ Accept: application/json
   "patientPhoneNumber": "0000000000",
   "patientEmailAddress": "patient@example.test",
   "specialty": "KNO",
-  "treatmentCode": "TEST-KNO",
+  "treatmentCode": "Z0005",
   "reasonForReferral": "Aanhoudende oorpijn",
   "clinicalQuestion": "Wat is de oorzaak?",
   "medication": "Geen",
@@ -27,5 +27,16 @@ Accept: application/json
   "allergies": "Geen bekend",
   "urgency": "Regular"
 }
+
+###
+
+# Catalogue reference data; no patient information.
+GET {{Server_HostAddress}}/api/treatments/specialties
+Accept: application/json
+
+###
+
+GET {{Server_HostAddress}}/api/treatments?specialty=KNO
+Accept: application/json
 
 ###
