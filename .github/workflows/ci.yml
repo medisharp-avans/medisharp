@@ -45,14 +45,14 @@ jobs:
           cache-dependency-path: Client/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run build
-      # Lighthouse CI starts its own preview server (see lighthouserc.json).
+      - id: build
+        run: npm run build
+      # Both checks start their own preview server.
       - run: npm run test:lighthouse
-      - name: Start preview server for axe
-        run: |
-          npm run preview -- --port 4173 --strictPort &
-          timeout 60 bash -c 'until curl -sf http://localhost:4173 > /dev/null; do sleep 1; done'
-      - run: npm run test:a11y
+      # Run axe even when Lighthouse fails (but not when the build failed),
+      # so both reports are always available.
+      - if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run test:a11y
       - name: Upload Lighthouse reports
         if: always()
         uses: actions/upload-artifact@v4

@@ -2,14 +2,12 @@
 // so new routes are tested automatically.
 // Lighthouse CI only loads CommonJS configs, so require() is needed here.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { paths } = require('./e2e/routes.ts')
-
-const baseUrl = 'http://localhost:4173'
+const { baseUrl, paths, previewPort } = require('./e2e/routes.ts')
 
 module.exports = {
   ci: {
     collect: {
-      startServerCommand: 'npm run preview -- --port 4173 --strictPort',
+      startServerCommand: `npm run preview -- --port ${previewPort} --strictPort`,
       startServerReadyPattern: 'Local',
       url: paths.map((path) => baseUrl + path),
       numberOfRuns: 1,
