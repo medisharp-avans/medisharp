@@ -184,22 +184,24 @@ is geen geldige cataloguskeuze meer. Er is bewust geen foreign key vanuit oude
 verwijzingen toegevoegd: hun historische gegevens moeten intact blijven wanneer
 de catalogus later verandert.
 
-## Formulierbasis (frontend, stap 1)
+## Verwijzingsformulier
 
-Via **Verwijsbrieven > Nieuwe verwijzing** opent `/verwijsbrieven/nieuw` binnen
-het dashboard. Het formulier groepeert de patientgegevens, verwijzingsgegevens
-en medische informatie. De invoervelden volgen de hierboven beschreven
-veldlengtes; de urgentie is vooralsnog alleen `Regulier`.
+Via **Verwijsbrieven > Nieuwe verwijzing** opent het formulier binnen het dashboard.
+Specialismen en behandelingen komen uit de API. Wisselen van specialisme wist de
+behandelkeuze; oudere aanvragen worden geannuleerd. Behandelingen tonen hun code.
 
-Deze stap bevat uitsluitend de formulierbasis. Specialisme, behandeling en
-opslaan zijn zichtbaar maar uitgeschakeld. Er worden nog geen API-aanroepen
-gedaan. Invoer blijft alleen in de geopende formuliercomponent en wordt niet
-naar URL's, logs of browseropslag geschreven. Bij het verlaten van de pagina
-vervalt de invoer. Gebruik fictieve gegevens bij het bekijken van deze tussenstap.
+Het formulier verstuurt de invoer met POST naar /api/referrals. Tijdens het opslaan
+zijn de invoervelden en verzendknop uitgeschakeld. Alleen HTTP 201 geldt als
+bevestiging; daarna verdwijnt de invoer en verschijnt status Open. Bij een fout
+blijft de invoer behouden en verschijnt een veilige melding, eventueel met de
+namen van te controleren velden. Een verbindingsfout kan betekenen dat de server
+wel heeft opgeslagen; de melding vraagt daarom eerst de opslag te controleren.
+Er is nog geen idempotentiesleutel of overzicht om deze onzekerheid op te lossen.
 
-Vervolgstappen zijn het ophalen van specialismen, de daarvan afhankelijke
-behandelkeuze, opslaan via de API en het tonen en testen van veldfouten en
-servermeldingen. De bestaande afhankelijkheid van PRI-03 blijft gelden.
+Patiëntgegevens worden niet in URL's, logs of browseropslag gezet. Gebruik fictieve
+gegevens; de backend staat aanmaken uitsluitend in Development toe totdat PRI-03
+is aangesloten. Lokale Vite-aanvragen naar /api gaan naar localhost:5174.
+Bijlagen, accounts en het overzicht voor planners volgen afzonderlijk.
 
 ## Privacy en oplevering
 
