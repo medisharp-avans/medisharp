@@ -1,12 +1,14 @@
 <script setup lang="ts">
 // Formulierbasis voor AFS-01a. Invoer bestaat alleen zolang deze pagina geopend is.
 // De cataloguskeuze, API-aanroep en afhandeling van veldfouten volgen afzonderlijk.
-import { reactive } from 'vue'
+import { reactive, ref, onMounted, onUnmounted } from 'vue'
+import { getSpecialties } from '@/services/treatmentCatalog'
 import { RouterLink } from 'vue-router'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import ReferralFormField from '@/components/referrals/ReferralFormField.vue'
 
 const draft = reactive({
+  specialty: '',
   bsn: '',
   patientName: '',
   patientAddress: '',
@@ -20,6 +22,27 @@ const draft = reactive({
   allergies: '',
   urgency: 'Regular',
 })
+
+const specialties = ref<string[]>([])
+const loadingSpecialties = ref(false)
+const specialtyError = ref('')
+const controller = new AbortController()
+
+async function loadSpecialties() {
+  loadingSpecialties.value = true
+  specialtyError.value = ''
+  try {
+    specialties.value = await getSpecialties(controller.signal)
+  } catch {
+    if (!controller.signal.aborted) {
+      specialtyError.value = 'De specialismen konden niet worden geladen. Probeer het opnieuw.'
+    }
+  } finally {
+    loadingSpecialties.value = false
+  }
+}
+onMounted(loadSpecialties)
+onUnmounted(() => controller.abort())
 
 const fieldsetClasses = 'min-w-0 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6'
 const selectClasses =
@@ -113,11 +136,16 @@ const selectClasses =
               >
               <select
                 id="referral-specialty"
+                v-model="draft.specialty"
                 :class="selectClasses"
-                aria-describedby="treatment-choice-hint"
-                disabled
+                aria-describedby="specialty-status"
+                :disabled="loadingSpecialties || specialties.length === 0"
+                required
               >
-                <option>Specialisme kiezen</option>
+                <option value="" disabled>Specialisme kiezen</option>
+                <option v-for="specialty in specialties" :key="specialty" :value="specialty">
+                  {{ specialty }}
+                </option>
               </select>
             </div>
             <div class="min-w-0">
@@ -133,6 +161,18 @@ const selectClasses =
                 <option>Behandeling kiezen</option>
               </select>
             </div>
+          </div>
+          <div id="specialty-status" role="status" class="text-sm text-gray-700">
+            <p v-if="loadingSpecialties">Specialismen laden…</p>
+            <template v-else-if="specialtyError">
+              <p>{{ specialtyError }}</p>
+              <BaseButton class="mt-2" variant="secondary" @click="loadSpecialties"
+                >Opnieuw proberen</BaseButton
+              >
+            </template>
+            <p v-else-if="specialties.length === 0">
+              Er zijn momenteel geen specialismen beschikbaar.
+            </p>
           </div>
           <p id="treatment-choice-hint" class="text-sm text-gray-600">
             De behandelkeuze is nog niet beschikbaar.
