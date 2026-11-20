@@ -12,6 +12,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.15">
       <PrivateAssets>all</PrivateAssets>
@@ -43,8 +45,7 @@
 
   <ItemGroup>
     <None Update="appsettings.test.json">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>appsettings.test.cs</LastGenOutput>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Server.Data;
+using Server.Data.Repositories;
+using Server.Filters;
+using Server.Services.Referrals;
 using System.Reflection;
 
 namespace Server
@@ -22,6 +26,9 @@ namespace Server
 
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
+            builder.Services.AddScoped<IReferralRepository, ReferralRepository>();
+            builder.Services.AddScoped<ReferralService>();
+            builder.Services.AddScoped<DevelopmentOnlyFilter>();
 
             // HTTPS is handled by the reverse proxy; take the scheme and client IP from the X-Forwarded-* headers.
             builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -32,7 +39,9 @@ namespace Server
                 options.KnownProxies.Clear();
             });
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers(options =>
+                options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider()))
+                .AddJsonOptions(options => options.AllowInputFormatterExceptionMessages = false);
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddSwaggerGen(options =>
             {
@@ -61,8 +70,10 @@ namespace Server
             var app = builder.Build();
 
             // Apply pending EF Core migrations on startup (replaces Database/index.sql and db-init).
-            using (var scope = app.Services.CreateScope())
+            // Integration tests provide their own isolated database and initialize its schema.
+            if (app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true))
             {
+                using var scope = app.Services.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 db.Database.Migrate();
             }

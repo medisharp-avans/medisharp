@@ -4,3 +4,28 @@ GET {{Server_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+# AFS-01a: local Development only; all data below is fictitious.
+# PRI-03 account authorization and attachment upload are separate follow-up work.
+POST {{Server_HostAddress}}/api/referrals
+Content-Type: application/json
+Accept: application/json
+
+{
+  "bsn": "000000000",
+  "patientName": "Testpatient",
+  "patientAddress": "Teststraat 1",
+  "patientCity": "Teststad",
+  "patientPhoneNumber": "0000000000",
+  "patientEmailAddress": "patient@example.test",
+  "specialty": "KNO",
+  "treatmentCode": "TEST-KNO",
+  "reasonForReferral": "Aanhoudende oorpijn",
+  "clinicalQuestion": "Wat is de oorzaak?",
+  "medication": "Geen",
+  "medicalInformation": "Alleen geselecteerde relevante gegevens",
+  "allergies": "Geen bekend",
+  "urgency": "Regular"
+}
+
+###

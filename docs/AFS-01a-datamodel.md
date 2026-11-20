@@ -1,4 +1,4 @@
-# AFS-01a - Fase 1: datamodel voor verwijzingen
+# AFS-01a - Datamodel en verwijzingen aanmaken
 
 Dit model ondersteunt de gegevens uit AFS-01a. Het staat los van het dashboard.
 Het team heeft bevestigd dat er nog geen gezamenlijk patientmodel is afgesproken.
@@ -74,10 +74,10 @@ later aparte afhandeling in de opslagservice; er is nu geen verwijderendpoint.
 
 ## Grens met de volgende fasen
 
-Er zijn nog geen migrations aangemaakt of op een database uitgevoerd. Stem het
-gedeelde model en onderstaande punten af voordat de definitieve migration wordt
-gegenereerd. `Program.cs` past migrations bij opstarten automatisch toe; deze
-wijziging alleen maakt de nieuwe tabellen dus nog niet aan.
+`InitialCreate` bevat inmiddels de tabellen voor verwijzingen en bijlagenmetadata.
+`Program.cs` past migrations bij opstarten automatisch toe. Neem de migration en
+modelsnapshot samen met het model op in de branch. De onderstaande afspraken
+blijven nodig voor de verdere aansluiting op de rest van het project.
 
 Nog af te stemmen:
 
@@ -87,26 +87,67 @@ Nog af te stemmen:
    urgenties. Ook de routering naar het bevoegde ziekenhuis moet worden bepaald.
 3. De opslagvoorziening, toegestane afbeeldingstypen en limieten voor bijlagen.
 
-Voor fase 2 blijven `POST /api/referrals` en `GET /api/referrals` het voorstel uit
-het gesprek. DTO's, controllers en services worden in die fase uitgewerkt. Maak
-expliciete DTO's voor de afgesproken invoervelden en geef interne entiteiten of
-opslagsleutels niet rechtstreeks terug. De huisarts kiest geen afspraak of tijdslot.
+## Verwijzingen aanmaken (fase 2)
 
-`required` in C# en `IsRequired` in EF Core zijn geen volledige invoervalidatie:
-lege of ongeldige waarden worden hiermee niet allemaal tegengehouden. De volgende
-fasen moeten onder meer de meldingen `Kies een specialisme`, `Vul het BSN in` en
-`Kies een behandelcode` toevoegen en ervoor zorgen dat ongeldige invoer niet wordt
-opgeslagen. Autorisatie en een overzicht voor ziekenhuispersoneel volgen eveneens
-later. De zes acceptatiecriteria zijn met alleen dit datamodel nog niet voltooid.
+`POST /api/referrals` op de backend valideert een `CreateReferralRequest` en slaat
+de verwijzing op via een scoped service en EF Core-repository. Bij succes volgt
+HTTP 201 met uitsluitend `id`, `status` (`Open`) en `createdAtUtc`. Er is nog geen
+GET-endpoint; daarom wordt geen Location-header naar een niet-bestaand detail
+teruggegeven. Een volledig fictief voorbeeld staat in `Server/Server.http` en
+kan ook via Swagger worden verstuurd.
+
+De DTO gebruikt dezelfde validatieregels in de HTTP-pipeline en in de service.
+Ontbrekende, null, lege en alleen uit witruimte bestaande verplichte velden worden
+geweigerd met HTTP 400 en veldfouten onder `errors` (camelCase veldnamen).
+De meldingen voor `bsn`, `specialty` en `treatmentCode` zijn respectievelijk
+`Vul het BSN in`, `Kies een specialisme` en `Kies een behandelcode`.
+Bij ongeldige invoer wordt niets opgeslagen. De veldlengtes volgen het datamodel;
+een urgentie moet een bekende waarde zijn. BSN-controlecijfer, overige
+formaatregels en cataloguscontroles zijn nog geen onderdeel van deze stap.
+
+Niet-afgesproken JSON-velden worden geweigerd, waaronder een volledig dossier,
+status, ID, aanmaaktijd, afspraak/tijdslot en interne opslagsleutels. Bijlagen
+hebben nog geen uploadcontract en kunnen dus nog niet worden meegestuurd; een
+verwijzing zonder bijlagen werkt wel. Het antwoord bevat geen patiëntgegevens.
+
+Authenticatie is afhankelijk van de aparte user story PRI-03. Totdat die en de
+toegangsregels zijn aangesloten, is deze aanmaakfunctie uitsluitend beschikbaar
+bij `ASPNETCORE_ENVIRONMENT=Development`. In Staging en Production geeft het
+endpoint HTTP 404, ook bij geldige invoer. Dit is een tijdelijke beperking en
+geen vervanging voor authenticatie of autorisatie. Gebruik lokaal fictieve data.
+
+Het formulier, het overzicht voor bevoegde ziekenhuisplanners, koppeling met
+huisartsaccounts, autorisatie, auditlogging en bijlagenopslag volgen in de volgende
+stappen. De zes acceptatiecriteria van AFS-01a zijn daarmee nog niet alle voltooid.
+Bij de frontendkoppeling moet ook de proxyroute worden afgestemd: het endpoint
+heeft zelf het `/api`-prefix, terwijl de bestaande nginx-configuratie dat verwijdert.
 
 ## Controle
 
 `Server.Tests/ReferralModelTests.cs` controleert de SQL Server-schemaopbouw zonder
 databaseverbinding en de EF Core-koppeling van bijlagen bij twee verwijzingen met
-hetzelfde BSN. Dit controleert de mapping, niet daadwerkelijk opslaan of ophalen
-uit SQL Server en niet de toekomstige API-validatie of autorisatie.
+hetzelfde BSN.
+
+`ReferralServiceTests` controleert validatie, serverwaarden en het voorkomen van
+opslag bij fouten met een lokale testimplementatie van de repository.
+`CreateReferralApiTests` gebruikt de echte HTTP-pipeline, service en repository
+met een afzonderlijke SQLite-database in het geheugen per test. Opslag wordt met
+een nieuwe DbContext teruggelezen. Deze tests gebruiken geen draaiende API,
+browser, LocalDB of ontwikkeldatabase. Ze bewijzen geen SQL Server-specifieke
+migratie-uitvoering; daarvoor blijft een aparte SQL Server-integratiecontrole nodig.
+
+De browserbasis `TestBase` is abstract. Alleen afgeleide EndToEnd-tests voeren
+de initialisatie van SQL Server, een externe app en Chrome uit. Die tests draaien
+niet parallel en zijn uitgesloten van de standaard CI-job. De bestaande
+browserhelpers zijn geen onderdeel van de nieuwe unit- en API-tests.
+
+De API-testhost schakelt startup-migrations uit met
+`Database:ApplyMigrationsOnStartup=false` en maakt zelf zijn SQLite-schema aan.
+Voor normaal starten blijft de standaardwaarde `true`.
 
 ```powershell
-dotnet build Server/Server.slnx --no-restore --configuration Release
-dotnet test Server/Server.slnx --no-build --configuration Release
+dotnet test Server/Server.slnx --configuration Release --filter "TestCategory!=EndToEnd"
 ```
+
+Stop een zelf gestarte Debug-backend met Ctrl+C voordat je die opnieuw bouwt of
+start. De bovenstaande testopdracht bouwt Release en gebruikt geen luisterpoort.

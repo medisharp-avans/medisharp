@@ -11,26 +11,29 @@ using System.Diagnostics;
 namespace Server.Tests
 {
     [TestClass]
-    public class TestBase
+    [TestCategory("EndToEnd")]
+    [DoNotParallelize]
+    public abstract class TestBase
     {
         public TestContext TestContext { get; set; } = null!;
         private Stopwatch _stopwatch = null!;
         private const string FallbackConnectionString =
             "Server=(localdb)\\MSSQLLocalDB;Database=DeZachteHeelmeesters_DbTest;Trusted_Connection=True;TrustServerCertificate=True";
 
-        private static string _connectionString = null!;
+        private string _connectionString = null!;
 
-        protected static IConfiguration Config = null!;
-        protected static string BaseUrl = null!;
+        protected IConfiguration Config = null!;
+        protected string BaseUrl = null!;
 
         protected AppDbContext DbContext = null!;
         protected QueryPlans Db = null!;
         protected IWebDriver Driver = null!;
 
-        [AssemblyInitialize]
-        public static async Task AssemblyInit(TestContext _)
+        // Only browser tests inheriting this base class need a running app and SQL Server.
+        private async Task InitializeEnvironmentAsync()
         {
             Config = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
                 .AddJsonFile("appsettings.test.json", optional: true)
                 .Build();
 
@@ -55,10 +58,12 @@ namespace Server.Tests
         }
 
         [TestInitialize]
-        public void TestInit()
+        public async Task TestInit()
         {
             _stopwatch = Stopwatch.StartNew();
             TestLog.Logger.Information("▶ START  {Test}", TestContext.TestName);
+
+            await InitializeEnvironmentAsync();
 
             new TestMsSqlDatabaseHelper(_connectionString).ClearData();
 
@@ -98,11 +103,11 @@ namespace Server.Tests
             }
         }
 
-        private static AppDbContext CreateDbContext() =>
+        private AppDbContext CreateDbContext() =>
             new(new DbContextOptionsBuilder<AppDbContext>().UseSqlServer(_connectionString).Options);
 
         /// <summary>Faalt snel en duidelijk als de app niet handmatig gestart is.</summary>
-        private static async Task EnsureAppIsRunningAsync()
+        private async Task EnsureAppIsRunningAsync()
         {
             using var http = new HttpClient(new HttpClientHandler
             {
