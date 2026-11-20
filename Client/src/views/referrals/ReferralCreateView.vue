@@ -1,14 +1,15 @@
 <script setup lang="ts">
 // Formulierbasis voor AFS-01a. Invoer bestaat alleen zolang deze pagina geopend is.
-// De cataloguskeuze, API-aanroep en afhandeling van veldfouten volgen afzonderlijk.
-import { reactive, ref, onMounted, onUnmounted } from 'vue'
-import { getSpecialties } from '@/services/treatmentCatalog'
+// Opslaan en de afhandeling van veldfouten volgen afzonderlijk.
+import { reactive, ref, watch, onMounted, onUnmounted } from 'vue'
+import { getSpecialties, getTreatments, type TreatmentChoice } from '@/services/treatmentCatalog'
 import { RouterLink } from 'vue-router'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import ReferralFormField from '@/components/referrals/ReferralFormField.vue'
 
 const draft = reactive({
   specialty: '',
+  treatmentCode: '',
   bsn: '',
   patientName: '',
   patientAddress: '',
@@ -42,7 +43,38 @@ async function loadSpecialties() {
   }
 }
 onMounted(loadSpecialties)
-onUnmounted(() => controller.abort())
+const treatments = ref<TreatmentChoice[]>([])
+const loadingTreatments = ref(false)
+const treatmentError = ref('')
+let treatmentController: AbortController | undefined
+
+// Annuleer oudere aanvragen zodat een trage respons nooit een nieuwere keuze overschrijft.
+async function loadTreatments() {
+  treatmentController?.abort()
+  draft.treatmentCode = ''
+  treatments.value = []
+  treatmentError.value = ''
+  loadingTreatments.value = false
+  if (!draft.specialty) return
+  const request = new AbortController()
+  treatmentController = request
+  loadingTreatments.value = true
+  try {
+    const result = await getTreatments(draft.specialty, request.signal)
+    if (!request.signal.aborted) treatments.value = result
+  } catch {
+    if (!request.signal.aborted) {
+      treatmentError.value = 'De behandelingen konden niet worden geladen. Probeer het opnieuw.'
+    }
+  } finally {
+    if (!request.signal.aborted) loadingTreatments.value = false
+  }
+}
+watch(() => draft.specialty, loadTreatments, { flush: 'sync' })
+onUnmounted(() => {
+  controller.abort()
+  treatmentController?.abort()
+})
 
 const fieldsetClasses = 'min-w-0 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6'
 const selectClasses =
@@ -154,11 +186,20 @@ const selectClasses =
               </label>
               <select
                 id="referral-treatment"
+                v-model="draft.treatmentCode"
                 :class="selectClasses"
                 aria-describedby="treatment-choice-hint"
-                disabled
+                :disabled="loadingTreatments || treatments.length === 0"
+                required
               >
-                <option>Behandeling kiezen</option>
+                <option value="" disabled>Behandeling kiezen</option>
+                <option
+                  v-for="treatment in treatments"
+                  :key="treatment.code"
+                  :value="treatment.code"
+                >
+                  {{ treatment.description }} — {{ treatment.code }}
+                </option>
               </select>
             </div>
           </div>
@@ -174,9 +215,19 @@ const selectClasses =
               Er zijn momenteel geen specialismen beschikbaar.
             </p>
           </div>
-          <p id="treatment-choice-hint" class="text-sm text-gray-600">
-            De behandelkeuze is nog niet beschikbaar.
-          </p>
+          <div id="treatment-choice-hint" role="status" class="text-sm text-gray-600">
+            <p v-if="!draft.specialty">Kies eerst een specialisme.</p>
+            <p v-else-if="loadingTreatments">Behandelingen laden…</p>
+            <template v-else-if="treatmentError">
+              <p>{{ treatmentError }}</p>
+              <BaseButton variant="secondary" class="mt-2" @click="loadTreatments"
+                >Opnieuw proberen</BaseButton
+              >
+            </template>
+            <p v-else-if="treatments.length === 0">
+              Er zijn geen behandelingen beschikbaar voor dit specialisme.
+            </p>
+          </div>
           <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <ReferralFormField
               id="referral-reason"
