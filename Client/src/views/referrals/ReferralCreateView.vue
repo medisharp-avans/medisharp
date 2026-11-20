@@ -1,0 +1,211 @@
+<script setup lang="ts">
+// Formulierbasis voor AFS-01a. Invoer bestaat alleen zolang deze pagina geopend is.
+// De cataloguskeuze, API-aanroep en afhandeling van veldfouten volgen afzonderlijk.
+import { reactive } from 'vue'
+import { RouterLink } from 'vue-router'
+import BaseButton from '@/components/elements/BaseButton.vue'
+import ReferralFormField from '@/components/referrals/ReferralFormField.vue'
+
+const draft = reactive({
+  bsn: '',
+  patientName: '',
+  patientAddress: '',
+  patientCity: '',
+  patientPhoneNumber: '',
+  patientEmailAddress: '',
+  reasonForReferral: '',
+  clinicalQuestion: '',
+  medicalInformation: '',
+  medication: '',
+  allergies: '',
+  urgency: 'Regular',
+})
+
+const fieldsetClasses = 'min-w-0 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6'
+const selectClasses =
+  'block w-full min-w-0 rounded-xl border border-gray-500 bg-white px-3 py-2.5 text-base leading-6 text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-600'
+</script>
+
+<template>
+  <section class="mx-auto max-w-5xl space-y-6 pb-8" aria-labelledby="referral-create-title">
+    <div class="space-y-4">
+      <RouterLink
+        :to="{ name: 'Referrals' }"
+        class="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-medium text-blue-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+      >
+        <span aria-hidden="true">←</span>
+        Terug naar verwijsbrieven
+      </RouterLink>
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 id="referral-create-title" class="text-2xl leading-tight font-semibold sm:text-3xl">
+          Nieuwe verwijzing
+        </h2>
+        <span class="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-800">
+          In voorbereiding
+        </span>
+      </div>
+      <p class="max-w-2xl text-base leading-6 text-gray-600">
+        Vul de gegevens in die de specialist nodig heeft om de verwijzing te beoordelen. Het
+        ziekenhuis plant de afspraak.
+      </p>
+      <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+        Dit formulier slaat nog geen gegevens op. Gebruik alleen fictieve patiëntgegevens.
+      </div>
+    </div>
+
+    <!-- Voorkom ook bij Enter dat de browser gegevens via een formulier-URL verstuurt. -->
+    <form class="space-y-6" autocomplete="off" @submit.prevent>
+      <p class="text-sm text-gray-600">Alle invulvelden zijn verplicht.</p>
+
+      <fieldset :class="fieldsetClasses">
+        <legend class="px-2 text-lg font-semibold">Patiëntgegevens</legend>
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <ReferralFormField
+            id="patient-name"
+            v-model="draft.patientName"
+            label="Naam patiënt"
+            :maxlength="200"
+          />
+          <ReferralFormField
+            id="patient-bsn"
+            v-model="draft.bsn"
+            label="BSN"
+            inputmode="numeric"
+            :maxlength="9"
+            hint="Neem alle cijfers over, inclusief eventuele nullen aan het begin."
+          />
+          <ReferralFormField
+            id="patient-address"
+            v-model="draft.patientAddress"
+            label="Adres en huisnummer"
+            :maxlength="300"
+          />
+          <ReferralFormField
+            id="patient-city"
+            v-model="draft.patientCity"
+            label="Woonplaats"
+            :maxlength="100"
+          />
+          <ReferralFormField
+            id="patient-phone"
+            v-model="draft.patientPhoneNumber"
+            label="Telefoonnummer"
+            type="tel"
+            :maxlength="32"
+          />
+          <ReferralFormField
+            id="patient-email"
+            v-model="draft.patientEmailAddress"
+            label="E-mailadres"
+            type="email"
+            :maxlength="254"
+          />
+        </div>
+      </fieldset>
+
+      <fieldset :class="fieldsetClasses">
+        <legend class="px-2 text-lg font-semibold">Verwijzing</legend>
+        <div class="space-y-5">
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div class="min-w-0">
+              <label for="referral-specialty" class="mb-2 block text-sm font-medium"
+                >Specialisme</label
+              >
+              <select
+                id="referral-specialty"
+                :class="selectClasses"
+                aria-describedby="treatment-choice-hint"
+                disabled
+              >
+                <option>Specialisme kiezen</option>
+              </select>
+            </div>
+            <div class="min-w-0">
+              <label for="referral-treatment" class="mb-2 block text-sm font-medium">
+                Behandeling en behandelcode
+              </label>
+              <select
+                id="referral-treatment"
+                :class="selectClasses"
+                aria-describedby="treatment-choice-hint"
+                disabled
+              >
+                <option>Behandeling kiezen</option>
+              </select>
+            </div>
+          </div>
+          <p id="treatment-choice-hint" class="text-sm text-gray-600">
+            De behandelkeuze is nog niet beschikbaar.
+          </p>
+          <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <ReferralFormField
+              id="referral-reason"
+              v-model="draft.reasonForReferral"
+              label="Reden van verwijzing"
+              multiline
+            />
+            <ReferralFormField
+              id="referral-question"
+              v-model="draft.clinicalQuestion"
+              label="Vraagstelling aan de specialist"
+              multiline
+            />
+            <div>
+              <label for="referral-urgency" class="mb-2 block text-sm font-medium">Urgentie</label>
+              <select
+                id="referral-urgency"
+                v-model="draft.urgency"
+                name="urgency"
+                :class="selectClasses"
+                required
+              >
+                <option value="Regular">Regulier</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset :class="fieldsetClasses">
+        <legend class="px-2 text-lg font-semibold">Medische informatie</legend>
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <ReferralFormField
+            id="referral-medical-information"
+            v-model="draft.medicalInformation"
+            class="sm:col-span-2"
+            label="Relevante medische gegevens"
+            hint="Neem alleen gegevens op die voor deze verwijzing relevant zijn."
+            multiline
+            :rows="4"
+          />
+          <ReferralFormField
+            id="referral-medication"
+            v-model="draft.medication"
+            label="Medicatie"
+            hint="Vul ‘Geen’ in als de patiënt geen medicatie gebruikt."
+            multiline
+          />
+          <ReferralFormField
+            id="referral-allergies"
+            v-model="draft.allergies"
+            label="Allergieën"
+            hint="Vul ‘Geen bekend’ in als er geen allergieën bekend zijn."
+            multiline
+          />
+        </div>
+      </fieldset>
+
+      <div
+        class="flex flex-col gap-4 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-end"
+      >
+        <RouterLink
+          :to="{ name: 'Referrals' }"
+          class="inline-flex min-h-11 items-center justify-center rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-medium hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
+        >
+          Annuleren
+        </RouterLink>
+        <BaseButton type="submit" disabled>Verwijzing opslaan</BaseButton>
+      </div>
+    </form>
+  </section>
+</template>

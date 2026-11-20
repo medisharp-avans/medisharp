@@ -132,7 +132,7 @@ bij `ASPNETCORE_ENVIRONMENT=Development`. In Staging en Production geeft het
 endpoint HTTP 404, ook bij geldige invoer. Dit is een tijdelijke beperking en
 geen vervanging voor authenticatie of autorisatie. Gebruik lokaal fictieve data.
 
-Het formulier, het overzicht voor bevoegde ziekenhuisplanners, koppeling met
+De aansluiting van het formulier, het overzicht voor bevoegde ziekenhuisplanners, koppeling met
 huisartsaccounts, autorisatie, auditlogging en bijlagenopslag volgen in de volgende
 stappen. De zes acceptatiecriteria van AFS-01a zijn daarmee nog niet alle voltooid.
 Bij de frontendkoppeling moet ook de proxyroute worden afgestemd: het endpoint
@@ -183,6 +183,23 @@ Voor KNO kan bijvoorbeeld `Z0005` worden gebruikt; de oude voorbeeldcode `TEST-K
 is geen geldige cataloguskeuze meer. Er is bewust geen foreign key vanuit oude
 verwijzingen toegevoegd: hun historische gegevens moeten intact blijven wanneer
 de catalogus later verandert.
+
+## Formulierbasis (frontend, stap 1)
+
+Via **Verwijsbrieven > Nieuwe verwijzing** opent `/verwijsbrieven/nieuw` binnen
+het dashboard. Het formulier groepeert de patientgegevens, verwijzingsgegevens
+en medische informatie. De invoervelden volgen de hierboven beschreven
+veldlengtes; de urgentie is vooralsnog alleen `Regulier`.
+
+Deze stap bevat uitsluitend de formulierbasis. Specialisme, behandeling en
+opslaan zijn zichtbaar maar uitgeschakeld. Er worden nog geen API-aanroepen
+gedaan. Invoer blijft alleen in de geopende formuliercomponent en wordt niet
+naar URL's, logs of browseropslag geschreven. Bij het verlaten van de pagina
+vervalt de invoer. Gebruik fictieve gegevens bij het bekijken van deze tussenstap.
+
+Vervolgstappen zijn het ophalen van specialismen, de daarvan afhankelijke
+behandelkeuze, opslaan via de API en het tonen en testen van veldfouten en
+servermeldingen. De bestaande afhankelijkheid van PRI-03 blijft gelden.
 
 ## Privacy en oplevering
 

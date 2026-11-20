@@ -29,8 +29,10 @@ useKeyboardShortcuts()
   <div v-else class="min-h-screen flex flex-col bg-white">
     <AppHeader />
 
-    <div class="flex flex-1">
-      <aside class="w-1/8 min-w-62.5 max-w-[25%] bg-gray-100 border-r border-gray-200">
+    <div class="flex flex-1 flex-col md:flex-row">
+      <aside
+        class="w-full border-b border-gray-200 bg-gray-100 md:w-1/8 md:min-w-62.5 md:max-w-[25%] md:border-r md:border-b-0"
+      >
         <AppNavigation />
       </aside>
 

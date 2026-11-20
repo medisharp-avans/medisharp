@@ -38,6 +38,13 @@ const routes = [
     name: 'Referrals',
     component: () => import('@/views/referrals/ReferralsView.vue'),
     meta: { requiresAuth: true },
+    children: [
+      {
+        path: 'nieuw',
+        name: 'ReferralCreate',
+        component: () => import('@/views/referrals/ReferralCreateView.vue'),
+      },
+    ],
   },
   {
     path: '/patienten',
