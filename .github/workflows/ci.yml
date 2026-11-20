@@ -34,11 +34,10 @@ jobs:
   server:
     runs-on: ubuntu-latest
     # Gives this job the secrets of the 'test' environment (Settings > Environments > test).
-    environment: test
     env:
       # Read by Server.Tests (TestSettings), overrides the LocalDB connection in appsettings.test.json.
       # The database name must end with "Test", otherwise the tests refuse to reset it.
-      ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=MediSharp_DbTest;User Id=sa;Password=${{ secrets.MSSQL_SA_PASSWORD }};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=MediSharp_DbTest;User Id=sa;Password=${{ secrets.CI_MSSQL_SA_PASSWORD }};TrustServerCertificate=True
     # A throwaway SQL Server (same image as docker-compose.yml), only reachable from this job.
     # GitHub waits until the health check passes before the steps start.
     services:
@@ -47,7 +46,7 @@ jobs:
         env:
           ACCEPT_EULA: "Y"
           MSSQL_PID: Developer
-          MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_MSSQL_SA_PASSWORD }}
         ports:
           - 1433:1433
         options: >-
@@ -74,9 +73,8 @@ jobs:
     # Only when the faster jobs pass, so a broken build does not waste minutes on browser tests.
     needs: [client, server]
     runs-on: ubuntu-latest
-    environment: test
     env:
-      ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=MediSharp_DbTest;User Id=sa;Password=${{ secrets.MSSQL_SA_PASSWORD }};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=MediSharp_DbTest;User Id=sa;Password=${{ secrets.CI_MSSQL_SA_PASSWORD }};TrustServerCertificate=True
       # Read by TestSettings: Chrome without a window, because the runner has no screen.
       Headless: "true"
     services:
@@ -85,7 +83,7 @@ jobs:
         env:
           ACCEPT_EULA: "Y"
           MSSQL_PID: Developer
-          MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_MSSQL_SA_PASSWORD }}
         ports:
           - 1433:1433
         options: >-
