@@ -8,16 +8,23 @@ namespace Server.Tests
     /// </summary>
     public abstract class DatabaseTestBase : TestBase
     {
+        /// <summary>A DbContext on the test database, new for every test.</summary>
         protected AppDbContext DbContext { get; private set; } = null!;
 
+        /// <summary>Resets the test database to the seed data and creates the DbContext for this test.</summary>
         [TestInitialize]
-        public void ResetDatabase()
+        public async Task ResetDatabaseAsync()
         {
-            TestDatabase.Reset();
+            await TestDatabase.ResetAsync();
             DbContext = TestDatabase.CreateDbContext();
         }
 
+        /// <summary>Disposes the DbContext of this test.</summary>
         [TestCleanup]
-        public void DisposeDbContext() => DbContext?.Dispose();
+        public async Task DisposeDbContextAsync()
+        {
+            if (DbContext != null)
+                await DbContext.DisposeAsync();
+        }
     }
 }

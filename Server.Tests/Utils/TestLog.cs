@@ -14,7 +14,10 @@ namespace Server.Tests.Utils
     {
         private const string Template = "{Timestamp:HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}";
 
+        /// <summary>The Serilog logger, for messages that are not a test step.</summary>
         public static ILogger Logger { get; }
+
+        /// <summary>The TestLogs folder in the build output of the test project.</summary>
         public static string LogDirectory { get; } = Path.Combine(AppContext.BaseDirectory, "TestLogs");
 
         static TestLog()
@@ -44,9 +47,11 @@ namespace Server.Tests.Utils
                 bugId, testName, expected, actual, driver?.Url, context, screenshot);
         }
 
+        /// <summary>Saves a screenshot of a failed test and returns its path, or null when there is no browser.</summary>
         public static string? FailureScreenshot(IWebDriver? driver, string testName) =>
             Screenshot(driver, $"FAILED_{testName}");
 
+        /// <summary>Saves a screenshot in TestLogs/screenshots; a failing screenshot never fails the test itself.</summary>
         private static string? Screenshot(IWebDriver? driver, string name)
         {
             if (driver == null) return null;

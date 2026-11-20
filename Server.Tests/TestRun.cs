@@ -6,6 +6,7 @@ namespace Server.Tests
     [TestClass]
     public class TestRun
     {
+        /// <summary>Stops the apps and flushes the log files.</summary>
         [AssemblyCleanup]
         public static void Cleanup()
         {

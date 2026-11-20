@@ -10,6 +10,7 @@ namespace Server.Tests.Utils
     /// </summary>
     public static class WebDriverExtensions
     {
+        /// <summary>An explicit wait with the TimeoutSeconds of the settings.</summary>
         private static WebDriverWait Wait(IWebDriver driver) => new(driver, TestSettings.Timeout);
 
         /// <summary>Waits until the URL contains the given part, for example a path or a query parameter.</summary>

@@ -9,13 +9,17 @@ namespace Server.Tests
     /// </summary>
     public abstract class EndToEndTestBase : DatabaseTestBase
     {
+        private string? _failureScreenshot;
+
+        /// <summary>The Chrome browser of this test.</summary>
         protected IWebDriver Driver { get; private set; } = null!;
 
+        /// <summary>Makes sure the API and client run, then opens a new Chrome browser.</summary>
         [TestInitialize]
-        public void StartBrowser()
+        public async Task StartBrowserAsync()
         {
             // Starts the API and client once for the whole test run, after the first database reset
-            AppServer.EnsureStarted();
+            await AppServer.EnsureStartedAsync();
 
             var options = new ChromeOptions { AcceptInsecureCertificates = true };
             // The tests only open localhost, so Chrome does not need to look up proxy settings (saves about a second per browser)
@@ -25,12 +29,14 @@ namespace Server.Tests
             if (TestSettings.Headless)
                 options.AddArgument("--headless=new");
 
+            // Selenium has no async API, so the browser is started and stopped synchronously
             Driver = new ChromeDriver(options);
         }
 
-        private string? _failureScreenshot;
-
-        // MSTest runs this cleanup before the one of TestBase, so the screenshot is taken while the browser is still open
+        /// <summary>
+        /// Takes a screenshot when the test failed and closes the browser.
+        /// MSTest runs this cleanup before the one of TestBase, so the screenshot is taken while the browser is still open.
+        /// </summary>
         [TestCleanup]
         public void StopBrowser()
         {
@@ -41,6 +47,7 @@ namespace Server.Tests
             Driver?.Dispose();
         }
 
+        /// <inheritdoc />
         protected override string? GetFailureEvidence() => _failureScreenshot;
     }
 }

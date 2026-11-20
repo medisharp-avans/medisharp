@@ -10,8 +10,17 @@ namespace Server.Tests.Utils
     /// </summary>
     public static class AppServer
     {
-        private static readonly TimeSpan StartTimeout = TimeSpan.FromSeconds(90);
-        private static readonly List<Process> Started = [];
+        private static readonly TimeSpan _startTimeout = TimeSpan.FromSeconds(90);
+        private static readonly TimeSpan _pollInterval = TimeSpan.FromMilliseconds(500);
+        private static readonly List<Process> _started = [];
+
+        // Only used to check whether an app answers. The development certificate is accepted without checking it.
+        private static readonly HttpClient _httpClient = new(new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+        })
+        { Timeout = TimeSpan.FromSeconds(2) };
+
         private static bool _isStarted;
 
 #if DEBUG
@@ -20,7 +29,8 @@ namespace Server.Tests.Utils
         private const string Configuration = "Release";
 #endif
 
-        public static void EnsureStarted()
+        /// <summary>Starts the API and the client once for the whole test run; later calls do nothing.</summary>
+        public static async Task EnsureStartedAsync()
         {
             if (_isStarted) return;
 
@@ -28,13 +38,13 @@ namespace Server.Tests.Utils
 
             // Same as the 'Tests' launch profile in Visual Studio: the URL of ApiUrl and the test database.
             // '--no-build' because the API is already built together with this test project.
-            Start("API", TestSettings.ApiUrl, Path.Combine(root, "Server"),
+            await StartAsync("API", TestSettings.ApiUrl, Path.Combine(root, "Server"),
                 "dotnet", ["run", "--no-build", "-c", Configuration, "--launch-profile", "Tests"]);
 
             // Vite is started with node directly (like 'npm run dev'), because npm.cmd cannot be started reliably
             // without a shell on Windows. Run 'npm install' in Client once before the first test run.
             var port = new Uri(TestSettings.ClientUrl).Port.ToString();
-            Start("Client", TestSettings.ClientUrl, Path.Combine(root, "Client"),
+            await StartAsync("Client", TestSettings.ClientUrl, Path.Combine(root, "Client"),
                 "node", [Path.Combine("node_modules", "vite", "bin", "vite.js"), "--port", port, "--strictPort"]);
 
             _isStarted = true;
@@ -43,20 +53,24 @@ namespace Server.Tests.Utils
         /// <summary>Stops only the apps that this class started.</summary>
         public static void Stop()
         {
-            foreach (var process in Started)
+            foreach (var process in _started)
             {
-                // 'dotnet run' and 'npm' start the app as a child process, so the whole process tree is stopped
+                // 'dotnet run' starts the app as a child process, so the whole process tree is stopped
                 if (!process.HasExited)
                     process.Kill(entireProcessTree: true);
                 process.Dispose();
             }
-            Started.Clear();
+            _started.Clear();
             _isStarted = false;
         }
 
-        private static void Start(string name, string url, string workingDirectory, string fileName, string[] arguments)
+        /// <summary>
+        /// Starts one app and waits until it answers on its URL.
+        /// Fails with the last output of the app when it stops or does not answer within the start timeout.
+        /// </summary>
+        private static async Task StartAsync(string name, string url, string workingDirectory, string fileName, string[] arguments)
         {
-            if (IsRunning(url))
+            if (await IsRunningAsync(url))
             {
                 TestLog.Logger.Information("{App} is already running on {Url}, using that one", name, url);
                 return;
@@ -80,33 +94,28 @@ namespace Server.Tests.Utils
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
-            Started.Add(process);
+            _started.Add(process);
 
             var stopwatch = Stopwatch.StartNew();
-            while (!IsRunning(url))
+            while (!await IsRunningAsync(url))
             {
-                if (process.HasExited || stopwatch.Elapsed > StartTimeout)
+                if (process.HasExited || stopwatch.Elapsed > _startTimeout)
                 {
                     Stop();
                     throw new InvalidOperationException(
                         $"{name} did not start on {url}. Last output:{Environment.NewLine}{string.Join(Environment.NewLine, lastOutput)}");
                 }
-                Thread.Sleep(500);
+                await Task.Delay(_pollInterval);
             }
             TestLog.Logger.Information("{App} started in {Seconds:0} s", name, stopwatch.Elapsed.TotalSeconds);
         }
 
-        /// <summary>An app is running when it answers on its URL, with any status code. The dev certificate is not checked.</summary>
-        private static bool IsRunning(string url)
+        /// <summary>An app is running when it answers on its URL, with any status code.</summary>
+        private static async Task<bool> IsRunningAsync(string url)
         {
-            using var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-            };
-            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(2) };
             try
             {
-                client.GetAsync(url).GetAwaiter().GetResult();
+                using var response = await _httpClient.GetAsync(url);
                 return true;
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
@@ -126,6 +135,7 @@ namespace Server.Tests.Utils
             throw new InvalidOperationException($"No folder with 'Server' and 'Client' found above {AppContext.BaseDirectory}.");
         }
 
+        /// <summary>Keeps only the last 30 lines an app wrote, to show them when the app does not start.</summary>
         private static void KeepLast(ConcurrentQueue<string> output, string? line)
         {
             if (line == null) return;

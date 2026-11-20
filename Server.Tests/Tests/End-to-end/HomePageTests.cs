@@ -8,6 +8,7 @@ namespace Server.Tests.EndToEnd
     [TestClass]
     public class HomePageTests : EndToEndTestBase
     {
+        /// <summary>The home page opens and shows the main navigation.</summary>
         [TestMethod]
         public void HomePage_Opens_ShowsMainNavigation()
         {
@@ -22,6 +23,7 @@ namespace Server.Tests.EndToEnd
             Assert.AreEqual("MediSharp", Driver.Title);
         }
 
+        /// <summary>The home page; it only needs what every page can do.</summary>
         private sealed class HomePage(IWebDriver driver) : BasePage(driver);
     }
 }

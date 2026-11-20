@@ -10,11 +10,12 @@ namespace Server.Tests
     /// </summary>
     public abstract class TestBase
     {
-        // MSTest fills this in automatically; it knows the name and result of the running test
-        public TestContext TestContext { get; set; } = null!;
-
         private Stopwatch _stopwatch = null!;
 
+        /// <summary>Filled in by MSTest; knows the name and result of the running test.</summary>
+        public TestContext TestContext { get; set; } = null!;
+
+        /// <summary>Logs the start of the test and starts timing it.</summary>
         [TestInitialize]
         public void LogStart()
         {
@@ -22,6 +23,7 @@ namespace Server.Tests
             TestLog.Logger.Information("▶ START  {Category} {Test}", GetTestCategories(), TestContext.TestName);
         }
 
+        /// <summary>Logs the result and duration of the test, with the failure evidence if there is any.</summary>
         [TestCleanup]
         public void LogEnd()
         {
@@ -33,7 +35,7 @@ namespace Server.Tests
         /// <summary>Extra evidence for a failed test, such as a screenshot. Empty for unit tests.</summary>
         protected virtual string? GetFailureEvidence() => null;
 
-        // The TC numbers of the running test, from its [TestCategory] attributes
+        /// <summary>The TC numbers of the running test, from its [TestCategory] attributes.</summary>
         private string GetTestCategories()
         {
             var method = GetType().GetMethod(TestContext.TestName!);
