@@ -4,6 +4,15 @@ on:
   pull_request:
     branches: [development, main]
 
+# The workflow only reads the code; it never needs to write to the repository.
+permissions:
+  contents: read
+
+# A new push to the same pull request cancels the run that is still busy.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   client:
     runs-on: ubuntu-latest
@@ -24,6 +33,29 @@ jobs:
 
   server:
     runs-on: ubuntu-latest
+    # Gives this job the secrets of the 'test' environment (Settings > Environments > test).
+    environment: test
+    env:
+      # Read by Server.Tests (TestSettings), overrides the LocalDB connection in appsettings.test.json.
+      # The database name must end with "Test", otherwise the tests refuse to reset it.
+      ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=MediSharp_DbTest;User Id=sa;Password=${{ secrets.MSSQL_SA_PASSWORD }};TrustServerCertificate=True
+    # A throwaway SQL Server (same image as docker-compose.yml), only reachable from this job.
+    # GitHub waits until the health check passes before the steps start.
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $MSSQL_SA_PASSWORD -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 30s
     defaults:
       run:
         working-directory: Server
@@ -34,4 +66,61 @@ jobs:
           dotnet-version: 10.0.x
       - run: dotnet restore Server.slnx
       - run: dotnet build Server.slnx --no-restore --configuration Release
-      - run: dotnet test --no-build --configuration Release
+      # Same solution as restore and build, so it is clear which projects are tested.
+      # End-to-end tests are skipped here: they run in the e2e job below.
+      - run: dotnet test Server.slnx --no-build --configuration Release --filter "FullyQualifiedName!~Server.Tests.EndToEnd"
+
+  e2e:
+    # Only when the faster jobs pass, so a broken build does not waste minutes on browser tests.
+    needs: [client, server]
+    runs-on: ubuntu-latest
+    environment: test
+    env:
+      ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=MediSharp_DbTest;User Id=sa;Password=${{ secrets.MSSQL_SA_PASSWORD }};TrustServerCertificate=True
+      # Read by TestSettings: Chrome without a window, because the runner has no screen.
+      Headless: "true"
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $MSSQL_SA_PASSWORD -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 30s
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: Client/package-lock.json
+      - run: npm ci
+        working-directory: Client
+      # Kestrel needs a development certificate for https://localhost:5071.
+      # It does not have to be trusted: Chrome and the tests accept it anyway.
+      - run: dotnet dev-certs https
+      - run: dotnet build Server/Server.slnx --configuration Release
+      # Start the API and the client ourselves. AppServer sees they already run and uses them.
+      # If AppServer started the API itself, the 'Tests' launch profile would point it at LocalDB,
+      # which does not exist on Linux; '--no-launch-profile' keeps the connection string from 'env' above.
+      - name: Start API and client
+        run: |
+          ASPNETCORE_ENVIRONMENT=Development dotnet run --project Server --no-build -c Release \
+            --no-launch-profile --urls https://localhost:5071 > api.log 2>&1 &
+          (cd Client && npx vite --port 5173 --strictPort > ../client.log 2>&1 &)
+          timeout 120 bash -c 'until curl -sk https://localhost:5071 > /dev/null; do sleep 2; done'
+          timeout 60 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 2; done'
+      - run: dotnet test Server/Server.slnx --no-build --configuration Release --filter "FullyQualifiedName~Server.Tests.EndToEnd"
+      # On failure, the output of the API and client usually tells why.
+      - if: failure()
+        run: tail -n 50 api.log client.log
