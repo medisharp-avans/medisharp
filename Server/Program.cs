@@ -10,9 +10,11 @@ using System.Reflection;
 
 namespace Server
 {
+    /// <summary>Configures the API, its scoped dependencies and database startup.</summary>
     public class Program
     {
-        public static void Main(string[] args)
+        /// <summary>Applies pending migrations when enabled and starts the HTTP server.</summary>
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +29,7 @@ namespace Server
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
             builder.Services.AddScoped<IReferralRepository, ReferralRepository>();
-            builder.Services.AddScoped<ReferralService>();
+            builder.Services.AddScoped<IReferralService, ReferralService>();
             builder.Services.AddScoped<DevelopmentOnlyFilter>();
 
             // HTTPS is handled by the reverse proxy; take the scheme and client IP from the X-Forwarded-* headers.
@@ -73,12 +75,19 @@ namespace Server
             // Integration tests provide their own isolated database and initialize its schema.
             if (app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true))
             {
-                using var scope = app.Services.CreateScope();
+                await using var scope = app.Services.CreateAsyncScope();
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                db.Database.Migrate();
+                await db.Database.MigrateAsync();
             }
 
             app.UseForwardedHeaders();
+
+            app.UseExceptionHandler(new ExceptionHandlerOptions
+            {
+                // Exception text can contain patient values. Log only a safe event below.
+                SuppressDiagnosticsCallback = _ => true,
+                ExceptionHandler = HandleUnexpectedErrorAsync
+            });
 
             // Configure the HTTP request pipeline.
             // Swagger in Development and Staging (acceptance), not in Production.
@@ -93,7 +102,21 @@ namespace Server
 
             app.MapControllers();
 
-            app.Run();
+            await app.RunAsync();
+        }
+
+        /// <summary>Returns a consistent error without copying exception or request details into the response or log.</summary>
+        private static async Task HandleUnexpectedErrorAsync(HttpContext context)
+        {
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError("An unexpected API error occurred. TraceId: {TraceId}", context.TraceIdentifier);
+
+            await Results.Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Er is iets misgegaan",
+                detail: "De aanvraag kon niet worden verwerkt. Probeer het later opnieuw.",
+                extensions: new Dictionary<string, object?> { ["traceId"] = context.TraceIdentifier })
+                .ExecuteAsync(context);
         }
     }
 }

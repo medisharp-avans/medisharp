@@ -4,8 +4,10 @@ using Server.Models;
 
 namespace Server.Data.Configurations
 {
+    /// <summary>Maps referral snapshots, field limits and attachment ownership to the database.</summary>
     public class ReferralConfiguration : IEntityTypeConfiguration<Referral>
     {
+        /// <inheritdoc />
         public void Configure(EntityTypeBuilder<Referral> builder)
         {
             builder.ToTable("Referrals");

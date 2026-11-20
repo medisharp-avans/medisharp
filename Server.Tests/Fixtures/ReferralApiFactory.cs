@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Server.Data;
 
 namespace Server.Tests.Fixtures
@@ -22,6 +23,8 @@ namespace Server.Tests.Fixtures
             builder.UseEnvironment(environmentName);
             builder.UseSetting("ConnectionStrings:DefaultConnection", "UnusedTestConnection");
             builder.UseSetting("Database:ApplyMigrationsOnStartup", "false");
+            // Tests write to captured console output, not the machine's Windows Event Log.
+            builder.ConfigureLogging(logging => logging.ClearProviders().AddConsole());
             builder.ConfigureTestServices(services =>
             {
                 services.RemoveAll<AppDbContext>();

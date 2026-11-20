@@ -1,10 +1,17 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Server.Contracts.Referrals;
 using Server.Data;
+using Server.Data.Repositories;
 using Server.Models;
 using Server.Tests.Fixtures;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -155,6 +162,48 @@ namespace Server.Tests.Tests.Integration
         }
 
         [TestMethod]
+        [DataRow("application/json")]
+        [DataRow("text/html")]
+        public async Task StorageFailureReturnsSafeProblemWithoutLoggingPatientValues(string acceptedContentType)
+        {
+            using var logs = new CapturedLogs();
+            using var databaseFactory = new ReferralApiFactory();
+            using var factory = databaseFactory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureLogging(logging => logging.ClearProviders().AddProvider(logs));
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IReferralRepository>();
+                    services.AddScoped<IReferralRepository, FailingReferralRepository>();
+                });
+            });
+            using var client = factory.CreateClient();
+            client.DefaultRequestHeaders.Accept.ParseAdd(acceptedContentType);
+            var request = new ReferralRequests().Valid();
+
+            using var response = await client.PostAsJsonAsync("/api/referrals", request);
+
+            Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            Assert.AreEqual("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+            var body = await response.Content.ReadAsStringAsync();
+            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+            Assert.IsNotNull(problem);
+            Assert.AreEqual(500, problem.Status);
+            Assert.AreEqual("Er is iets misgegaan", problem.Title);
+            Assert.AreEqual("De aanvraag kon niet worden verwerkt. Probeer het later opnieuw.", problem.Detail);
+            Assert.IsTrue(problem.Extensions.ContainsKey("traceId"));
+            Assert.IsTrue(logs.Messages.Any(message => message.Contains("An unexpected API error occurred.")));
+            foreach (var excluded in new[] { request.Bsn!, request.PatientName!, request.MedicalInformation!,
+                "FICTIEVE-INTERNE-DATABASEFOUT", nameof(DbUpdateException) })
+            {
+                Assert.IsFalse(body.Contains(excluded), "The response must not contain patient or exception details.");
+                Assert.IsFalse(logs.Messages.Any(message => message.Contains(excluded)),
+                    "Handled errors must not put patient or exception details in logs.");
+            }
+            Assert.AreEqual(0, await CountReferralsAsync(factory));
+        }
+
+        [TestMethod]
         [DataRow("Production")]
         [DataRow("Staging")]
         public async Task CreatingReferralsIsUnavailableOutsideDevelopmentUntilAccountsAreConnected(string environment)
@@ -171,10 +220,39 @@ namespace Server.Tests.Tests.Integration
         private JsonObject ValidJson() => JsonSerializer.SerializeToNode(
             new ReferralRequests().Valid(), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.AsObject();
 
-        private async Task<int> CountReferralsAsync(ReferralApiFactory factory)
+        private async Task<int> CountReferralsAsync(WebApplicationFactory<Program> factory)
         {
             using var scope = factory.Services.CreateScope();
             return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Referrals.CountAsync();
+        }
+
+        // Deliberately include fictional patient values in an exception to exercise the privacy boundary.
+        private class FailingReferralRepository : IReferralRepository
+        {
+            public Task AddAsync(Referral referral, CancellationToken cancellationToken) =>
+                throw new DbUpdateException($"{referral.Bsn} {referral.PatientName} {referral.MedicalInformation}",
+                    new InvalidOperationException("FICTIEVE-INTERNE-DATABASEFOUT"));
+        }
+
+        // Per-test capture also includes exception text, which ordinary log providers would write.
+        private class CapturedLogs : ILoggerProvider
+        {
+            public ConcurrentQueue<string> Messages { get; } = new();
+
+            public ILogger CreateLogger(string categoryName) => new CapturedLogger(Messages);
+
+            public void Dispose() { }
+
+            private class CapturedLogger(ConcurrentQueue<string> messages) : ILogger
+            {
+                public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+                public bool IsEnabled(LogLevel logLevel) => true;
+
+                public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+                    Exception? exception, Func<TState, Exception?, string> formatter) =>
+                    messages.Enqueue($"{formatter(state, exception)} {exception}");
+            }
         }
     }
 }

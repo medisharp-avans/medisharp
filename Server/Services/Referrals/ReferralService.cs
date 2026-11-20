@@ -6,8 +6,10 @@ using System.Text.Json;
 
 namespace Server.Services.Referrals
 {
-    public class ReferralService(IReferralRepository repository)
+    /// <summary>Creates a patient snapshot after validating the referral's required fields.</summary>
+    public class ReferralService(IReferralRepository repository) : IReferralService
     {
+        /// <inheritdoc />
         public async Task<CreateReferralResult> CreateAsync(
             CreateReferralRequest request, CancellationToken cancellationToken = default)
         {

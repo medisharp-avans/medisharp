@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace Server.Contracts.Referrals
 {
+    /// <summary>Contains only the patient and medical fields selected for a new referral.</summary>
+    /// <remarks>Server-generated values, full dossiers and attachment storage keys are not accepted.</remarks>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
     public class CreateReferralRequest
     {

@@ -4,8 +4,10 @@ using Server.Models;
 
 namespace Server.Data.Configurations
 {
+    /// <summary>Maps attachment metadata; file content is outside this model.</summary>
     public class ReferralAttachmentConfiguration : IEntityTypeConfiguration<ReferralAttachment>
     {
+        /// <inheritdoc />
         public void Configure(EntityTypeBuilder<ReferralAttachment> builder)
         {
             builder.ToTable("ReferralAttachments");

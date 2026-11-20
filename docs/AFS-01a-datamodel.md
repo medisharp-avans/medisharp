@@ -90,7 +90,8 @@ Nog af te stemmen:
 ## Verwijzingen aanmaken (fase 2)
 
 `POST /api/referrals` op de backend valideert een `CreateReferralRequest` en slaat
-de verwijzing op via een scoped service en EF Core-repository. Bij succes volgt
+de verwijzing op via `IReferralService` en een EF Core-repository, beide scoped.
+Bij succes volgt
 HTTP 201 met uitsluitend `id`, `status` (`Open`) en `createdAtUtc`. Er is nog geen
 GET-endpoint; daarom wordt geen Location-header naar een niet-bestaand detail
 teruggegeven. Een volledig fictief voorbeeld staat in `Server/Server.http` en
@@ -104,6 +105,13 @@ De meldingen voor `bsn`, `specialty` en `treatmentCode` zijn respectievelijk
 Bij ongeldige invoer wordt niets opgeslagen. De veldlengtes volgen het datamodel;
 een urgentie moet een bekende waarde zijn. BSN-controlecijfer, overige
 formaatregels en cataloguscontroles zijn nog geen onderdeel van deze stap.
+
+Onverwachte fouten worden centraal afgehandeld met HTTP 500 en `ProblemDetails`,
+ook in Development. De foutmelding bevat een vaste Nederlandse uitleg en een
+`traceId`, zonder exceptiontekst of aangeleverde patientgegevens. De centrale
+afhandeling logt alleen een vaste foutmelding met deze technische trace-ID;
+de standaard exceptiondiagnostiek van die afhandeling is uitgeschakeld om
+exceptiontekst niet alsnog naar de logs te schrijven.
 
 Niet-afgesproken JSON-velden worden geweigerd, waaronder een volledig dossier,
 status, ID, aanmaaktijd, afspraak/tijdslot en interne opslagsleutels. Bijlagen
@@ -122,6 +130,28 @@ stappen. De zes acceptatiecriteria van AFS-01a zijn daarmee nog niet alle voltoo
 Bij de frontendkoppeling moet ook de proxyroute worden afgestemd: het endpoint
 heeft zelf het `/api`-prefix, terwijl de bestaande nginx-configuratie dat verwijdert.
 
+## Privacy en oplevering
+
+BSN en naam identificeren de patient; adres, woonplaats, telefoonnummer en
+e-mailadres ondersteunen contact door de ontvangende zorgverlener. De geselecteerde
+medische informatie, medicatie, allergieen, reden en vraagstelling ondersteunen de
+beoordeling van de verwijzing. Specialisme, behandelcode en urgentie ondersteunen
+de routering en planning. De tabellen hierboven beschrijven de opgeslagen velden;
+het volledige huisartsendossier wordt niet overgenomen.
+
+De bewaartermijn en de daarop aansluitende verwijder- of anonimiseringsregels
+zijn nog niet door het team vastgesteld. Er is daarom geen termijn verzonnen
+en nog geen automatische opschoonfunctie toegevoegd. Leg deze beslissing vast
+en vermeld gegevens, doel en termijn in de AVG-sectie van de uiteindelijke PR.
+
+Dit is een tussenstap en geen afgeronde user story volgens de DoD. Voor oplevering
+blijven onder meer PRI-03 met rolgebonden toegang, de resterende acceptatiecriteria,
+de hoofdflow als end-to-end test, een guerrilla-test en de vereiste reviews en
+acceptatie nodig. De DoD vraagt minimaal 90% test coverage; dekking van alleen de
+verwijzingsservice bewijst niet dat het hele project aan die norm voldoet.
+Stem ontbrekende keuzes en afhankelijkheden af voordat de vervolgtaak volgens
+de DoR als Ready wordt ingepland.
+
 ## Controle
 
 `Server.Tests/ReferralModelTests.cs` controleert de SQL Server-schemaopbouw zonder
@@ -135,6 +165,11 @@ met een afzonderlijke SQLite-database in het geheugen per test. Opslag wordt met
 een nieuwe DbContext teruggelezen. Deze tests gebruiken geen draaiende API,
 browser, LocalDB of ontwikkeldatabase. Ze bewijzen geen SQL Server-specifieke
 migratie-uitvoering; daarvoor blijft een aparte SQL Server-integratiecontrole nodig.
+De API-tests simuleren ook een opslagfout met fictieve patientgegevens in de
+exception en controleren dat de HTTP-respons en de centrale foutlog deze niet
+overnemen, ook wanneer een browser een HTML-foutpagina vraagt.
+De testhost schrijft uitsluitend naar de testuitvoer en vereist geen toegang
+tot het Windows-systeemlogboek.
 
 De browserbasis `TestBase` is abstract. Alleen afgeleide EndToEnd-tests voeren
 de initialisatie van SQL Server, een externe app en Chrome uit. Die tests draaien
