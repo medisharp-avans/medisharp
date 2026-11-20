@@ -11,7 +11,9 @@ const reportDir = new URL('../a11y-reports/', import.meta.url)
 
 await mkdir(reportDir, { recursive: true })
 const server = await preview({ preview: { port: previewPort, strictPort: true } })
-const browser = await chromium.launch()
+// Use the installed Google Chrome (also used by Lighthouse) instead of
+// downloading Playwright's own browser; GitHub runners ship with Chrome.
+const browser = await chromium.launch({ channel: 'chrome' })
 const page = await (await browser.newContext()).newPage()
 let hasViolations = false
 

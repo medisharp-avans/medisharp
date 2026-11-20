@@ -137,7 +137,7 @@ npm run test:a11y         # reports in a11y-reports/
 
 Both commands start their own preview server on <http://localhost:4173>, so that port has to be free.
 
-The first time, install the browser Playwright uses with `npx playwright install chromium`. The Lighthouse thresholds live in `lighthouserc.cjs`; the coverage settings live in `vitest.config.ts`. In CI the same checks run in the `client` and `client-quality` jobs, and the reports are uploaded as artifacts on the workflow run.
+Both checks use your installed Google Chrome. The Lighthouse thresholds live in `lighthouserc.cjs`; the coverage settings live in `vitest.config.ts`. In CI the same checks run in the `client` and `client-quality` jobs, and the reports are uploaded as artifacts on the workflow run.
 
 ### 1.7 Optional: test the production setup locally
 
