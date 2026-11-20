@@ -1,77 +1,138 @@
 <!--
-  MediSharp – Pull Request
-  Vink alleen aan wat je echt hebt gecontroleerd. Niet van toepassing? Laat leeg en zet "n.v.t." erachter.
-
-  Nummers:
-  - DoD x = punt x uit de Definition of Done (v1.2)
-  - CR x.y = punt x.y uit de code review-checklist (CODE_REVIEW.md)
-
-  De overige DoD-punten (1, 3, 8, 12, 14, 17, 29, 31–36) gaan over de hele user story
-  en worden na de merge afgevinkt op de Trello-kaart.
+  MediSharp – Pull Request template (gebaseerd op de Definition of Done v1.0, 10-11-2026)
+  Vink elk criterium af ([x]) zodra het is voldaan en geverifieerd.
+  Is een criterium niet van toepassing? Vink het af en zet er "N.v.t. – <reden>" achter.
+  Een user story is pas Done als ALLE criteria zijn afgevinkt.
 -->
 
-## 🔗 User story
+## 📋 Gegevens user story
 
-**Trello-kaart:** 
-**User story:** 
+| Onderdeel                        | Gegevens                                  |
+| -------------------------------- | ----------------------------------------- |
+| **User Story ID**                | <!-- bijv. HUI-1 -->                      |
+| **Titel**                        |                                           |
+| **Sprint**                       |                                           |
+| **Branchnaam**                   | <!-- bijv. Feature/HUI-1-verwijsbrief --> |
+| **Jira/Trello-ticket**           | <!-- link -->                             |
+| **Reviewers (min. 2 teamleden)** | <!-- @naam1, @naam2 -->                   |
 
-## 📝 Wat en waarom
+## 📝 Beschrijving
 
-<!-- Wat verandert er en waarom? Benoem de belangrijkste technische keuzes. -->
+<!-- Wat is er veranderd en waarom? Benoem de belangrijkste technische keuzes. -->
 
-## 🧪 Hoe kan de reviewer dit testen?
+### Type wijziging
 
-<!-- Stappen om het lokaal te controleren. Welk testaccount / welke testdata? -->
-
-## 🖼️ Screenshots
-
-<!-- Alleen bij UI-wijzigingen: mobiel + desktop. Uitsluitend fictieve data. -->
-
-## Type wijziging
-
-- [ ] ✨ Feature
-- [ ] 🐛 Fix / hotfix
-- [ ] 🧹 Chore (refactor, packages, config)
-- [ ] 🗄️ Database / migratie
+- [ ] ✨ Nieuwe feature
+- [ ] 🐛 Bugfix
+- [ ] ♻️ Refactor
+- [ ] 🗄️ Databasewijziging / migratie
 - [ ] 📚 Documentatie
-- [ ] ⚙️ CI/CD
+- [ ] ⚙️ Configuratie / CI/CD
 
-## 🔒 Persoonsgegevens (AVG) – DoD 20
+### Persoonsgegevens (AVG)
 
 <!-- Welke persoonsgegevens worden verwerkt, waarom, en wat is de bewaartermijn? Anders: "Geen". -->
 
-## ✅ Checklist auteur
+---
 
-### Altijd
+## ✅ Definition of Done
 
-- [ ] **CR 4.2** – Branchnaam en PR-titel volgen CONTRIBUTING.md (bijv. `feature/AFS-03-schedule-appointment`, _"AFS-03: Patient can schedule an appointment"_)
-- [ ] **DoD 2** – Edge cases zijn afgevangen (foutieve invoer, ontbrekende rechten, verlopen sessie)
-- [ ] **DoD 4** – De code volgt de coderingsstandaarden (CODE_REVIEW.md)
-- [ ] **DoD 5** – Linting en formattering geven geen fouten
-- [ ] **DoD 6** – Methoden, endpoints en ingewikkelde logica zijn gedocumenteerd
-- [ ] **DoD 9** – Alle tests slagen
-- [ ] **DoD 10–11** – Nieuwe businesslogica (backend) en frontend-logica met condities is gedekt met unit tests
-- [ ] **DoD 15** – De kernfunctionaliteit is handmatig getest
-- [ ] **DoD 18** – Geen persoonsgegevens in URL's, logs, foutmeldingen of browseropslag
-- [ ] **DoD 19** – Alleen fictieve testdata gebruikt, ook in seeders en tests
-- [ ] **DoD 20** – De AVG-sectie hierboven is ingevuld
-- [ ] **DoD 22** – Geen onnodig zware queries (N+1, ophalen zonder filter of paginering)
+### 1. Functionele voltooiing
 
-### Indien van toepassing
+- [ ] **1.** De user story is volledig geïmplementeerd: alle subtaken zijn afgerond.
+- [ ] **2.** Alle acceptatiecriteria zijn behaald, volledig geïmplementeerd en gevalideerd.
+- [ ] **3.** Edge cases zijn afgevangen (foutieve invoer, ontbrekende permissies, verlopen sessies).
 
-- [ ] **DoD 7** – Database: EF Core-migratie toegevoegd en getest
-- [ ] **DoD 13** – API: integratietests voor nieuwe of gewijzigde endpoints
-- [ ] **DoD 16, 21** – Autorisatie: getest dat gebruikers zonder de juiste rechten geen toegang krijgen
-- [ ] **DoD 23–24** – UI: getest op mobiel, tablet en desktop en sluit aan bij Wireframes
-- [ ] **DoD 25–26** – UI: voldoet aan WCAG 2.2 AA, gecontroleerd met Lighthouse/axe en met alleen het toetsenbord
-- [ ] **DoD 27** – UI: foutmeldingen zijn duidelijk en tonen geen technische details
-- [ ] **DoD 28** – API: Swagger/OpenAPI is bijgewerkt
-- [ ] **DoD 30** – Nieuwe configuratie (omgevingsvariabelen, secrets) is gedocumenteerd
+### 2. Kwaliteit & technische standaarden
 
-## 📌 Open punten
+- [ ] **4.** Code wordt samengevoegd (gemerged) via deze pull request.
+- [ ] **5.** De pull request is beoordeeld en goedgekeurd door minimaal twee teamleden.
+- [ ] **6.** Er staan geen onopgeloste opmerkingen meer open.
+- [ ] **7.** De implementatie volgt de afgesproken coderingsstandaarden en de stijlgids.
+- [ ] **8.** Code voldoet aan de code style guidelines (linting, naming conventions).
+- [ ] **9.** Geen ernstige of high-severity issues in linting/scans (SAST/DAST).
+- [ ] **10.** De code is gedocumenteerd (methoden, endpoints, ingewikkelde logica).
+- [ ] **11.** Databasewijzigingen zijn gemigreerd en getest.
 
-<!-- Bekende beperkingen of vervolgwerk, met links naar Trello-kaarten (DoD 36). Anders: "Geen". -->
+### 3. Testen
+
+- [ ] **12.** Alle gedefinieerde functionele tests slagen.
+- [ ] **13.** De kernfunctionaliteit is handmatig getest met een guerrilla-test.
+- [ ] **14.** Er staan geen kritieke of hoogprioritaire bugs meer open.
+- [ ] **15.** Voor alle businesslogica zijn unit tests geschreven (bijv. berekeningen).
+- [ ] **16.** Frontend unit tests zijn geschreven voor logica met regels/condities (pure DB-aanroepen en UI-interacties uitgesloten).
+- [ ] **17.** End-to-end tests zijn uitgevoerd.
+- [ ] **18.** De minimale test coverage norm (**90%**) is behaald. Coverage: `___%`
+- [ ] **19.** Nieuwe businesslogica is gedekt met tests.
+- [ ] **20.** Toegepast: unit tests, integratietests, systeemtests en acceptatietests.
+- [ ] **21.** Integratietests zijn uitgevoerd op alle relevante interfaces (API's, DB, externe diensten).
+- [ ] **22.** Handmatige acceptatietesten zijn uitgevoerd door development of QA.
+- [ ] **23.** Securitytests zijn uitgevoerd (bij stories die authenticatie/autorisatie raken).
+- [ ] **24.** Regressietests zijn uitgevoerd op functionaliteit die mogelijk geraakt is.
+
+### 4. Beveiliging & privacy (AVG)
+
+- [ ] **25.** Volgt de beveiligingsrichtlijnen (TLS, hashing, encryptie, secrets-management).
+- [ ] **26.** Geen gevoelige gegevens in foutmeldingen of logs.
+- [ ] **27.** Dataverwerking voldoet aan de AVG: dataminimalisatie, bewuste opslaglocaties, correcte toegangsniveaus.
+- [ ] **28.** Logging voldoet aan het beleid (geen gevoelige data, bewaartermijnen, audits).
+- [ ] **29.** Geen persoonsgegevens in URL's, logs, foutmeldingen of browseropslag; alleen fictieve testdata gebruikt.
+- [ ] **30.** Gedocumenteerd welke persoonsgegevens worden gebruikt en waarom; bewaartermijn bepaald.
+
+### 5. Performance & stabiliteit
+
+- [ ] **31.** Geen memory leaks of onnodig zware queries.
+
+### 6. Bruikbaarheid & responsiviteit
+
+- [ ] **32.** Getest op mobiele apparaten, tablets en desktops.
+- [ ] **33.** De layout past zich correct aan op verschillende schermformaten.
+- [ ] **34.** Alle interacties werken correct op alle ondersteunde apparaten.
+
+### 7. Toegankelijkheid & User Experience
+
+- [ ] **35.** Elke view volgt WCAG 2.2 niveau AA.
+- [ ] **36.** Elke view is getest op het behalen van alle WCAG-criteria.
+- [ ] **37.** UI-componenten sluiten aan bij het design system / de UX-richtlijnen (Figma).
+- [ ] **38.** Foutmeldingen zijn duidelijk en generiek waar nodig (security).
+
+### 8. Documentatie & kennisoverdracht
+
+- [ ] **39.** Gebruikersdocumentatie is aangemaakt of bijgewerkt waar van toepassing.
+- [ ] **40.** Nieuwe functionaliteit is duidelijk beschreven voor de eindgebruiker.
+- [ ] **41.** Functionele documentatie is bijgewerkt (Confluence).
+- [ ] **42.** API-documentatie is geüpdatet (Swagger).
+- [ ] **43.** Release notes bevatten de wijzigingen/impact.
+- [ ] **44.** Eventuele configuraties voor beheer zijn gedocumenteerd.
+
+### 9. Deploybaarheid
+
+- [ ] **45.** De build slaagt zonder fouten.
+- [ ] **46.** De feature is opgenomen in de CI/CD pipeline zonder blockers.
+- [ ] **47.** Configuratie (omgeving, secrets, permissies) is klaar voor productie/acceptatie.
+
+### 10. Acceptatie / stakeholdervalidatie
+
+- [ ] **48.** De Projectleider heeft de user story beoordeeld en geaccepteerd.
+- [ ] **49.** De Projectleider heeft de functionaliteit getest, geaccepteerd en goedgekeurd.
+- [ ] **50.** Afhankelijkheden met andere teams zijn gevalideerd of gecommuniceerd.
+
+### 11. Geen open blockers
+
+- [ ] **51.** Er staan geen kritieke bugs of blockers open voor deze user story.
+- [ ] **52.** Resterende (non-blocking) verbeterpunten zijn als tickets geregistreerd. Tickets: <!-- links -->
 
 ---
 
-> **Reviewers:** beoordeel deze PR met de [code review-checklist](https://github.com/medisharp-avans/medisharp/blob/development/CODE_REVIEW.md), verwijs in comments naar het nummer (bijv. _"2.4"_) en geef je oordeel via **Review changes**.
+## 🏁 Afronding
+
+| Onderdeel                   | Gegevens           |
+| --------------------------- | ------------------ |
+| **Alle criteria afgevinkt** | ☐ Ja ☐ Nee         |
+| **Status user story**       | ☐ Done ☐ Niet Done |
+| **Naam teamlid (auteur)**   |                    |
+| **Reviewer 1**              |                    |
+| **Reviewer 2**              |                    |
+| **Naam Projectleider**      |                    |
+| **Datum afronding**         |                    |
+| **Opmerkingen**             |                    |
