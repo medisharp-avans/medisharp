@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpenQA.Selenium;
 using Server.Tests.Utils;
 
@@ -27,6 +28,31 @@ namespace Server.Tests.PageModels
         {
             var element = Driver.WaitForElement(field);
             return ((IJavaScriptExecutor)Driver).ExecuteScript("return arguments[0].validity.valueMissing;", element) is true;
+        }
+
+        /// <summary>Locator for an element with this data-testid.</summary>
+        protected static By TestId(string id) => By.CssSelector($"[data-testid='{id}']");
+
+        /// <summary>Locator for all elements whose data-testid starts with this prefix.</summary>
+        protected static By TestIdStartsWith(string prefix) => By.CssSelector($"[data-testid^='{prefix}']");
+
+        /// <summary>True when the element is on the page right now (no waiting).</summary>
+        protected bool Exists(By by) => Driver.FindElements(by).Count > 0;
+
+        /// <summary>Waits for the element and clicks it.</summary>
+        protected void Click(By by, string? description = null)
+        {
+            TestLog.Step($"Click {description ?? by.ToString()}");
+            Driver.WaitForElement(by).Click();
+        }
+
+        /// <summary>Waits for the field, clears it and types the text.</summary>
+        protected void Type(By by, string text, string? description = null)
+        {
+            TestLog.Step($"Type '{text}' in {description ?? by.ToString()}");
+            var element = Driver.WaitForElement(by);
+            element.Clear();
+            element.SendKeys(text);
         }
     }
 }
