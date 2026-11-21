@@ -61,6 +61,30 @@ namespace Server.Migrations
                     b.ToTable("Appointments");
                 });
 
+            modelBuilder.Entity("Server.Models.Availability", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SpecialistId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpecialistId");
+
+                    b.ToTable("Availabilities");
+                });
+
             modelBuilder.Entity("Server.Models.GeneralPractitioner", b =>
                 {
                     b.Property<int>("Id")
@@ -77,7 +101,7 @@ namespace Server.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("GeneralPractitioner");
+                    b.ToTable("GeneralPractitioners");
                 });
 
             modelBuilder.Entity("Server.Models.Patient", b =>
@@ -157,10 +181,8 @@ namespace Server.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("Specialism")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<int>("Specialism")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -169,7 +191,6 @@ namespace Server.Migrations
 
                     b.Property<string>("TreatmentCode")
                         .IsRequired()
-                        .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Urgency")
@@ -184,6 +205,8 @@ namespace Server.Migrations
                     b.HasIndex("PatientId");
 
                     b.HasIndex("PreferredSpecialistId");
+
+                    b.HasIndex("TreatmentCode");
 
                     b.ToTable("Referrals");
                 });
@@ -208,6 +231,33 @@ namespace Server.Migrations
                         .IsUnique();
 
                     b.ToTable("Specialists");
+                });
+
+            modelBuilder.Entity("Server.Models.TreatmentCode", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("Cost")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<int>("DurationInQuarters")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Specialism")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Code");
+
+                    b.ToTable("TreatmentCodes");
                 });
 
             modelBuilder.Entity("Server.Models.User", b =>
@@ -272,6 +322,17 @@ namespace Server.Migrations
                     b.Navigation("Specialist");
                 });
 
+            modelBuilder.Entity("Server.Models.Availability", b =>
+                {
+                    b.HasOne("Server.Models.Specialist", "Specialist")
+                        .WithMany("Availabilities")
+                        .HasForeignKey("SpecialistId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Specialist");
+                });
+
             modelBuilder.Entity("Server.Models.GeneralPractitioner", b =>
                 {
                     b.HasOne("Server.Models.User", "User")
@@ -320,11 +381,19 @@ namespace Server.Migrations
                         .HasForeignKey("PreferredSpecialistId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("Server.Models.TreatmentCode", "TreatmentCodeDetails")
+                        .WithMany()
+                        .HasForeignKey("TreatmentCode")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.Navigation("GeneralPractitioner");
 
                     b.Navigation("Patient");
 
                     b.Navigation("PreferredSpecialist");
+
+                    b.Navigation("TreatmentCodeDetails");
                 });
 
             modelBuilder.Entity("Server.Models.Specialist", b =>
@@ -360,6 +429,8 @@ namespace Server.Migrations
             modelBuilder.Entity("Server.Models.Specialist", b =>
                 {
                     b.Navigation("Appointments");
+
+                    b.Navigation("Availabilities");
                 });
 
             modelBuilder.Entity("Server.Models.User", b =>

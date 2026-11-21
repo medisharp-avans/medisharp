@@ -15,9 +15,13 @@ namespace Server.Models
         public User User { get; set; } = null!;
 
         [Required]
+        [EnumDataType(typeof(Specialism))]
         public Specialism Specialism { get; set; }
 
         public ICollection<Appointment> Appointments { get; set; }
             = new List<Appointment>();
+
+        public ICollection<Availability> Availabilities { get; set; }
+            = new List<Availability>();
     }
 }

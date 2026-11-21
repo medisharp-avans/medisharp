@@ -18,7 +18,6 @@ namespace Server.Tests.EndToEnd
 
         private const string MsgSlotTaken = "Dit tijdslot is niet meer beschikbaar";
         private const string MsgSpecialistBusy = "Specialist is al ingepland";
-        private const string MsgReferralNeeded = "verwijzing van de huisarts";
 
         private static readonly DateTime Jan12_0900 = new(2027, 1, 12, 9, 0, 0);
         private static readonly DateTime Jan12_1000 = new(2027, 1, 12, 10, 0, 0);
@@ -43,6 +42,18 @@ namespace Server.Tests.EndToEnd
             plan.Confirm();
         }
 
+        /// <summary>
+        /// Stuurt een POST naar /api/appointments. De namen worden hier omgezet naar ids,
+        /// want de DTO verwacht PatientId en SpecialistId.
+        /// </summary>
+        private static async Task<long> PostAsync(
+            IWebDriver driver, string patient, string specialist, DateTime start, int? referralId = null)
+        {
+            var patientId = await AfsData.PatientIdAsync(patient);
+            var specialistId = await AfsData.SpecialistIdAsync(specialist);
+            return BrowserApi.PostAppointment(driver, patientId, specialistId, start, referralId);
+        }
+
         // =====================================================================
         // AC-AFS-03_1 – Medewerker plant een afspraak bij een beschikbare specialist
         // =====================================================================
@@ -60,6 +71,7 @@ namespace Server.Tests.EndToEnd
             // Assert: opgeslagen, status, tijdslot bezet
             Assert.AreEqual("Ingepland", await AfsData.ReferralStatusAsync(referralId));
             Assert.AreEqual(1, await AfsData.CountAppointmentsAsync(DeVries, Jan12_1000));
+            Assert.AreEqual(1, await AfsData.CountAppointmentsOfPatientAsync(Jan));
 
             // Tijdslot niet meer vrij voor anderen
             await AfsData.CreateOpenReferralAsync(Piet, "KNO");
@@ -70,7 +82,7 @@ namespace Server.Tests.EndToEnd
         [TestMethod, TestCategory("TC-AFS-03_1_2")]
         public async Task TC_AFS_03_1_2_Medewerker_PlantTijdslotDirectNaBestaandeAfspraak_WordtOpgeslagenZonderConflict()
         {
-            // Arrange
+            // Arrange: afspraak van 09:00 duurt 60 minuten (KNO-code), dus 10:00 sluit direct aan
             var referralPiet = await AfsData.CreateOpenReferralAsync(Piet, "KNO");
             await AfsData.CreateAppointmentAsync(Piet, DeVries, Jan12_0900, referralPiet);
             var referralJan = await AfsData.CreateOpenReferralAsync(Jan, "KNO");
@@ -92,12 +104,11 @@ namespace Server.Tests.EndToEnd
         {
             // Arrange
             var referralId = await AfsData.CreateOpenReferralAsync(Jan, "KNO");
-            var specialistId = await AfsData.SpecialistIdAsync(DeVries);
             LoginAs(Driver, "huisarts.visser");
 
             // Act
             var hasUiFunction = new PatientAppointmentsPage(Driver).Open().HasPlanFunction;
-            var status = BrowserApi.PostAppointment(Driver, referralId, specialistId, Jan12_1000);
+            var status = await PostAsync(Driver, Jan, DeVries, Jan12_1000, referralId);
 
             // Assert
             Assert.IsFalse(hasUiFunction, "Huisarts ziet een functie om te plannen.");
@@ -123,34 +134,38 @@ namespace Server.Tests.EndToEnd
             var plan = new PlanAppointmentPage(Driver);
             plan.OpenTimeSlots();
 
-            if (plan.HasSlot(DeVries, Jan12_1000))
-                Book(plan, DeVries, Jan12_1000);
+            // Geen voorwaardelijke boeking meer: het tijdslot moet gewoon aangeboden worden
+            Assert.IsTrue(plan.HasSlot(DeVries, Jan12_1000), "Tijdslot wordt niet aangeboden voor een patiënt zonder verwijzing.");
+            Book(plan, DeVries, Jan12_1000);
 
             // Assert
             Assert.AreEqual(1, await AfsData.CountAppointmentsOfPatientAsync(Piet));
             Assert.AreEqual(1, await AfsData.CountAppointmentsAsync(DeVries, Jan12_1000));
+            Assert.AreEqual(1, await AfsData.CountAppointmentsWithoutReferralAsync(Piet), "Afspraak hoort geen verwijzing te hebben.");
         }
 
         [TestMethod, TestCategory("TC-AFS-03_2_2")]
         public async Task TC_AFS_03_2_2_Medewerker_PlantVervolgafspraak_BestaandeVerwijzingBlijftIngepland()
         {
-            // Arrange: Jan heeft al een afspraak met status 'Ingepland'
+            // Arrange: Jan heeft al een afspraak met status 'Ingepland'.
+            // Een verwijzing kan maar één afspraak hebben (1-op-1), dus de vervolgafspraak heeft geen verwijzing.
             var referralId = await AfsData.CreateOpenReferralAsync(Jan, "KNO");
             await AfsData.CreateAppointmentAsync(Jan, DeVries, Jan12_1000, referralId);
             LoginAs(Driver, "medewerker.a");
             var patients = new StaffPatientsPage(Driver).Open().Search(Jan);
 
-            // Act: Plan een tweede tijdslot (vervolgafspraak)
+            // Act
             patients.StartPlanning(Jan);
             var plan = new PlanAppointmentPage(Driver);
             plan.OpenTimeSlots();
 
-            if (plan.HasSlot(DeVries, Jan19_1100))
-                Book(plan, DeVries, Jan19_1100);
+            Assert.IsTrue(plan.HasSlot(DeVries, Jan19_1100), "Tijdslot voor de vervolgafspraak wordt niet aangeboden.");
+            Book(plan, DeVries, Jan19_1100);
 
             // Assert
             Assert.AreEqual("Ingepland", await AfsData.ReferralStatusAsync(referralId));
             Assert.AreEqual(2, await AfsData.CountAppointmentsOfPatientAsync(Jan));
+            Assert.AreEqual(1, await AfsData.CountAppointmentsWithoutReferralAsync(Jan));
         }
 
         [TestMethod, TestCategory("TC-AFS-03_2_3")]
@@ -158,15 +173,15 @@ namespace Server.Tests.EndToEnd
         {
             // Arrange
             await AfsData.DeleteReferralsAsync(Piet);
-            var specialistId = await AfsData.SpecialistIdAsync(DeVries);
             LoginAs(Driver, "medewerker.a");
 
-            // Act: referralId 0 of niet-bestaand/geen verwijzing
-            var status = BrowserApi.PostAppointment(Driver, 0, specialistId, Jan12_1000);
+            // Act: referralId null = geen verwijzing
+            var status = await PostAsync(Driver, Piet, DeVries, Jan12_1000, referralId: null);
 
             // Assert
             Assert.IsTrue(status is >= 200 and < 300, $"Verwacht succesvolle boeking (2xx), kreeg {status}.");
             Assert.AreEqual(1, await AfsData.CountAppointmentsOfPatientAsync(Piet));
+            Assert.AreEqual(1, await AfsData.CountAppointmentsWithoutReferralAsync(Piet), "Afspraak hoort geen verwijzing te hebben.");
         }
 
         // =====================================================================
@@ -273,11 +288,10 @@ namespace Server.Tests.EndToEnd
         {
             // Arrange
             var referralId = await AfsData.CreateOpenReferralAsync(Jan, "KNO");
-            var specialistId = await AfsData.SpecialistIdAsync(DeVries);
             LoginAs(Driver, "jan.jansen");
 
             // Act
-            var status = BrowserApi.PostAppointment(Driver, referralId, specialistId, Jan12_1000);
+            var status = await PostAsync(Driver, Jan, DeVries, Jan12_1000, referralId);
 
             // Assert
             Assert.AreEqual(403, status);
@@ -297,19 +311,17 @@ namespace Server.Tests.EndToEnd
             var referralJan = await AfsData.CreateOpenReferralAsync(Jan, "KNO");
             await AfsData.CreateAppointmentAsync(Jan, DeVries, Jan12_1000, referralJan);
             var referralPiet = await AfsData.CreateOpenReferralAsync(Piet, "KNO");
-            var specialistId = await AfsData.SpecialistIdAsync(DeVries);
             var plan = OpenPlanningAsStaff(Driver, "medewerker.a", Piet);
 
             // Act
             var offeredInUi = plan.HasSlot(DeVries, Jan12_1000);
-            var status = BrowserApi.PostAppointment(Driver, referralPiet, specialistId, Jan12_1000);
+            var status = await PostAsync(Driver, Piet, DeVries, Jan12_1000, referralPiet);
 
             // Assert
             Assert.IsFalse(offeredInUi, "Bezet tijdstip wordt nog aangeboden.");
             Assert.IsTrue(status is 400 or 409 or 422, $"Verwacht weigering, kreeg {status}.");
             Assert.AreEqual(1, await AfsData.CountAppointmentsAsync(DeVries, Jan12_1000));
             Assert.AreEqual("Open", await AfsData.ReferralStatusAsync(referralPiet));
-            if (offeredInUi) StringAssert.Contains(plan.Message, MsgSpecialistBusy);
         }
 
         [TestMethod, TestCategory("TC-AFS-03_6_2")]
@@ -344,6 +356,8 @@ namespace Server.Tests.EndToEnd
             // Arrange
             var referralJan = await AfsData.CreateOpenReferralAsync(Jan, "KNO");
             var referralPiet = await AfsData.CreateOpenReferralAsync(Piet, "KNO");
+            var patientJan = await AfsData.PatientIdAsync(Jan);
+            var patientPiet = await AfsData.PatientIdAsync(Piet);
             var specialistId = await AfsData.SpecialistIdAsync(DeVries);
             using var driverB = ExtraBrowser.Start();
             LoginAs(Driver, "medewerker.a");
@@ -354,8 +368,8 @@ namespace Server.Tests.EndToEnd
                 await AfsData.ResetAppointmentsAsync(referralJan, referralPiet);
 
                 // Act
-                var taskA = Task.Run(() => BrowserApi.PostAppointment(Driver, referralJan, specialistId, Jan12_1000));
-                var taskB = Task.Run(() => BrowserApi.PostAppointment(driverB, referralPiet, specialistId, Jan12_1000));
+                var taskA = Task.Run(() => BrowserApi.PostAppointment(Driver, patientJan, specialistId, Jan12_1000, referralJan));
+                var taskB = Task.Run(() => BrowserApi.PostAppointment(driverB, patientPiet, specialistId, Jan12_1000, referralPiet));
                 var statuses = await Task.WhenAll(taskA, taskB);
 
                 // Assert
@@ -375,12 +389,11 @@ namespace Server.Tests.EndToEnd
             // Arrange
             var referralId = await AfsData.CreateOpenReferralAsync(Jan, "KNO");
             await AfsData.SetUnavailableAsync(DeVries, Jan12_1000);
-            var specialistId = await AfsData.SpecialistIdAsync(DeVries);
             var plan = OpenPlanningAsStaff(Driver, "medewerker.a", Jan);
 
             // Act
             var offeredInUi = plan.HasSlot(DeVries, Jan12_1000);
-            var status = BrowserApi.PostAppointment(Driver, referralId, specialistId, Jan12_1000);
+            var status = await PostAsync(Driver, Jan, DeVries, Jan12_1000, referralId);
 
             // Assert
             Assert.IsFalse(offeredInUi, "Niet-beschikbare dag wordt aangeboden.");
@@ -422,11 +435,10 @@ namespace Server.Tests.EndToEnd
             // Arrange
             var referralId = await AfsData.CreateOpenReferralAsync(Jan, "KNO");
             await AfsData.SetUnavailableAsync(DeVries, Jan12_1000);
-            var specialistId = await AfsData.SpecialistIdAsync(DeVries);
             LoginAs(Driver, "medewerker.a");
 
             // Act
-            var status = BrowserApi.PostAppointment(Driver, referralId, specialistId, Jan12_1000);
+            var status = await PostAsync(Driver, Jan, DeVries, Jan12_1000, referralId);
 
             // Assert
             Assert.IsTrue(status is 400 or 409 or 422, $"Verwacht weigering, kreeg {status}.");

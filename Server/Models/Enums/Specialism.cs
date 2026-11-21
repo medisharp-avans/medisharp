@@ -2,10 +2,17 @@
 {
     public enum Specialism
     {
-        KNO,
         Cardiologie,
         Dermatologie,
+        Longgeneeskunde,
+        Oogheelkunde,
+        KNO,
+        Orthopedie,
         Chirurgie,
-        Neurologie
+        Radiologie,
+        Laboratoriumgeneeskunde,
+        Revalidatiegeneeskunde,
+        Psychiatrie,
+        Algemeen
     }
 }

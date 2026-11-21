@@ -1,4 +1,5 @@
 ﻿
+using Server.Models.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace Server.Models
@@ -19,8 +20,8 @@ namespace Server.Models
         public GeneralPractitioner GeneralPractitioner { get; set; } = null!;
 
         [Required]
-        [StringLength(50)]
-        public string Specialism { get; set; } = string.Empty;
+        [EnumDataType(typeof(Specialism))]
+        public Specialism Specialism { get; set; } 
 
         public int? PreferredSpecialistId { get; set; }
 
@@ -37,9 +38,9 @@ namespace Server.Models
         [StringLength(20)]
         public string Urgency { get; set; } = "Regulier";
 
-        [Required]
-        [StringLength(20)]
         public string TreatmentCode { get; set; } = string.Empty;
+
+        public TreatmentCode TreatmentCodeDetails { get; set; } = null!;
 
         [Required]
         [StringLength(20)]
