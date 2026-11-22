@@ -33,11 +33,10 @@ jobs:
 
   server:
     runs-on: ubuntu-latest
-    # Gives this job the secrets of the 'test' environment (Settings > Environments > test).
     env:
       # Read by Server.Tests (TestSettings), overrides the LocalDB connection in appsettings.test.json.
       # The database name must end with "Test", otherwise the tests refuse to reset it.
-      ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=MediSharp_DbTest;User Id=sa;Password=${{ secrets.CI_MSSQL_SA_PASSWORD }};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: ${{ vars.CI_DB_CONNECTION }};Password=${{ secrets.CI_MSSQL_SA_PASSWORD }}
     # A throwaway SQL Server (same image as docker-compose.yml), only reachable from this job.
     # GitHub waits until the health check passes before the steps start.
     services:
@@ -74,7 +73,7 @@ jobs:
     needs: [client, server]
     runs-on: ubuntu-latest
     env:
-      ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=MediSharp_DbTest;User Id=sa;Password=${{ secrets.CI_MSSQL_SA_PASSWORD }};TrustServerCertificate=True
+      ConnectionStrings__DefaultConnection: ${{ vars.CI_DB_CONNECTION }};Password=${{ secrets.CI_MSSQL_SA_PASSWORD }}
       # Read by TestSettings: Chrome without a window, because the runner has no screen.
       Headless: "true"
     services:
