@@ -113,12 +113,31 @@ server: {
 
 Other useful commands:
 
-| Command             | What it does                        |
-| ------------------- | ----------------------------------- |
-| `npm run build`     | Type-check and build for production |
-| `npm run test:unit` | Run unit tests with Vitest          |
-| `npm run lint`      | Lint with oxlint and ESLint         |
-| `npm run format`    | Format `src/` with Prettier         |
+| Command                   | What it does                                                    |
+| ------------------------- | --------------------------------------------------------------- |
+| `npm run build`           | Type-check and build for production                             |
+| `npm run test:unit`       | Run unit tests with Vitest (watch mode)                         |
+| `npm run test:coverage`   | Run unit tests once with a coverage report in `coverage/`       |
+| `npm run test:lighthouse` | Run Lighthouse CI on every route (needs `npm run build` first)  |
+| `npm run test:a11y`       | Run axe accessibility checks on every route (needs a build too) |
+| `npm run check`           | Lint and format check without fixing, the same as CI            |
+| `npm run lint`            | Lint with oxlint and ESLint                                     |
+| `npm run format`          | Format `src/` with Prettier                                     |
+
+#### Lighthouse and accessibility checks
+
+Both checks test the built app, so build it first. The list of pages comes from `src/router/routes.ts` (via `e2e/routes.ts`), so a new route is tested automatically.
+
+```sh
+cd Client
+npm run build
+npm run test:lighthouse   # reports in lighthouse-reports/
+npm run test:a11y         # reports in a11y-reports/
+```
+
+Both commands start their own preview server on <http://localhost:4173>, so that port has to be free.
+
+Both checks use your installed Google Chrome. The Lighthouse thresholds live in `lighthouserc.cjs`; the coverage settings live in `vitest.config.ts`. In CI the same checks run in the `client` and `client-quality` jobs, and the reports are uploaded as artifacts on the workflow run.
 
 ### 1.7 Optional: test the production setup locally
 
