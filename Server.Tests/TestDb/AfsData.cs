@@ -8,85 +8,48 @@ using Server.Tests.Utils;
 namespace Server.Tests.Helpers
 {
     /// <summary>
-    /// Arrange/Assert via de database. Namen uit de tests worden gekoppeld aan de Username van de seed-data,
+    /// Arrange/Assert via de database. Namen uit de tests zijn de FullName van de User van de patiënt of specialist,
     /// omdat Patient en Specialist zelf geen naam hebben (die staat via UserId op User).
+    /// Een afspraak maakt zelf een verwijzing aan; de helpers hier doen dat ook voor bestaande afspraken.
     /// </summary>
     public static class AfsData
     {
-        private static readonly Dictionary<string, string> Usernames = new()
-        {
-            ["Jan Jansen"] = "jan.jansen",
-            ["Piet Pietersen"] = "piet.pietersen",
-            ["Anna de Boer"] = "anna.deboer",
-            ["Dr. De Vries"] = "dr.devries",
-            ["Dr. Bakker"] = "dr.bakker",
-            ["Dr. Smit"] = "dr.smit"
-        };
-
-        private static SqlParameter UsernameParam(string name) =>
-            new("@u", Usernames.TryGetValue(name, out var username)
-                ? username
-                : throw new ArgumentException($"'{name}' staat niet in de seed-data.", nameof(name)));
+        private static SqlParameter NameParam(string name) => new("@u", name);
 
         public static async Task<int> PatientIdAsync(string name) =>
             Convert.ToInt32((await TestDatabase.QueryAsync(
-                "SELECT p.Id FROM Patients p JOIN Users u ON u.Id = p.UserId WHERE u.Username = @u",
-                UsernameParam(name))).Rows[0][0]);
+                "SELECT p.Id FROM Patients p JOIN Users u ON u.Id = p.UserId WHERE u.FullName = @u",
+                NameParam(name))).Rows[0][0]);
 
         public static async Task<int> SpecialistIdAsync(string name) =>
             Convert.ToInt32((await TestDatabase.QueryAsync(
-                "SELECT s.Id FROM Specialists s JOIN Users u ON u.Id = s.UserId WHERE u.Username = @u",
-                UsernameParam(name))).Rows[0][0]);
+                "SELECT s.Id FROM Specialists s JOIN Users u ON u.Id = s.UserId WHERE u.FullName = @u",
+                NameParam(name))).Rows[0][0]);
 
-        /// <summary>Zorgt voor precies één verwijzing met status "Open" voor de patiënt.</summary>
-        public static async Task<int> CreateOpenReferralAsync(string patient, string specialism)
+        /// <summary>
+        /// Maakt een bestaande afspraak (KNO, behandelcode KNO002 = 60 minuten) met een bijbehorende
+        /// verwijzing met status "Ingepland", zoals de applicatie dat zelf zou doen.
+        /// </summary>
+        public static async Task<int> CreateAppointmentAsync(string patient, string specialist, DateTime start)
         {
-            var patientId = await PatientIdAsync(patient);
-            await DeleteReferralsAsync(patient);
-
-            // Specialism is een enum (int) in Referrals, maar een string in TreatmentCodes.
-            // De behandelcode wordt gekozen uit de seed-data op basis van het specialisme.
-            var specialismValue = (int)Enum.Parse<Specialism>(specialism);
             var t = await TestDatabase.QueryAsync(@"
+                DECLARE @ref TABLE (Id int);
+
                 INSERT INTO Referrals (PatientId, GeneralPractitionerId, Specialism, Reason, Questionnaire, Urgency, TreatmentCode, Status, CreatedAt)
-                OUTPUT INSERTED.Id
-                SELECT p.Id, p.GeneralPractitionerId, @s, 'Testverwijzing', '', 'Regulier',
-                       (SELECT TOP 1 Code FROM TreatmentCodes WHERE Specialism = @sn ORDER BY Code),
-                       'Open', SYSUTCDATETIME()
-                FROM Patients p WHERE p.Id = @p",
-                new SqlParameter("@p", patientId),
-                new SqlParameter("@s", specialismValue),
-                new SqlParameter("@sn", specialism));
-            return Convert.ToInt32(t.Rows[0][0]);
-        }
+                OUTPUT INSERTED.Id INTO @ref
+                SELECT p.Id, p.GeneralPractitionerId, @spec, 'Testverwijzing', '', 'Regulier', 'KNO002', 'Ingepland', SYSUTCDATETIME()
+                FROM Patients p WHERE p.Id = @p;
 
-        /// <summary>Verwijdert de verwijzingen van de patiënt, en eerst de afspraken die eraan hangen (FK).</summary>
-        public static async Task DeleteReferralsAsync(string patient)
-        {
-            var p = new SqlParameter("@p", await PatientIdAsync(patient));
-            await TestDatabase.ExecuteAsync(@"
-                DELETE FROM Appointments WHERE ReferralId IN (SELECT Id FROM Referrals WHERE PatientId = @p);
-                DELETE FROM Referrals WHERE PatientId = @p;", p);
-        }
-
-        /// <summary>Maakt een afspraak (eindtijd volgt uit de behandelcode van de verwijzing) en zet de verwijzing op "Ingepland".</summary>
-        public static async Task<int> CreateAppointmentAsync(string patient, string specialist, DateTime start, int referralId)
-        {
-            var t = await TestDatabase.QueryAsync(@"
                 INSERT INTO Appointments (PatientId, SpecialistId, ReferralId, StartTime, EndTime, Status)
                 OUTPUT INSERTED.Id
                 SELECT @p, @s, r.Id, @st, DATEADD(MINUTE, tc.DurationInQuarters * 15, @st), @status
-                FROM Referrals r
-                JOIN TreatmentCodes tc ON tc.Code = r.TreatmentCode
-                WHERE r.Id = @r",
+                FROM @ref r CROSS JOIN TreatmentCodes tc
+                WHERE tc.Code = 'KNO002';",
                 new SqlParameter("@p", await PatientIdAsync(patient)),
                 new SqlParameter("@s", await SpecialistIdAsync(specialist)),
-                new SqlParameter("@r", referralId),
                 new SqlParameter("@st", start),
+                new SqlParameter("@spec", (int)Specialism.KNO),
                 new SqlParameter("@status", (int)AppointmentStatus.Ingepland));
-
-            await TestDatabase.ExecuteAsync("UPDATE Referrals SET Status = 'Ingepland' WHERE Id = @r",
-                new SqlParameter("@r", referralId));
             return Convert.ToInt32(t.Rows[0][0]);
         }
 
@@ -96,12 +59,14 @@ namespace Server.Tests.Helpers
                 new SqlParameter("@s", await SpecialistIdAsync(specialist)),
                 new SqlParameter("@d", date.Date));
 
-        public static async Task ResetAppointmentsAsync(params int[] referralIds)
-        {
-            await TestDatabase.ExecuteAsync("DELETE FROM Appointments");
-            foreach (var id in referralIds)
-                await TestDatabase.ExecuteAsync("UPDATE Referrals SET Status = 'Open' WHERE Id = @r", new SqlParameter("@r", id));
-        }
+        /// <summary>
+        /// Verwijdert alle afspraken en de verwijzingen die door een afspraak zijn aangemaakt (status "Ingepland").
+        /// De open verwijzingen uit de seed blijven bestaan.
+        /// </summary>
+        public static async Task ResetAppointmentsAsync() =>
+            await TestDatabase.ExecuteAsync(@"
+                DELETE FROM Appointments;
+                DELETE FROM Referrals WHERE Status = 'Ingepland';");
 
         public static async Task<int> CountAppointmentsAsync(string specialist, DateTime start) =>
             Convert.ToInt32((await TestDatabase.QueryAsync(
@@ -114,14 +79,29 @@ namespace Server.Tests.Helpers
                 "SELECT COUNT(*) FROM Appointments WHERE PatientId = @p",
                 new SqlParameter("@p", await PatientIdAsync(patient)))).Rows[0][0]);
 
-        public static async Task<int> CountAppointmentsWithoutReferralAsync(string patient) =>
+        public static async Task<int> CountReferralsOfPatientAsync(string patient) =>
             Convert.ToInt32((await TestDatabase.QueryAsync(
-                "SELECT COUNT(*) FROM Appointments WHERE PatientId = @p AND ReferralId IS NULL",
+                "SELECT COUNT(*) FROM Referrals WHERE PatientId = @p",
                 new SqlParameter("@p", await PatientIdAsync(patient)))).Rows[0][0]);
 
-        public static async Task<string> ReferralStatusAsync(int referralId) =>
-            (await TestDatabase.QueryAsync("SELECT Status FROM Referrals WHERE Id = @r",
-                new SqlParameter("@r", referralId))).Rows[0][0].ToString()!;
+        /// <summary>Alle verwijzingen, om te controleren dat er geen wees-verwijzing is achtergebleven.</summary>
+        public static async Task<int> CountReferralsAsync() =>
+            Convert.ToInt32((await TestDatabase.QueryAsync("SELECT COUNT(*) FROM Referrals")).Rows[0][0]);
+
+        /// <summary>De verwijzing die bij de afspraak van deze specialist op dit tijdstip hoort.</summary>
+        public static async Task<(string Status, string TreatmentCode, int Specialism)> AppointmentReferralAsync(
+            string specialist, DateTime start)
+        {
+            var t = await TestDatabase.QueryAsync(@"
+                SELECT r.Status, r.TreatmentCode, r.Specialism
+                FROM Appointments a JOIN Referrals r ON r.Id = a.ReferralId
+                WHERE a.SpecialistId = @s AND a.StartTime = @st",
+                new SqlParameter("@s", await SpecialistIdAsync(specialist)),
+                new SqlParameter("@st", start));
+
+            var row = t.Rows[0];
+            return (row["Status"].ToString()!, row["TreatmentCode"].ToString()!, Convert.ToInt32(row["Specialism"]));
+        }
     }
 
     /// <summary>
@@ -131,13 +111,12 @@ namespace Server.Tests.Helpers
     /// </summary>
     public static class BrowserApi
     {
-        /// <summary>Geeft de HTTP-statuscode terug (-1 bij een netwerkfout).</summary>
+        /// <summary>Plant een afspraak (de API maakt zelf een verwijzing aan). Geeft de HTTP-statuscode (-1 bij een netwerkfout).</summary>
         public static long PostAppointment(
             IWebDriver driver,
             int patientId,
             int specialistId,
             DateTime start,
-            int? referralId = null,
             string treatmentCode = "KNO002",
             int generalPractitionerId = 1,
             Specialism specialism = Specialism.KNO)
@@ -148,9 +127,9 @@ namespace Server.Tests.Helpers
                 patientId,
                 specialistId,
                 startTime = start.ToString("yyyy-MM-ddTHH:mm:ss"),
-                referralId,
                 generalPractitionerId,
                 specialism = (int)specialism,
+                preferredSpecialistId = specialistId,
                 reason = "Testafspraak",
                 urgency = "Regulier",
                 treatmentCode
@@ -158,9 +137,9 @@ namespace Server.Tests.Helpers
 
             var result = js.ExecuteAsyncScript(@"
                 const done = arguments[arguments.length - 1];
-                fetch('/api/appointments', { method: 'POST', credentials: 'include',
+                fetch(arguments[1] + '/api/appointments', { method: 'POST', credentials: 'include',
                     headers: { 'Content-Type': 'application/json' }, body: arguments[0] })
-                  .then(r => done(r.status)).catch(() => done(-1));", body);
+                  .then(r => done(r.status)).catch(() => done(-1));", body, TestSettings.ApiUrl);
             return Convert.ToInt64(result);
         }
     }

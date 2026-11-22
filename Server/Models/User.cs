@@ -13,6 +13,18 @@ namespace Server.Models
         [StringLength(50, MinimumLength = 3)]
         public string Username { get; set; } = string.Empty;
 
+        [Required] 
+        [StringLength(100)] 
+        public string SurName { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string LastName { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(100)]
+        public string FullName { get; set; } = string.Empty;
+
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 

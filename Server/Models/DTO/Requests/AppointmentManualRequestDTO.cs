@@ -1,12 +1,14 @@
-﻿
-using Server.Models.Enums;
+﻿using Server.Models.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace Server.Models.DTO.Requests
 {
+    /// <summary>
+    /// Een afspraak plannen. Er wordt altijd automatisch een verwijzing bij aangemaakt,
+    /// dus er is geen ReferralId meer.
+    /// </summary>
     public class AppointmentManualRequestDTO
     {
-        // Appointment gegevens
         [Required]
         public int PatientId { get; set; }
 
@@ -14,16 +16,14 @@ namespace Server.Models.DTO.Requests
         public int SpecialistId { get; set; }
 
         [Required]
-        public DateTime StartTime {  get; set; }
-
-        public int? ReferralId { get; set; }
+        public DateTime StartTime { get; set; }
 
         [Required]
         public int GeneralPractitionerId { get; set; }
 
         [Required]
         [EnumDataType(typeof(Specialism))]
-        public Specialism Specialism { get; set; } 
+        public Specialism Specialism { get; set; }
 
         public int? PreferredSpecialistId { get; set; }
 

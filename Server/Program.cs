@@ -40,6 +40,17 @@ namespace Server
                 options.KnownProxies.Clear();
             });
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("Client", policy =>
+                {
+                    policy.WithOrigins("http://localhost:5173")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+            });
+
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                 {
@@ -89,6 +100,8 @@ namespace Server
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseCors("Client");
 
             app.UseAuthorization();
 

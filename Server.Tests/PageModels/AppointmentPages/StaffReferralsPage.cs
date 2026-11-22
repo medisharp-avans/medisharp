@@ -1,23 +1,27 @@
 ﻿using OpenQA.Selenium;
+using OpenQA.Selenium.Support.UI;
 using Server.Tests.Utils;
 
-namespace Server.Tests.PageModels.AppointmentPages
+namespace Server.Tests.PageModels
 {
-    /// <summary>Referrals overview (/verwijsbrieven) for staff.</summary>
-    public class StaffReferralsPage(IWebDriver driver) : BasePage(driver)
+    /// <summary>Page model van /verwijsbrieven (ReferralsView.vue).</summary>
+    public class StaffReferralsPage(IWebDriver driver)
     {
-        private static readonly By Status = TestId("referral-status");
+        private WebDriverWait Wait => new(driver, TestSettings.Timeout);
 
         public StaffReferralsPage Open()
         {
-            Navigate("verwijsbrieven");
+            driver.Navigate().GoToUrl($"{TestSettings.ClientUrl}/verwijsbrieven");
+            Wait.Until(d => d.FindElements(By.CssSelector("[data-testid='referral-row']")).Count > 0);
             return this;
         }
 
-        public void OpenReferralOf(string patientName) =>
-            Click(By.XPath($"//*[@data-testid='referral-row'][contains(.,'{patientName}')]//*[@data-testid='open-referral']"),
-                $"referral of {patientName}");
-
-        public string ReferralStatus => Driver.WaitForElement(Status).Text.Trim();
+        /// <summary>Opent de planningspagina vanuit de open verwijzing van deze patiënt.</summary>
+        public void OpenReferralOf(string patient)
+        {
+            var link = Wait.Until(d => d.FindElements(By.CssSelector(
+                $"[data-testid='referral-row'][data-patient='{patient}'] [data-testid='plan-referral']")).FirstOrDefault());
+            link.Click();
+        }
     }
 }

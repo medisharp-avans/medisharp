@@ -8,6 +8,13 @@ namespace Server.Services;
 /// <summary>
 /// Creates isolated development-only test data on startup and removes it
 /// before creating a fresh set. The same data is removed on graceful shutdown.
+///
+/// Seeded data (all fictitious):
+///  - 1 GP (huisarts), 2 specialists (Cardiologie, Dermatologie), 2 patients, 1 hospital employee
+///  - 3 treatment codes (DEV-CONSULT, DEV-FOLLOWUP, DEV-CHECK)
+///  - 2 referrals: #1 already planned (Ingepland, with an appointment), #2 still Open (to plan)
+///  - 1 appointment for referral #1 on the next workday at 09:00
+///  - availability 08:00-17:00 for both specialists on the next 10 workdays
 /// </summary>
 public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : IHostedService
 {
@@ -34,77 +41,27 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
 
     private static async Task SeedAsync(AppDbContext db, CancellationToken cancellationToken)
     {
-        var specialisms = Enum.GetValues<Specialism>();
-        var appointmentStatuses = Enum.GetValues<AppointmentStatus>();
+        // ----- Users -----
+        var gpUser = CreateUser("huisarts", UserRole.Huisarts, 1, "Dr.", "Visser");
+        var specialist1User = CreateUser("specialist-1", UserRole.Specialist, 2, "Dr.", "Jansen");
+        var specialist2User = CreateUser("specialist-2", UserRole.Specialist, 3, "Dr.", "Bakker");
+        var patient1User = CreateUser("patient-1", UserRole.Patient, 4, "Emma", "Testpersoon");
+        var patient2User = CreateUser("patient-2", UserRole.Patient, 5, "Daan", "Testpersoon");
+        var staffUser = CreateUser("medewerker", UserRole.Ziekenhuismedewerker, 6, "Sanne", "Medewerker");
 
-        if (specialisms.Length == 0 || appointmentStatuses.Length == 0)
-            throw new InvalidOperationException(
-                "Specialism and AppointmentStatus must each contain at least one enum value.");
-
-        var gpUser = new User
-        {
-            Username = $"{UserPrefix}huisarts",
-            Email = "dev-huisarts@example.test",
-            PasswordHash = "DEV-ONLY-random-password-hash-01",
-            Role = FindEnumValue<UserRole>("GeneralPractitioner", "Huisarts"),
-            IsActive = true
-        };
-
-        var specialist1User = new User
-        {
-            Username = $"{UserPrefix}specialist-1",
-            Email = "dev-specialist1@example.test",
-            PasswordHash = "DEV-ONLY-random-password-hash-02",
-            Role = FindEnumValue<UserRole>("Specialist"),
-            IsActive = true
-        };
-
-        var specialist2User = new User
-        {
-            Username = $"{UserPrefix}specialist-2",
-            Email = "dev-specialist2@example.test",
-            PasswordHash = "DEV-ONLY-random-password-hash-03",
-            Role = FindEnumValue<UserRole>("Specialist"),
-            IsActive = true
-        };
-
-        var patient1User = new User
-        {
-            Username = $"{UserPrefix}patient-1",
-            Email = "dev-patient1@example.test",
-            PasswordHash = "DEV-ONLY-random-password-hash-04",
-            Role = FindEnumValue<UserRole>("Patient"),
-            IsActive = true
-        };
-
-        var patient2User = new User
-        {
-            Username = $"{UserPrefix}patient-2",
-            Email = "dev-patient2@example.test",
-            PasswordHash = "DEV-ONLY-random-password-hash-05",
-            Role = FindEnumValue<UserRole>("Patient"),
-            IsActive = true
-        };
-
-        db.Users.AddRange(gpUser, specialist1User, specialist2User, patient1User, patient2User);
+        db.Users.AddRange(gpUser, specialist1User, specialist2User, patient1User, patient2User, staffUser);
         await db.SaveChangesAsync(cancellationToken);
 
+        // ----- General practitioner and specialists -----
         var gp = new GeneralPractitioner { UserId = gpUser.Id };
-        var specialist1 = new Specialist
-        {
-            UserId = specialist1User.Id,
-            Specialism = specialisms[0]
-        };
-        var specialist2 = new Specialist
-        {
-            UserId = specialist2User.Id,
-            Specialism = specialisms.Length > 1 ? specialisms[1] : specialisms[0]
-        };
+        var specialist1 = new Specialist { UserId = specialist1User.Id, Specialism = Specialism.Cardiologie };
+        var specialist2 = new Specialist { UserId = specialist2User.Id, Specialism = Specialism.Dermatologie };
 
         db.GeneralPractitioners.Add(gp);
         db.Specialists.AddRange(specialist1, specialist2);
         await db.SaveChangesAsync(cancellationToken);
 
+        // ----- Patients -----
         var patient1 = new Patient
         {
             UserId = patient1User.Id,
@@ -129,48 +86,49 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
 
         db.Patients.AddRange(patient1, patient2);
 
-        var treatmentCodes = new[]
+        // ----- Treatment codes (Specialism is a string here) -----
+        var consult = new TreatmentCode
         {
-            new TreatmentCode
-            {
-                Code = $"{TreatmentCodePrefix}CONSULT",
-                Description = "Standaard eerste consult (ontwikkeldata)",
-                Specialism = specialisms[0].ToString(),
-                DurationInQuarters = 4,
-                Cost = 75.00m
-            },
-            new TreatmentCode
-            {
-                Code = $"{TreatmentCodePrefix}FOLLOWUP",
-                Description = "Vervolgconsult (ontwikkeldata)",
-                Specialism = specialisms[0].ToString(),
-                DurationInQuarters = 2,
-                Cost = 45.00m
-            },
-            new TreatmentCode
-            {
-                Code = $"{TreatmentCodePrefix}CHECK",
-                Description = "Controleafspraak (ontwikkeldata)",
-                Specialism = (specialisms.Length > 1 ? specialisms[1] : specialisms[0]).ToString(),
-                DurationInQuarters = 2,
-                Cost = 35.00m
-            }
+            Code = $"{TreatmentCodePrefix}CONSULT",
+            Description = "Standaard eerste consult (ontwikkeldata)",
+            Specialism = nameof(Specialism.Cardiologie),
+            DurationInQuarters = 4,
+            Cost = 75.00m
         };
 
-        db.TreatmentCodes.AddRange(treatmentCodes);
+        var followUp = new TreatmentCode
+        {
+            Code = $"{TreatmentCodePrefix}FOLLOWUP",
+            Description = "Vervolgconsult (ontwikkeldata)",
+            Specialism = nameof(Specialism.Cardiologie),
+            DurationInQuarters = 2,
+            Cost = 45.00m
+        };
+
+        var check = new TreatmentCode
+        {
+            Code = $"{TreatmentCodePrefix}CHECK",
+            Description = "Controleafspraak (ontwikkeldata)",
+            Specialism = nameof(Specialism.Dermatologie),
+            DurationInQuarters = 2,
+            Cost = 35.00m
+        };
+
+        db.TreatmentCodes.AddRange(consult, followUp, check);
         await db.SaveChangesAsync(cancellationToken);
 
+        // ----- Referrals: #1 is already planned, #2 is still open so it can be planned in the UI -----
         var referral1 = new Referral
         {
             PatientId = patient1.Id,
             GeneralPractitionerId = gp.Id,
-            Specialism = specialisms[0],
+            Specialism = Specialism.Cardiologie,
             PreferredSpecialistId = specialist1.Id,
             Reason = "Testverwijzing wegens aanhoudende klachten.",
             Questionnaire = "Ontwikkeldata: klachten bestaan enkele weken.",
             Urgency = "Regulier",
-            TreatmentCode = treatmentCodes[0].Code,
-            Status = "Open",
+            TreatmentCode = consult.Code,
+            Status = "Ingepland",
             CreatedAt = DateTime.UtcNow.AddDays(-2)
         };
 
@@ -178,12 +136,12 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         {
             PatientId = patient2.Id,
             GeneralPractitionerId = gp.Id,
-            Specialism = specialisms.Length > 1 ? specialisms[1] : specialisms[0],
+            Specialism = Specialism.Dermatologie,
             PreferredSpecialistId = specialist2.Id,
             Reason = "Testverwijzing voor een controle.",
             Questionnaire = "Ontwikkeldata: periodieke controle.",
-            Urgency = "Laag",
-            TreatmentCode = treatmentCodes[2].Code,
+            Urgency = "Regulier",
+            TreatmentCode = check.Code,
             Status = "Open",
             CreatedAt = DateTime.UtcNow.AddDays(-1)
         };
@@ -191,30 +149,36 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         db.Referrals.AddRange(referral1, referral2);
         await db.SaveChangesAsync(cancellationToken);
 
-        var now = DateTime.UtcNow;
-        var appointments = new[]
+        // ----- Availability: 08:00-17:00 on the next 10 workdays for both specialists -----
+        var availabilities = new List<Availability>();
+        foreach (var specialist in new[] { specialist1, specialist2 })
         {
-            new Appointment
+            for (var workday = 1; workday <= 10; workday++)
             {
-                PatientId = patient1.Id,
-                SpecialistId = specialist1.Id,
-                ReferralId = referral1.Id,
-                StartTime = now.AddDays(1).Date.AddHours(9),
-                EndTime = now.AddDays(1).Date.AddHours(10),
-                Status = appointmentStatuses[0]
-            },
-            new Appointment
-            {
-                PatientId = patient2.Id,
-                SpecialistId = specialist2.Id,
-                ReferralId = referral2.Id,
-                StartTime = now.AddDays(2).Date.AddHours(13),
-                EndTime = now.AddDays(2).Date.AddHours(13).AddMinutes(30),
-                Status = appointmentStatuses[0]
+                var day = NextWorkday(workday);
+                availabilities.Add(new Availability
+                {
+                    SpecialistId = specialist.Id,
+                    StartTime = day.AddHours(8),
+                    EndTime = day.AddHours(17)
+                });
             }
-        };
+        }
 
-        db.Appointments.AddRange(appointments);
+        db.Availabilities.AddRange(availabilities);
+
+        // ----- Appointment for referral #1 (DEV-CONSULT = 4 quarters = 1 hour) -----
+        var appointmentDay = NextWorkday(1);
+        db.Appointments.Add(new Appointment
+        {
+            PatientId = patient1.Id,
+            SpecialistId = specialist1.Id,
+            ReferralId = referral1.Id,
+            StartTime = appointmentDay.AddHours(9),
+            EndTime = appointmentDay.AddHours(10),
+            Status = AppointmentStatus.Ingepland
+        });
+
         await db.SaveChangesAsync(cancellationToken);
     }
 
@@ -268,6 +232,10 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
             .Where(r => seededReferralIds.Contains(r.Id))
             .ToListAsync(cancellationToken);
 
+        var availabilities = await db.Availabilities
+            .Where(a => seededSpecialistIds.Contains(a.SpecialistId))
+            .ToListAsync(cancellationToken);
+
         var patients = await db.Patients
             .Where(p => seededPatientIds.Contains(p.Id))
             .ToListAsync(cancellationToken);
@@ -291,6 +259,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         // Delete dependents first because the relationships use NoAction.
         db.Appointments.RemoveRange(appointments);
         db.Referrals.RemoveRange(referrals);
+        db.Availabilities.RemoveRange(availabilities);
         db.Patients.RemoveRange(patients);
         db.Specialists.RemoveRange(specialists);
         db.GeneralPractitioners.RemoveRange(generalPractitioners);
@@ -299,49 +268,53 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
 
         await db.SaveChangesAsync(cancellationToken);
 
-        // Reset identity counters only when the entire table is empty.
-        // This avoids duplicate-key conflicts with non-seed records.
-        await ResetIdentityIfEmptyAsync(db, "Users", !await db.Users.AnyAsync(cancellationToken), cancellationToken);
-        await ResetIdentityIfEmptyAsync(db, "Patients", !await db.Patients.AnyAsync(cancellationToken), cancellationToken);
-        await ResetIdentityIfEmptyAsync(db, "Specialists", !await db.Specialists.AnyAsync(cancellationToken), cancellationToken);
-        await ResetIdentityIfEmptyAsync(db, "GeneralPractitioners", !await db.GeneralPractitioners.AnyAsync(cancellationToken), cancellationToken);
-        await ResetIdentityIfEmptyAsync(db, "Referrals", !await db.Referrals.AnyAsync(cancellationToken), cancellationToken);
-        await ResetIdentityIfEmptyAsync(db, "Appointments", !await db.Appointments.AnyAsync(cancellationToken), cancellationToken);
+        // Reset identity counters only for tables that are now completely empty,
+        // so the seed gets the same ids every run and non-seed records are never affected.
+        foreach (var table in new[]
+                 { "Users", "Patients", "Specialists", "GeneralPractitioners", "Referrals", "Availabilities", "Appointments" })
+        {
+            await ResetIdentityIfUnusedAsync(db, table, cancellationToken);
+        }
     }
 
-    private static async Task ResetIdentityIfEmptyAsync(
+    /// <summary>
+    /// Reseeds the identity of an empty table to 0, but only if the identity was used before.
+    /// Reseeding a never used identity would make the first id 0 instead of 1.
+    /// The table names are constants of this class, so they are safe to put in the SQL.
+    /// </summary>
+    private static Task ResetIdentityIfUnusedAsync(
         AppDbContext db,
         string tableName,
-        bool isEmpty,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) =>
+        db.Database.ExecuteSqlRawAsync($@"
+            IF NOT EXISTS (SELECT 1 FROM [dbo].[{tableName}])
+               AND EXISTS (SELECT 1 FROM sys.identity_columns
+                           WHERE object_id = OBJECT_ID('[dbo].[{tableName}]') AND last_value IS NOT NULL)
+                DBCC CHECKIDENT ('[dbo].[{tableName}]', RESEED, 0) WITH NO_INFOMSGS;",
+            cancellationToken);
+
+    private static User CreateUser(string name, UserRole role, int number, string surName, string lastName) => new()
     {
-        if (isEmpty)
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                $"DBCC CHECKIDENT ('[dbo].[{tableName}]', RESEED, 0);",
-                cancellationToken);
-        }
-    }
+        Username = $"{UserPrefix}{name}",
+        SurName = surName,
+        LastName = lastName,
+        FullName = $"{surName} {lastName}",
+        Email = $"dev-{name}@example.test",
+        PasswordHash = $"DEV-ONLY-random-password-hash-{number:00}",
+        Role = role,
+        IsActive = true
+    };
 
-    private static TEnum FindEnumValue<TEnum>(params string[] preferredNames)
-        where TEnum : struct, Enum
+    /// <summary>The date (00:00) of the n-th workday from today, skipping Saturdays and Sundays.</summary>
+    private static DateTime NextWorkday(int workdaysAhead)
     {
-        var values = Enum.GetValues<TEnum>();
-
-        foreach (var preferredName in preferredNames)
+        var date = DateTime.UtcNow.Date;
+        while (workdaysAhead > 0)
         {
-            var match = values.FirstOrDefault(value =>
-                string.Equals(value.ToString(), preferredName, StringComparison.OrdinalIgnoreCase));
-
-            if (values.Any(value =>
-                    string.Equals(value.ToString(), preferredName, StringComparison.OrdinalIgnoreCase)))
-                return match;
+            date = date.AddDays(1);
+            if (date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
+                workdaysAhead--;
         }
-
-        // Fallback keeps the seeder compatible with projects that use different enum labels.
-        if (values.Length > 0)
-            return values[0];
-
-        throw new InvalidOperationException($"Enum {typeof(TEnum).Name} contains no values.");
+        return date;
     }
 }

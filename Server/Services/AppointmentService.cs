@@ -1,4 +1,5 @@
-﻿using Server.Models;
+﻿using Server.Exceptions;
+using Server.Models;
 using Server.Models.DTO.Requests;
 using Server.Repositories.InterFaces;
 using Server.Services.InterFaces;
@@ -8,13 +9,11 @@ namespace Server.Services
     public class AppointmentService : IAppointmentService
     {
         private readonly IAppointmentRepository _repository;
-        private readonly IReferralService _referralService;
         private readonly ICalculateService _calculateService;
 
-        public AppointmentService(IAppointmentRepository repository, IReferralService referralService, ICalculateService calculateService)
+        public AppointmentService(IAppointmentRepository repository, ICalculateService calculateService)
         {
             _repository = repository;
-            _referralService = referralService;
             _calculateService = calculateService;
         }
 
@@ -23,12 +22,28 @@ namespace Server.Services
             return await _repository.GetAsync();
         }
 
-        public async Task<Appointment> CreateAppointment(
-            AppointmentManualRequestDTO dto)
+        /// <exception cref="KeyNotFoundException">De behandelcode bestaat niet.</exception>
+        /// <exception cref="SlotUnavailableException">De specialist is niet beschikbaar of heeft het tijdslot al.</exception>
+        public async Task<Appointment> CreateAppointment(AppointmentManualRequestDTO dto)
         {
             var endTime = await _calculateService.CalculateAppointmentEndTime(dto.StartTime, dto.TreatmentCode);
 
-            var referral = await _referralService.CreateAsync(
+            if (!await _repository.IsWithinAvailabilityAsync(dto.SpecialistId, dto.StartTime, endTime))
+                throw new SlotUnavailableException("De specialist is op dit tijdstip niet beschikbaar.");
+
+            if (await _repository.HasOverlapAsync(dto.SpecialistId, dto.StartTime, endTime))
+                throw new SlotUnavailableException("Dit tijdslot is niet meer beschikbaar.");
+
+            // De verwijzing en de afspraak worden samen opgeslagen. Een gelijktijdige boeking van
+            // hetzelfde tijdslot wordt door de unique index tegengehouden (SlotUnavailableException).
+            return await _repository.CreateWithReferralAsync(
+                new CreateAppointmentDTO
+                {
+                    PatientId = dto.PatientId,
+                    SpecialistId = dto.SpecialistId,
+                    StartTime = dto.StartTime,
+                    EndTime = endTime
+                },
                 new CreateReferralRequestDTO
                 {
                     PatientId = dto.PatientId,
@@ -39,16 +54,6 @@ namespace Server.Services
                     Questionnaire = dto.Questionnaire,
                     Urgency = dto.Urgency,
                     TreatmentCode = dto.TreatmentCode
-                });
-
-            return await _repository.CreateAsync(
-                new CreateAppointmentDTO
-                {
-                    PatientId = dto.PatientId,
-                    SpecialistId = dto.SpecialistId,
-                    StartTime = dto.StartTime,
-                    EndTime = endTime,
-                    ReferralId = referral.Id
                 });
         }
     }

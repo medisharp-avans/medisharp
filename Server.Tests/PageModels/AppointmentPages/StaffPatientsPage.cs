@@ -1,26 +1,36 @@
 ﻿using OpenQA.Selenium;
+using OpenQA.Selenium.Support.UI;
+using Server.Tests.Utils;
 
-namespace Server.Tests.PageModels.AppointmentPages
+namespace Server.Tests.PageModels
 {
-    /// <summary>Patients overview (/patienten) for staff.</summary>
-    public class StaffPatientsPage(IWebDriver driver) : BasePage(driver)
+    /// <summary>Page model van /patienten (PatientsView.vue).</summary>
+    public class StaffPatientsPage(IWebDriver driver)
     {
-        private static readonly By SearchField = TestId("patient-search");
+        private WebDriverWait Wait => new(driver, TestSettings.Timeout);
 
         public StaffPatientsPage Open()
         {
-            Navigate("patienten");
+            driver.Navigate().GoToUrl($"{TestSettings.ClientUrl}/patienten");
+            Wait.Until(d => d.FindElements(By.CssSelector("[data-testid='patient-search']")).Count > 0);
             return this;
         }
 
-        public StaffPatientsPage Search(string patientName)
+        public StaffPatientsPage Search(string name)
         {
-            Type(SearchField, patientName, "patient search");
+            var input = driver.FindElement(By.CssSelector("[data-testid='patient-search']"));
+            input.Clear();
+            input.SendKeys(name);
+            driver.FindElement(By.CssSelector("[data-testid='patient-search-submit']")).Click();
+            Wait.Until(d => d.FindElements(By.CssSelector($"[data-testid='patient-row'][data-patient='{name}']")).Count > 0);
             return this;
         }
 
-        public void StartPlanning(string patientName) =>
-            Click(By.XPath($"//*[@data-testid='patient-row'][contains(.,'{patientName}')]//*[@data-testid='plan-appointment']"),
-                $"plan appointment for {patientName}");
+        public void StartPlanning(string patient)
+        {
+            var link = Wait.Until(d => d.FindElements(By.CssSelector(
+                $"[data-testid='patient-row'][data-patient='{patient}'] [data-testid='plan-patient']")).FirstOrDefault());
+            link.Click();
+        }
     }
 }

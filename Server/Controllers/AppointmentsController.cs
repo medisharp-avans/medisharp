@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Server.Exceptions;
 using Server.Models;
-using Server.Data;
-using Server.Services.InterFaces;
 using Server.Models.DTO.Requests;
+using Server.Models.DTO.Responses;
+using Server.Services.InterFaces;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -11,36 +11,38 @@ using Server.Models.DTO.Requests;
 public class AppointmentsController : ControllerBase
 {
     private readonly IAppointmentService _service;
+
     public AppointmentsController(IAppointmentService service)
     {
         _service = service;
     }
 
     [HttpGet]
-    public async Task<ActionResult<Appointment>> GetAppointments()
+    public async Task<ActionResult<List<Appointment>>> GetAppointments()
     {
         var appointments = await _service.GetAppointmentAsync();
         return Ok(appointments);
     }
-    // POST: api/Appointment
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+
+    // POST: api/Appointments
     [HttpPost]
-    public async Task<ActionResult<Appointment>> PostAppointment(AppointmentManualRequestDTO dto)
+    public async Task<ActionResult<AppointmentResponseDTO>> PostAppointment(AppointmentManualRequestDTO dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         try
         {
-            var createdAppointment = await _service.CreateAppointment(dto);
-            return Ok(createdAppointment);
+            var a = await _service.CreateAppointment(dto);
+            return Ok(new AppointmentResponseDTO(
+                a.Id, a.PatientId, a.SpecialistId, a.ReferralId, a.StartTime, a.EndTime, a.Status));
         }
         catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
         }
-        catch (Exception ex)      // eigen exception: bezet of buiten beschikbaarheid
+        catch (SlotUnavailableException ex)
         {
-            throw;
+            return Conflict(ex.Message);
         }
     }
 }

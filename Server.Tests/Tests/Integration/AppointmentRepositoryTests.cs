@@ -1,5 +1,5 @@
 using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+using Server.Exceptions;
 using Server.Models.DTO.Requests;
 using Server.Models.Enums;
 using Server.Repositories;
@@ -8,9 +8,16 @@ using Server.Tests.TestDb;
 
 namespace Server.Tests.Integration
 {
+    /// <summary>
+    /// Integratietests voor CreateWithReferralAsync, HasOverlapAsync en IsWithinAvailabilityAsync.
+    /// Gebruikt de seed: specialist 1 (KNO) is op elke dag van januari 2027 beschikbaar van 08:00 tot 17:00.
+    /// </summary>
     [TestClass]
-    public class AppointmentRepositoryTests : DatabaseTestBase
+    public class AppointmentRepositoryPlanningTests : DatabaseTestBase
     {
+        private static readonly DateTime Start = new(2027, 1, 12, 10, 0, 0);
+        private static readonly DateTime End = new(2027, 1, 12, 11, 0, 0);
+
         private IAppointmentRepository _sut = null!;
 
         [TestInitialize]
@@ -19,139 +26,110 @@ namespace Server.Tests.Integration
             _sut = new AppointmentRepository(DbContext);
         }
 
-        private static CreateAppointmentDTO CreateValidDto() => new()
+        private static CreateAppointmentDTO AppointmentDto(int specialistId = 1) => new()
         {
-            PatientId = 1,
-            SpecialistId = 1,
-            ReferralId = 1,
-            StartTime = new DateTime(2026, 12, 1, 9, 0, 0),
-            EndTime = new DateTime(2026, 12, 1, 9, 30, 0)
+            PatientId = 2,
+            SpecialistId = specialistId,
+            StartTime = Start,
+            EndTime = End
         };
 
-        private static async Task AssertForeignKeyViolationAsync(Func<Task> action, string constraintName)
+        private static CreateReferralRequestDTO ReferralDto() => new()
         {
-            var exception = await Assert.ThrowsAsync<DbUpdateException>(action);
-            var sqlException = Assert.IsInstanceOfType<SqlException>(exception.InnerException);
-            StringAssert.Contains(sqlException.Message, constraintName);
-        }
+            PatientId = 2,
+            GeneralPractitionerId = 1,
+            Specialism = Specialism.KNO,
+            Reason = "Oorpijn",
+            Urgency = "Regulier",
+            TreatmentCode = "KNO002"
+        };
 
-        // ---------- CreateAsync ----------
+        private static async Task<int> CountReferralsAsync() =>
+            Convert.ToInt32((await TestDatabase.QueryAsync("SELECT COUNT(*) FROM Referrals")).Rows[0][0]);
+
+        // ---------- CreateWithReferralAsync ----------
 
         [TestMethod]
-        public async Task CreateAsync_ValidDto_StoresAllFields()
+        public async Task CreateWithReferralAsync_ValidDtos_StoresAppointmentLinkedToNewReferral()
         {
-            // Arrange
-            var dto = CreateValidDto();
+            var referralsBefore = await CountReferralsAsync();
 
-            // Act
-            var result = await _sut.CreateAsync(dto);
+            var result = await _sut.CreateWithReferralAsync(AppointmentDto(), ReferralDto());
 
-            // Assert
             Assert.IsTrue(result.Id > 0);
+            Assert.AreEqual(referralsBefore + 1, await CountReferralsAsync());
 
-            var rows = await TestDatabase.QueryAsync(
-                "SELECT * FROM Appointments WHERE Id = @id",
-                new SqlParameter("@id", result.Id));
+            var rows = await TestDatabase.QueryAsync(@"
+                SELECT r.Status, r.TreatmentCode, r.PatientId
+                FROM Appointments a JOIN Referrals r ON r.Id = a.ReferralId
+                WHERE a.Id = @id", new SqlParameter("@id", result.Id));
 
             Assert.AreEqual(1, rows.Rows.Count);
-            var row = rows.Rows[0];
-            Assert.AreEqual(dto.PatientId, row["PatientId"]);
-            Assert.AreEqual(dto.SpecialistId, row["SpecialistId"]);
-            Assert.AreEqual(dto.ReferralId, row["ReferralId"]);
-            Assert.AreEqual(dto.StartTime, row["StartTime"]);
-            Assert.AreEqual(dto.EndTime, row["EndTime"]);
+            Assert.AreEqual("Ingepland", rows.Rows[0]["Status"]);
+            Assert.AreEqual("KNO002", rows.Rows[0]["TreatmentCode"]);
+            Assert.AreEqual(2, rows.Rows[0]["PatientId"]);
         }
 
         [TestMethod]
-        public async Task CreateAsync_ValidDto_SetsStatusToIngepland()
+        public async Task CreateWithReferralAsync_SameSlotTwice_ThrowsSlotUnavailableAndCreatesNoReferral()
         {
-            // Act
-            var result = await _sut.CreateAsync(CreateValidDto());
+            await _sut.CreateWithReferralAsync(AppointmentDto(), ReferralDto());
+            var referralsBefore = await CountReferralsAsync();
 
-            // Assert
-            await using var verifyContext = TestDatabase.CreateDbContext();
-            var stored = await verifyContext.Appointments.SingleAsync(a => a.Id == result.Id);
-            Assert.AreEqual(AppointmentStatus.Ingepland, stored.Status);
+            // Verse context: de mislukte entiteiten van een eerdere poging blijven anders getrackt
+            await using var context = TestDatabase.CreateDbContext();
+            var second = new AppointmentRepository(context);
+
+            await Assert.ThrowsAsync<SlotUnavailableException>(
+                () => second.CreateWithReferralAsync(AppointmentDto(), ReferralDto()));
+
+            Assert.AreEqual(referralsBefore, await CountReferralsAsync(), "Er is een wees-verwijzing achtergebleven.");
+        }
+
+        // ---------- HasOverlapAsync ----------
+
+        [TestMethod]
+        public async Task HasOverlapAsync_ExistingAppointment_DetectsOverlapButNotAdjacentSlots()
+        {
+            await _sut.CreateWithReferralAsync(AppointmentDto(), ReferralDto());
+
+            Assert.IsTrue(await _sut.HasOverlapAsync(1, Start, End), "Zelfde tijdslot");
+            Assert.IsTrue(await _sut.HasOverlapAsync(1, Start.AddMinutes(30), End.AddMinutes(30)), "Half overlappend");
+            Assert.IsFalse(await _sut.HasOverlapAsync(1, End, End.AddHours(1)), "Direct erna");
+            Assert.IsFalse(await _sut.HasOverlapAsync(1, Start.AddHours(-1), Start), "Direct ervoor");
+            Assert.IsFalse(await _sut.HasOverlapAsync(2, Start, End), "Andere specialist");
+        }
+
+        // ---------- IsWithinAvailabilityAsync ----------
+
+        [TestMethod]
+        public async Task IsWithinAvailabilityAsync_InsideBlock_ReturnsTrue()
+        {
+            Assert.IsTrue(await _sut.IsWithinAvailabilityAsync(1, Start, End));
+            Assert.IsTrue(await _sut.IsWithinAvailabilityAsync(
+                1, new DateTime(2027, 1, 12, 8, 0, 0), new DateTime(2027, 1, 12, 9, 0, 0)), "Begin van het blok");
+            Assert.IsTrue(await _sut.IsWithinAvailabilityAsync(
+                1, new DateTime(2027, 1, 12, 16, 0, 0), new DateTime(2027, 1, 12, 17, 0, 0)), "Einde van het blok");
         }
 
         [TestMethod]
-        public async Task CreateAsync_UnknownPatient_ThrowsDbUpdateException()
+        public async Task IsWithinAvailabilityAsync_OutsideBlock_ReturnsFalse()
         {
-            var dto = CreateValidDto();
-            dto.PatientId = 999;
-
-            await AssertForeignKeyViolationAsync(
-                () => _sut.CreateAsync(dto), "FK_Appointments_Patients_PatientId");
+            Assert.IsFalse(await _sut.IsWithinAvailabilityAsync(
+                1, new DateTime(2027, 1, 12, 7, 0, 0), new DateTime(2027, 1, 12, 8, 0, 0)), "Voor het blok");
+            Assert.IsFalse(await _sut.IsWithinAvailabilityAsync(
+                1, new DateTime(2027, 1, 12, 16, 30, 0), new DateTime(2027, 1, 12, 17, 30, 0)), "Steekt over het einde");
+            Assert.IsFalse(await _sut.IsWithinAvailabilityAsync(
+                1, new DateTime(2027, 2, 1, 10, 0, 0), new DateTime(2027, 2, 1, 11, 0, 0)), "Dag zonder beschikbaarheid");
         }
 
         [TestMethod]
-        public async Task CreateAsync_UnknownSpecialist_ThrowsDbUpdateException()
+        public async Task IsWithinAvailabilityAsync_AfterSetUnavailable_ReturnsFalse()
         {
-            var dto = CreateValidDto();
-            dto.SpecialistId = 999;
+            await TestDatabase.ExecuteAsync(
+                "DELETE FROM Availabilities WHERE SpecialistId = 1 AND CAST(StartTime AS date) = '2027-01-12'");
 
-            await AssertForeignKeyViolationAsync(
-                () => _sut.CreateAsync(dto), "FK_Appointments_Specialists_SpecialistId");
-        }
-
-        [TestMethod]
-        public async Task CreateAsync_UnknownReferral_ThrowsDbUpdateException()
-        {
-            var dto = CreateValidDto();
-            dto.ReferralId = 999;
-
-            await AssertForeignKeyViolationAsync(
-                () => _sut.CreateAsync(dto), "FK_Appointments_Referrals_ReferralId");
-        }
-
-        [TestMethod]
-        public async Task CreateAsync_SecondAppointmentForSameReferral_ThrowsDbUpdateException()
-        {
-            // Arrange: referral 1 heeft al een afspraak
-            await _sut.CreateAsync(CreateValidDto());
-
-            var second = CreateValidDto();
-            second.StartTime = new DateTime(2026, 12, 2, 9, 0, 0);
-            second.EndTime = new DateTime(2026, 12, 2, 9, 30, 0);
-
-            // Act + Assert (EF maakt bij een 1-op-1 relatie een unique index)
-            var exception = await Assert.ThrowsAsync<DbUpdateException>(() => _sut.CreateAsync(second));
-            Assert.IsInstanceOfType<SqlException>(exception.InnerException);
-        }
-
-        // ---------- GetAsync ----------
-
-        [TestMethod]
-        public async Task GetAsync_NoAppointments_ReturnsEmptyList()
-        {
-            // Act
-            var result = await _sut.GetAsync();
-
-            // Assert
-            Assert.AreEqual(0, result.Count);
-        }
-
-        [TestMethod]
-        public async Task GetAsync_TwoAppointments_ReturnsBoth()
-        {
-            // Arrange
-            var first = CreateValidDto();
-            var second = CreateValidDto();
-            second.ReferralId = 2; // referral 1 is al in gebruik
-            second.StartTime = new DateTime(2026, 12, 2, 9, 0, 0);
-            second.EndTime = new DateTime(2026, 12, 2, 9, 30, 0);
-
-            var created1 = await _sut.CreateAsync(first);
-            var created2 = await _sut.CreateAsync(second);
-
-            // Act
-            var result = await _sut.GetAsync();
-
-            // Assert
-            Assert.AreEqual(2, result.Count);
-            CollectionAssert.AreEquivalent(
-                new[] { created1.Id, created2.Id },
-                result.Select(a => a.Id).ToArray());
+            Assert.IsFalse(await _sut.IsWithinAvailabilityAsync(1, Start, End));
         }
     }
 }
