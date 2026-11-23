@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Models;
 using Server.Models.Enums;
@@ -20,6 +21,11 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
 {
     private const string UserPrefix = "dev-seed-";
     private const string TreatmentCodePrefix = "DEV-";
+
+    /// <summary>Password of every seeded user, e.g. log in as "dev-seed-huisarts" (development only).</summary>
+    public const string DevPassword = "DevWachtwoord123!";
+
+    private static readonly PasswordHasher<User> PasswordHasher = new();
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -300,7 +306,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         LastName = lastName,
         FullName = $"{surName} {lastName}",
         Email = $"dev-{name}@example.test",
-        PasswordHash = $"DEV-ONLY-random-password-hash-{number:00}",
+        PasswordHash = PasswordHasher.HashPassword(null!, DevPassword),
         Role = role,
         IsActive = true
     };

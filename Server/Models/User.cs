@@ -40,6 +40,9 @@ namespace Server.Models
 
         public bool IsLockedOut { get; set; } = false;
 
+        /// <summary>Moment of the last successful login (UTC).</summary>
+        public DateTime? LastLoginAt { get; set; }
+
         public Patient? PatientDetails { get; set; }
 
         public Specialist? SpecialistDetails { get; set; }

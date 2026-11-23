@@ -23,6 +23,12 @@ namespace Server.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // User configuratie: inloggen gaat op gebruikersnaam, dus die moet uniek zijn
+            modelBuilder.Entity<User>(e =>
+            {
+                e.HasIndex(u => u.Username).IsUnique();
+            });
+
             // TreatmentCode configuratie
             modelBuilder.Entity<TreatmentCode>(e =>
             {

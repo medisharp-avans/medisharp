@@ -273,6 +273,7 @@ MSSQL_PORT=1433
 | Variable            | Required | Default                                      | Description                                                                                                 |
 | ------------------- | -------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `MSSQL_SA_PASSWORD` | **Yes**  | none, the deploy stops if it is missing      | Password of the `sa` user. Also used in the server's connection string.                                     |
+| `JWT_KEY`           | **Yes**  | none, the deploy stops if it is missing      | Secret key that signs the login tokens (JWT). At least 32 characters, e.g. `openssl rand -base64 48`.       |
 | `MSSQL_DB_NAME`     | No       | `Medisharp`                                  | Name of the database the server connects to.                                                                |
 | `CLIENT_PORT`       | No       | `80`                                         | Host port for the website. **On Dokploy, set this to a free port such as `8085`**, because Traefik uses 80. |
 | `MSSQL_IMAGE`       | No       | `mcr.microsoft.com/mssql/server:2022-latest` | SQL Server Docker image.                                                                                    |
@@ -312,5 +313,6 @@ You do not set these in `.env`. `docker-compose.prod.yml` builds them for the se
 | `ASPNETCORE_ENVIRONMENT`               | `Production`                                                                                                     |
 | `ASPNETCORE_HTTP_PORTS`                | `8080`                                                                                                           |
 | `ConnectionStrings__DefaultConnection` | `Server=db,1433;Database=${MSSQL_DB_NAME};User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;` |
+| `Jwt__Key`                             | `${JWT_KEY}`                                                                                                     |
 
 In code you read the connection string with `builder.Configuration.GetConnectionString("DefaultConnection")`.

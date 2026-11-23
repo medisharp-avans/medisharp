@@ -1,10 +1,15 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Server.Configuration;
 using Server.Data;
 using Server.Repositories;
 using Server.Services;
 using System.Reflection;
+using System.Security.Claims;
+using System.Text;
 
 namespace Server
 {
@@ -30,6 +35,34 @@ namespace Server
             {
                 builder.Services.AddHostedService<DevelopmentDataSeeder>();
             }
+
+            // JWT login. The key comes from Jwt:Key (appsettings.Development.json locally,
+            // Jwt__Key environment variable in production). Startup fails when it is missing or too short.
+            builder.Services.AddOptions<JwtOptions>()
+                .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.MapInboundClaims = false;
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidIssuer = jwt.Issuer,
+                        ValidateAudience = true,
+                        ValidAudience = jwt.Audience,
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.FromMinutes(1),
+                        NameClaimType = ClaimTypes.Name,
+                        RoleClaimType = ClaimTypes.Role
+                    };
+                });
+            builder.Services.AddAuthorization();
 
             // HTTPS is handled by the reverse proxy; take the scheme and client IP from the X-Forwarded-* headers.
             builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -103,6 +136,7 @@ namespace Server
 
             app.UseCors("Client");
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
 

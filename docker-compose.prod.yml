@@ -38,6 +38,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
       ConnectionStrings__DefaultConnection: "Server=db,1433;Database=${MSSQL_DB_NAME:-Medisharp};User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;"
+      Jwt__Key: "${JWT_KEY:?Set JWT_KEY in .env}"
     networks:
       - backend
       - frontend

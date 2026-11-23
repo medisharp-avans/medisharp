@@ -1,4 +1,6 @@
-﻿using Server.Services.InterFaces;
+﻿using Microsoft.AspNetCore.Identity;
+using Server.Models;
+using Server.Services.InterFaces;
 
 namespace Server.Services
 {
@@ -18,6 +20,9 @@ namespace Server.Services
 
             services.AddScoped<IAppointmentService, AppointmentService>();
             services.AddScoped<IReferralService, ReferralService>();
+
+            services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+            services.AddScoped<IAuthService, AuthService>();
             return services;
         }
     }
