@@ -6,7 +6,12 @@
 
 const routes = [
   //Auth routes
-  // { path: '/login', name: 'Login', component: () => import("@/Login.vue"), meta: { hideLayout: true }},
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/auth/LoginView.vue'),
+    meta: { hideLayout: true },
+  },
   {
     path: '/profiel',
     name: 'Profile',

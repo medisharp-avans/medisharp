@@ -13,6 +13,18 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Stuur het JWT (gezet door de auth store na inloggen) mee met elke request.
+api.interceptors.request.use((config) => {
+  let token: string | null = null
+  try {
+    token = localStorage.getItem('auth_token')
+  } catch {
+    // Opslag niet beschikbaar
+  }
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
