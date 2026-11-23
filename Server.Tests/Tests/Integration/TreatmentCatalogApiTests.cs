@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Server.Contracts.Referrals;
-using Server.Contracts.Treatments;
+using Server.Models.DTO.Requests;
+using Server.Models.DTO.Responses;
 using Server.Data;
 using Server.Tests.Fixtures;
 using System.Net;

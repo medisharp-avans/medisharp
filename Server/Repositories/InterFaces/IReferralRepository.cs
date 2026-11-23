@@ -1,6 +1,6 @@
 using Server.Models;
 
-namespace Server.Data.Repositories
+namespace Server.Repositories.InterFaces
 {
     /// <summary>Persists referral snapshots without exposing database operations to the service.</summary>
     public interface IReferralRepository

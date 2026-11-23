@@ -1,4 +1,4 @@
-namespace Server.Models
+namespace Server.Models.Enums
 {
     public enum ReferralUrgency
     {

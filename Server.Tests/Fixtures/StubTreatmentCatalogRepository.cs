@@ -1,4 +1,5 @@
-using Server.Data.Repositories;
+using Server.Repositories;
+using Server.Repositories.InterFaces;
 using Server.Models;
 
 namespace Server.Tests.Fixtures

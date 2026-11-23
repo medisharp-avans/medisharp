@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Server.Contracts.Treatments;
-using Server.Services.Treatments;
+using Server.Models.DTO.Responses;
+using Server.Services;
+using Server.Services.InterFaces;
 using System.ComponentModel.DataAnnotations;
 
 namespace Server.Controllers

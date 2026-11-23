@@ -1,4 +1,4 @@
-namespace Server.Contracts.Referrals
+namespace Server.Models.DTO.Responses
 {
     /// <summary>Confirms creation without returning patient or medical information.</summary>
     public class CreatedReferralResponse

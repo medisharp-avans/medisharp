@@ -1,3 +1,4 @@
+using Server.Models.Enums;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -6,9 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Server.Contracts.Referrals;
+using Server.Models.DTO.Requests;
+using Server.Models.DTO.Responses;
 using Server.Data;
-using Server.Data.Repositories;
+using Server.Repositories;
+using Server.Repositories.InterFaces;
 using Server.Models;
 using Server.Tests.Fixtures;
 using System.Collections.Concurrent;

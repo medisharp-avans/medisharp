@@ -1,4 +1,6 @@
-using Server.Contracts.Referrals;
+using Server.Models.Enums;
+using Server.Models.DTO.Requests;
+using Server.Models.DTO.Responses;
 using Server.Models;
 
 namespace Server.Tests.Fixtures

@@ -1,10 +1,13 @@
-using Server.Contracts.Referrals;
-using Server.Data.Repositories;
+using Server.Services.InterFaces;
+using Server.Models.DTO.Requests;
+using Server.Models.DTO.Responses;
+using Server.Repositories;
+using Server.Repositories.InterFaces;
 using Server.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
-namespace Server.Services.Referrals
+namespace Server.Services
 {
     /// <summary>Creates a patient snapshot after validating the referral's required fields.</summary>
     public class ReferralService(IReferralRepository repository, ITreatmentCatalogRepository treatmentCatalog)

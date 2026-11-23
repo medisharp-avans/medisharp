@@ -1,8 +1,9 @@
+using Server.Models.Enums;
 using Server.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace Server.Contracts.Referrals
+namespace Server.Models.DTO.Requests
 {
     /// <summary>Contains only the patient and medical fields selected for a new referral.</summary>
     /// <remarks>Server-generated values, full dossiers and attachment storage keys are not accepted.</remarks>

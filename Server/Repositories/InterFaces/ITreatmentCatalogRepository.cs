@@ -1,6 +1,6 @@
 using Server.Models;
 
-namespace Server.Data.Repositories
+namespace Server.Repositories.InterFaces
 {
     /// <summary>Provides read-only access to the treatment reference data.</summary>
     public interface ITreatmentCatalogRepository

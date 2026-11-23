@@ -1,7 +1,9 @@
+using Server.Data;
+using Server.Repositories.InterFaces;
 using Microsoft.EntityFrameworkCore;
 using Server.Models;
 
-namespace Server.Data.Repositories
+namespace Server.Repositories
 {
     /// <summary>Queries the catalogue with typed, asynchronous EF Core queries.</summary>
     public class TreatmentCatalogRepository(AppDbContext context) : ITreatmentCatalogRepository

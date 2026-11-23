@@ -1,6 +1,8 @@
+using Server.Data;
+using Server.Repositories.InterFaces;
 using Server.Models;
 
-namespace Server.Data.Repositories
+namespace Server.Repositories
 {
     /// <summary>Persists referrals through the request's scoped EF Core context.</summary>
     public class ReferralRepository(AppDbContext context) : IReferralRepository

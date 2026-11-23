@@ -1,7 +1,11 @@
-using Server.Contracts.Referrals;
-using Server.Data.Repositories;
+using Server.Models.Enums;
+using Server.Models.DTO.Requests;
+using Server.Models.DTO.Responses;
+using Server.Repositories;
+using Server.Repositories.InterFaces;
 using Server.Models;
-using Server.Services.Referrals;
+using Server.Services;
+using Server.Services.InterFaces;
 using Server.Tests.Fixtures;
 
 namespace Server.Tests.Tests.Unit

@@ -1,6 +1,6 @@
-using Server.Contracts.Treatments;
+using Server.Models.DTO.Responses;
 
-namespace Server.Services.Treatments
+namespace Server.Services.InterFaces
 {
     /// <summary>Provides the choices needed by the referral form.</summary>
     public interface ITreatmentCatalogService

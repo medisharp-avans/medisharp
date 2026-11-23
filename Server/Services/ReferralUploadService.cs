@@ -1,7 +1,8 @@
-using Server.Contracts.Referrals;
+using Server.Models.DTO.Requests;
+using Server.Models.DTO.Responses;
 using Server.Models;
 
-namespace Server.Services.Referrals;
+namespace Server.Services;
 
 /// <summary>Validates bounded uploads and removes staged files unless the referral is committed.</summary>
 public class ReferralUploadService(ReferralService referrals, IConfiguration configuration)

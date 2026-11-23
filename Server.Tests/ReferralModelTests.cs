@@ -1,3 +1,4 @@
+using Server.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Models;

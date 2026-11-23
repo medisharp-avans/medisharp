@@ -1,6 +1,7 @@
-using Server.Contracts.Referrals;
+using Server.Models.DTO.Requests;
+using Server.Models.DTO.Responses;
 
-namespace Server.Services.Referrals
+namespace Server.Services.InterFaces
 {
     /// <summary>Validates and creates referrals independently of the HTTP endpoint.</summary>
     public interface IReferralService

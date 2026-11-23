@@ -1,7 +1,9 @@
-using Server.Contracts.Treatments;
-using Server.Data.Repositories;
+using Server.Services.InterFaces;
+using Server.Models.DTO.Responses;
+using Server.Repositories;
+using Server.Repositories.InterFaces;
 
-namespace Server.Services.Treatments
+namespace Server.Services
 {
     /// <summary>Maps catalogue records to the public reference data contract.</summary>
     public class TreatmentCatalogService(ITreatmentCatalogRepository repository) : ITreatmentCatalogService

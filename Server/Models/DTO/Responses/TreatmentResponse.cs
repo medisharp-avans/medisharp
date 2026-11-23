@@ -1,4 +1,4 @@
-namespace Server.Contracts.Treatments
+namespace Server.Models.DTO.Responses
 {
     /// <summary>Reference information for displaying a treatment choice in the referral form.</summary>
     public class TreatmentResponse
