@@ -1,13 +1,16 @@
-
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
 import { useCreate } from '@/composables/api/useCreate'
+import { useFetch } from '@/composables/api/useFetch'
 
 const { create, loading } = useCreate(
   '/api/appointments',
   { skipErrorRedirect: true },
 )
+
+const { data } = useFetch('api/Patients/search/patients')
+console.log(data)
 
 const form = ref({
   patientId: '',
@@ -78,7 +81,7 @@ async function submit() {
 </script>
 
 <template>
-  <main class="mx-auto max-w-3xl p-6">
+  <div class="mx-auto max-w-3xl p-6">
     <h1 class="mb-6 text-2xl font-semibold">
       Afspraak aanmaken
     </h1>
@@ -253,5 +256,5 @@ async function submit() {
       </button>
 
     </form>
-  </main>
+  </div>
 </template>

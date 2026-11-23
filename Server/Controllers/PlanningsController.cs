@@ -19,21 +19,7 @@ namespace Server.Controllers
         public record TimeSlotDto(int SpecialistId, string SpecialistName, DateTime StartTime);
 
         // GET /api/patients?search=jan
-        [HttpGet("api/patients")]
-        public async Task<ActionResult<List<PatientDto>>> SearchPatients([FromQuery] string? search)
-        {
-            var query = db.Patients.AsNoTracking();
 
-            if (!string.IsNullOrWhiteSpace(search))
-                query = query.Where(p => p.User.FullName.Contains(search));
-
-            var patients = await query
-                .OrderBy(p => p.User.FullName)
-                .Select(p => new PatientDto(p.Id, p.User.FullName, p.GeneralPractitionerId))
-                .ToListAsync();
-
-            return Ok(patients);
-        }
 
         // GET /api/patients/1
         [HttpGet("api/patients/{id:int}")]
