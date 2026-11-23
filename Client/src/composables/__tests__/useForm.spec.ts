@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { reactive } from 'vue'
 import { useForm } from '@/composables/useForm'
 
 const required = (value: string) => (value ? true : 'Required.')
@@ -118,5 +119,43 @@ describe('useForm', () => {
 
     expect(values.value.name).toBe('Paracetamol')
     expect(errors.value).toEqual({})
+  })
+
+  it('accepts nested reactive data without sharing it with the form', () => {
+    const patient = reactive({ allergies: ['Peanut'] })
+    const { values, setValues } = useForm({
+      initialValues: { allergies: [] as string[] },
+      onSubmit: vi.fn<() => void>(),
+    })
+
+    setValues({ allergies: patient.allergies })
+    values.value.allergies.push('Latex')
+
+    expect(values.value.allergies).toEqual(['Peanut', 'Latex'])
+    expect(patient.allergies).toEqual(['Peanut'])
+  })
+
+  it('accepts nested reactive data as initial values', () => {
+    const store = reactive({ address: { city: 'Breda' } })
+
+    const { values } = useForm({
+      initialValues: { address: store.address },
+      onSubmit: vi.fn<() => void>(),
+    })
+
+    expect(values.value.address).toEqual({ city: 'Breda' })
+  })
+
+  it('keeps a Date as a Date when copying values', () => {
+    const date = new Date('2026-01-15T10:00:00Z')
+
+    const { values } = useForm({
+      initialValues: { appointment: { date } },
+      onSubmit: vi.fn<() => void>(),
+    })
+
+    expect(values.value.appointment.date).toBeInstanceOf(Date)
+    expect(values.value.appointment.date).toEqual(date)
+    expect(values.value.appointment.date).not.toBe(date)
   })
 })

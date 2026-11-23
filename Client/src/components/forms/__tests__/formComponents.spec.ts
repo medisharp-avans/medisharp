@@ -25,6 +25,7 @@ describe('form components', () => {
     expect(input.attributes('aria-invalid')).toBe('true')
     expect(input.attributes('aria-describedby')).toBe('name-error')
     expect(wrapper.find('#name-error').text()).toBe('Required.')
+    expect(wrapper.find('#name-error').attributes('role')).toBe('alert')
   })
 
   it('BaseInput updates the model and passes on attributes', async () => {

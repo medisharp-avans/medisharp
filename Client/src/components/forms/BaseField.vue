@@ -36,12 +36,14 @@ const controlAttrs = computed(() => {
 })
 
 // Styling shared by all controls, with different colors for the error state.
+// The borders need at least 3:1 contrast and the focus ring matches BaseButton (WCAG 2.2 AA).
 const controlClass = computed(() => [
-  'w-full rounded-lg border text-sm outline-none transition-colors focus:bg-white',
+  'w-full rounded-xl border text-sm outline-hidden transition-colors focus:bg-white',
+  'focus-visible:ring-2 focus-visible:ring-offset-2',
   'disabled:cursor-not-allowed disabled:opacity-60',
   props.error
-    ? 'border-red-400 bg-red-50 focus:border-red-600'
-    : 'border-gray-200 bg-gray-100 focus:border-blue-500',
+    ? 'border-red-600 bg-red-50 focus-visible:ring-red-500'
+    : 'border-gray-500 bg-gray-100 focus-visible:ring-blue-500',
 ])
 </script>
 
@@ -53,8 +55,9 @@ const controlClass = computed(() => [
     <slot :control-attrs="controlAttrs" :control-class="controlClass"></slot>
 
     <!-- The error stays on the left and the hint on the right, also when only one is shown. -->
+    <!-- role="alert" makes screen readers announce an error as soon as it appears. -->
     <div v-if="error || hint" class="flex justify-between gap-2">
-      <p v-if="error" :id="errorId" class="text-xs text-red-700">{{ error }}</p>
+      <p v-if="error" :id="errorId" role="alert" class="text-xs text-red-700">{{ error }}</p>
       <p v-if="hint" :id="hintId" class="ml-auto text-xs text-gray-600">{{ hint }}</p>
     </div>
   </div>

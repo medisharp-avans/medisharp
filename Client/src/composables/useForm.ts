@@ -27,12 +27,30 @@ export interface UseFormOptions<Values extends object> {
   onSubmit: (values: Values) => void | false | Promise<void | false>
 }
 
+/** Checks for a regular `{}` object, so values such as `Date` and `File` are left out. */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) return false
+
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
+
 /**
  * Creates a deep copy, so editing the form can never change the original values.
- * `toRaw` is needed because `structuredClone` cannot copy Vue's reactive proxies.
+ * Arrays and objects are copied level by level, because `structuredClone` throws on Vue's
+ * reactive proxies and `toRaw` only unwraps one level (for example data from a Pinia store).
  */
-function cloneValues<Values extends object>(values: Values): Values {
-  return structuredClone(toRaw(values))
+function cloneValues<Value>(value: Value): Value {
+  const rawValue = toRaw(value)
+
+  if (Array.isArray(rawValue)) {
+    return rawValue.map((item) => cloneValues(item)) as Value
+  }
+  if (isPlainObject(rawValue)) {
+    const clonedEntries = Object.entries(rawValue).map(([key, item]) => [key, cloneValues(item)])
+    return Object.fromEntries(clonedEntries) as Value
+  }
+  return structuredClone(rawValue)
 }
 
 /**

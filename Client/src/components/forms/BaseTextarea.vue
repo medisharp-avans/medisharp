@@ -10,18 +10,16 @@ import BaseField from './BaseField.vue'
  * <BaseTextarea v-model="values.note" label="Notitie" :maxlength="200" :error="errors.note" />
  */
 
-// Extra attributes (rows, disabled, ...) belong on the <textarea>, not on the outer wrapper.
+// Extra attributes (rows, placeholder, ...) belong on the <textarea>, not on the outer wrapper.
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps<{
-  /** Visible text above the field. Also the placeholder when none is given. */
+  /** Visible text above the field. */
   label: string
   /** HTML id of the textarea. Generated automatically when left out. */
   id?: string
   /** Validation message shown below the field. */
   error?: string
-  /** Example text shown while the field is empty. */
-  placeholder?: string
   /** Maximum number of characters. Also turns on the character counter. */
   maxlength?: number
 }>()
@@ -47,7 +45,6 @@ const characterCount = computed(() =>
     <textarea
       v-model="model"
       rows="4"
-      :placeholder="placeholder || label"
       :maxlength="maxlength"
       v-bind="{ ...controlAttrs, ...$attrs }"
       :class="[controlClass, 'px-3.5 py-2.5 text-gray-900 placeholder:text-gray-600']"
