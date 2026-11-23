@@ -2,6 +2,18 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { createReferral, type ReferralDraft } from '../referrals'
 
 afterEach(() => vi.unstubAllGlobals())
+
+it('verstuurt bijlagen als multipart zonder een eigen boundary-header', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ status: 201 })
+  vi.stubGlobal('fetch', fetchMock)
+  const file = new File(['%PDF-1.4\n%%EOF'], 'test.pdf', { type: 'application/pdf' })
+  await createReferral(draft, [file])
+  const [url, options] = fetchMock.mock.calls[0]!
+  expect(url).toBe('/api/referrals/with-attachments')
+  expect(options.headers).toBeUndefined()
+  expect(options.body.get('referral')).toBe(JSON.stringify(draft))
+  expect(options.body.getAll('attachments')).toHaveLength(1)
+})
 const draft = { bsn: '000000001', patientName: 'Fictieve patiënt' } as ReferralDraft
 
 it('verstuurt invoer in de body en accepteert uitsluitend 201 als bevestiging', async () => {
@@ -18,12 +30,10 @@ it('verstuurt invoer in de body en accepteert uitsluitend 201 als bevestiging', 
 it('geeft veldnamen door zonder aangeleverde servertekst te tonen', async () => {
   vi.stubGlobal(
     'fetch',
-    vi
-      .fn()
-      .mockResolvedValue({
-        status: 400,
-        json: async () => ({ errors: { bsn: ['Technische of gevoelige servertekst'] } }),
-      }),
+    vi.fn().mockResolvedValue({
+      status: 400,
+      json: async () => ({ errors: { bsn: ['Technische of gevoelige servertekst'] } }),
+    }),
   )
   expect(await createReferral(draft)).toEqual({
     saved: false,

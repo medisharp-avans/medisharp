@@ -13,6 +13,12 @@ namespace Server.Services.Referrals
         /// <inheritdoc />
         public async Task<CreateReferralResult> CreateAsync(
             CreateReferralRequest request, CancellationToken cancellationToken = default)
+            => await CreateWithAttachmentsAsync(request, [], cancellationToken);
+
+        /// <summary>Persists validated attachment metadata together with the referral in one database save.</summary>
+        public async Task<CreateReferralResult> CreateWithAttachmentsAsync(
+            CreateReferralRequest request, IReadOnlyList<ReferralAttachment> attachments,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(request);
             cancellationToken.ThrowIfCancellationRequested();
@@ -70,6 +76,7 @@ namespace Server.Services.Referrals
                 Urgency = request.Urgency!.Value
             };
 
+            foreach (var attachment in attachments) referral.Attachments.Add(attachment);
             await repository.AddAsync(referral, cancellationToken);
 
             return new CreateReferralResult

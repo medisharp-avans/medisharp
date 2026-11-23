@@ -41,7 +41,7 @@ async function setup(status = 201, delayed = false) {
   await wrapper.get('#referral-specialty').setValue('KNO')
   await flushPromises()
   await wrapper.get('#referral-treatment').setValue('Z0005')
-  for (const input of wrapper.findAll('input, textarea')) {
+  for (const input of wrapper.findAll('input:not([type=file]), textarea')) {
     await input.setValue(input.attributes('type') === 'email' ? 'test@example.invalid' : 'Fictief')
   }
   return { wrapper, post, finish: () => finish?.() }

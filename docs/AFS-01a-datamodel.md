@@ -268,3 +268,30 @@ dotnet test Server/Server.slnx --configuration Release --filter "TestCategory!=E
 
 Stop een zelf gestarte Debug-backend met Ctrl+C voordat je die opnieuw bouwt of
 start. De bovenstaande testopdracht bouwt Release en gebruikt geen luisterpoort.
+
+## Uploadfase
+
+Het formulier accepteert optioneel PDF, JPG/JPEG en PNG: maximaal 5 bestanden,
+10 MiB per bestand en 25 MiB samen. Deze limieten zijn afgestemde ontwerpkeuzes.
+Met bijlagen verstuurt de client multipart naar POST /api/referrals/with-attachments:
+het veld referral bevat het bestaande JSON-contract, attachments bevat de bestanden.
+Zonder bestanden blijft het bestaande JSON-endpoint werken.
+
+De server valideert aantallen, lengtes, bestandsnaam, extensie en bestandskenmerken
+(signature en eindmarkering). Dit is geen volledige documentparser of virusscanner.
+Uploads blijven Development-only. Bestanden zijn niet openbaar te downloaden;
+rolgebonden toegang en de definitieve opslagvoorziening hangen af van PRI-03.
+
+Standaard staan bestanden onder LocalApplicationData/MediSharp/attachments, buiten
+Git en wwwroot. Attachments:StoragePath kan een afgeschermde absolute opslagmap
+instellen. Configureer die buiten de webmap, met beperkte bestandsrechten en een
+blijvend volume bij hosting. De database bevat uitsluitend metadata en interne sleutels.
+
+Bestanden worden onder gegenereerde namen geschreven, waarna verwijzing en metadata
+in één SaveChanges worden vastgelegd. Validatiefouten en opslagfouten ruimen de
+bestanden van die aanvraag op. Een procescrash tussen bestandsschrijven en databaseopslag
+kan verweesde bestanden achterlaten; er is nog geen periodieke opruimtaak.
+Er is geen databasewijziging nodig: de bestaande bijlagentabel wordt gebruikt.
+
+Upload-integratietests gebruiken een tijdelijke map en een geïsoleerde database.
+Ze controleren bytes, metadata, limieten, geweigerde bestandstypen en opruiming.

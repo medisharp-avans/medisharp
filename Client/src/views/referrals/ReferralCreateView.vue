@@ -25,6 +25,28 @@ const draft = reactive({
   urgency: 'Regular',
 })
 
+const attachments = ref<File[]>([])
+const attachmentError = ref('')
+function selectAttachments(event: Event) {
+  const input = event.target as HTMLInputElement
+  const selected = Array.from(input.files ?? [])
+  attachmentError.value = ''
+  if (
+    selected.length > 5 ||
+    selected.some(
+      (file) =>
+        file.size === 0 || file.size > 10 * 1024 * 1024 || !/\.(pdf|jpe?g|png)$/i.test(file.name),
+    ) ||
+    selected.reduce((sum, file) => sum + file.size, 0) > 25 * 1024 * 1024
+  ) {
+    attachments.value = []
+    input.value = ''
+    attachmentError.value =
+      'Kies maximaal 5 PDF-, JPG- of PNG-bestanden, maximaal 10 MB per bestand en 25 MB samen.'
+    return
+  }
+  attachments.value = selected
+}
 const saving = ref(false)
 const saved = ref(false)
 const saveMessage = ref('')
@@ -44,9 +66,10 @@ const fieldLabels: Record<string, string> = {
   medication: 'Medicatie',
   allergies: 'Allergieën',
   urgency: 'Urgentie',
+  attachments: 'Bijlagen: controleer bestandstype, aantal en grootte',
 }
 async function saveReferral() {
-  if (saving.value || saved.value) return
+  if (saving.value || saved.value || attachmentError.value) return
   saveMessage.value = ''
   invalidFields.value = []
   const blank = Object.entries(draft)
@@ -59,9 +82,10 @@ async function saveReferral() {
   }
   saving.value = true
   try {
-    const result = await createReferral({ ...draft })
+    const result = await createReferral({ ...draft }, attachments.value)
     if (result.saved) {
       saved.value = true
+      attachments.value = []
       Object.keys(draft).forEach((key) => {
         draft[key as keyof typeof draft] = ''
       })
@@ -356,6 +380,32 @@ const selectClasses =
           </div>
         </fieldset>
 
+        <fieldset :class="fieldsetClasses">
+          <legend class="px-2 text-lg font-semibold">Bijlagen (optioneel)</legend>
+          <label for="referral-attachments" class="mb-2 block font-medium"
+            >Afbeeldingen of pdf’s toevoegen</label
+          >
+          <input
+            id="referral-attachments"
+            type="file"
+            multiple
+            accept=".pdf,.jpg,.jpeg,.png"
+            aria-describedby="attachment-hint attachment-error"
+            :aria-invalid="!!attachmentError"
+            @change="selectAttachments"
+            class="block w-full min-w-0 rounded-lg border border-gray-500 p-3 focus:outline-2 focus:outline-blue-600"
+          />
+          <p id="attachment-hint" class="mt-2 text-sm">
+            PDF, JPG/JPEG of PNG. Maximaal 5 bestanden, 10 MB per bestand en 25 MB samen. Opnieuw
+            kiezen vervangt de selectie.
+          </p>
+          <p id="attachment-error" role="status" class="mt-2 text-sm text-red-800">
+            {{ attachmentError }}
+          </p>
+          <ul class="mt-2 list-disc pl-5">
+            <li v-for="(file, index) in attachments" :key="index">{{ file.name }}</li>
+          </ul>
+        </fieldset>
         <div
           class="flex flex-col gap-4 border-t border-gray-200 pt-5 sm:flex-row sm:items-center sm:justify-end"
         >

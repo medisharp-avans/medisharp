@@ -31,6 +31,8 @@ namespace Server
                 options.UseSqlServer(connectionString));
             builder.Services.AddScoped<IReferralRepository, ReferralRepository>();
             builder.Services.AddScoped<IReferralService, ReferralService>();
+            builder.Services.AddScoped<ReferralService>();
+            builder.Services.AddScoped<ReferralUploadService>();
             builder.Services.AddScoped<ITreatmentCatalogRepository, TreatmentCatalogRepository>();
             builder.Services.AddScoped<ITreatmentCatalogService, TreatmentCatalogService>();
             builder.Services.AddScoped<DevelopmentOnlyFilter>();
