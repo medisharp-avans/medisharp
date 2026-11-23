@@ -18,7 +18,7 @@ namespace Server.Services
 
             services.AddScoped<IAppointmentService, AppointmentService>();
             services.AddScoped<IReferralService, ReferralService>();
-            services.AddScoped<IPatientService, PatientService>();
+            services.AddScoped<IPlanningService, PlanningService>();
             return services;
         }
     }

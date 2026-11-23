@@ -5,11 +5,11 @@ import { useCreate } from '@/composables/api/useCreate'
 import { useFetch } from '@/composables/api/useFetch'
 
 const { create, loading } = useCreate(
-  '/api/appointments',
+  'api/appointments',
   { skipErrorRedirect: true },
 )
 
-const { data } = useFetch('api/Patients/search/patients')
+const { data } = useFetch('api/Planning/search/patients')
 console.log(data)
 
 const form = ref({

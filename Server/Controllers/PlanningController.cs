@@ -1,23 +1,21 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Server.Models;
+﻿using Microsoft.AspNetCore.Mvc;
+using Server.Models.DTO.Responses;
 using Server.Services.InterFaces;
-using static Server.Controllers.PlanningController;
 
 namespace Server.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PatientsController : ControllerBase
+    public class PlanningController : ControllerBase
     {
-        private readonly IPatientService _service;
+        private readonly IPlanningService _service;
 
-        public PatientsController(IPatientService service)
+        public PlanningController(IPlanningService service)
         {
             _service = service;
         }
         [HttpGet("search/patients")]
-        public async Task<ActionResult<List<Patient>>> SearchPatients()
+        public async Task<ActionResult<List<PlanningResponseDTO>>> SearchPatients()
         {
             var patients = await _service.GetPatientsAsync();
 
