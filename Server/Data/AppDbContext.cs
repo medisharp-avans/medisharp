@@ -120,6 +120,9 @@ namespace Server.Data
                     .HasForeignKey<Appointment>(a => a.ReferralId)
                     .IsRequired(false)
                     .OnDelete(DeleteBehavior.NoAction);
+
+                e.HasIndex(a => new { a.SpecialistId, a.StartTime })
+                    .IsUnique();
             });
 
 

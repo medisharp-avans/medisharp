@@ -4,6 +4,7 @@ using OpenQA.Selenium.Chrome;
 using Server.Models.Enums;
 using Server.Tests.TestDb;
 using Server.Tests.Utils;
+using System.Data;
 
 namespace Server.Tests.Helpers
 {
@@ -49,7 +50,10 @@ namespace Server.Tests.Helpers
                 new SqlParameter("@s", await SpecialistIdAsync(specialist)),
                 new SqlParameter("@st", start),
                 new SqlParameter("@spec", (int)Specialism.KNO),
-                new SqlParameter("@status", (int)AppointmentStatus.Ingepland));
+                new SqlParameter("@status", SqlDbType.Int)
+                {
+                    Value = (int)AppointmentStatus.Ingepland
+                });
             return Convert.ToInt32(t.Rows[0][0]);
         }
 
@@ -112,6 +116,7 @@ namespace Server.Tests.Helpers
     public static class BrowserApi
     {
         /// <summary>Plant een afspraak (de API maakt zelf een verwijzing aan). Geeft de HTTP-statuscode (-1 bij een netwerkfout).</summary>
+
         public static long PostAppointment(
             IWebDriver driver,
             int patientId,
@@ -122,6 +127,7 @@ namespace Server.Tests.Helpers
             Specialism specialism = Specialism.KNO)
         {
             var js = (IJavaScriptExecutor)driver;
+
             var body = System.Text.Json.JsonSerializer.Serialize(new
             {
                 patientId,
@@ -137,11 +143,45 @@ namespace Server.Tests.Helpers
 
             var result = js.ExecuteAsyncScript(@"
                 const done = arguments[arguments.length - 1];
-                fetch(arguments[1] + '/api/appointments', { method: 'POST', credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }, body: arguments[0] })
-                  .then(r => done(r.status)).catch(() => done(-1));", body, TestSettings.ApiUrl);
-            return Convert.ToInt64(result);
+
+                fetch(arguments[1] + '/api/appointments', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: arguments[0]
+                })
+                .then(async response => {
+                    const responseBody = await response.text();
+
+                    done(JSON.stringify({
+                        status: response.status,
+                        body: responseBody
+                    }));
+                })
+                .catch(error => {
+                    done(JSON.stringify({
+                        status: -1,
+                        error: error.message
+                    }));
+                });
+            ", body, TestSettings.ApiUrl);
+
+            using var document = System.Text.Json.JsonDocument.Parse(result.ToString()!);
+
+            var root = document.RootElement;
+            var status = root.GetProperty("status").GetInt64();
+
+            if (status == -1)
+            {
+                var error = root.GetProperty("error").GetString();
+
+                throw new InvalidOperationException(
+                    $"Het API-verzoek kon niet worden uitgevoerd: {error}");
+            }
+
+            return status;
         }
+
     }
 
     /// <summary>Tweede (of derde) Chrome-browser voor tests met meerdere gelijktijdige sessies.</summary>

@@ -56,7 +56,8 @@ namespace Server.Migrations
                         .IsUnique()
                         .HasFilter("[ReferralId] IS NOT NULL");
 
-                    b.HasIndex("SpecialistId");
+                    b.HasIndex("SpecialistId", "StartTime")
+                        .IsUnique();
 
                     b.ToTable("Appointments");
                 });

@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpenQA.Selenium;
 using Server.Tests.Utils;
+using OpenQA.Selenium.Support.UI;
 
 namespace Server.Tests.PageModels
 {
@@ -53,6 +53,17 @@ namespace Server.Tests.PageModels
             var element = Driver.WaitForElement(by);
             element.Clear();
             element.SendKeys(text);
+        }
+
+        /// <summary>Selects an option in a dropdown by its value.</summary>
+        protected void Select(By by, string value, string? description = null)
+        {
+            TestLog.Step($"Select '{value}' in {description ?? by.ToString()}");
+
+            var element = Driver.WaitForElement(by);
+            var dropdown = new SelectElement(element);
+
+            dropdown.SelectByValue(value);
         }
     }
 }
