@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { reactive } from 'vue'
-import { useForm } from '@/composables/useForm'
+import { useForm } from '@/composables/forms/useForm'
 
 const required = (value: string) => (value ? true : 'Required.')
 

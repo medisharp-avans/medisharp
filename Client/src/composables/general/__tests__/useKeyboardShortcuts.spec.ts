@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { handleKeyboardShortcut } from '@/composables/useKeyboardShortcuts'
+import { handleKeyboardShortcut } from '@/composables/general/useKeyboardShortcuts'
 
 describe('handleKeyboardShortcut', () => {
   beforeEach(() => {

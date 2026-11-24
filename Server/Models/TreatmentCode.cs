@@ -16,7 +16,7 @@ namespace Server.Models
 
         [Required]
         [EnumDataType(typeof(Specialism))]
-        public string Specialism { get; set; } = string.Empty;
+        public Specialism Specialism { get; set; } 
 
         [Required]
         public int DurationInQuarters { get; set; }

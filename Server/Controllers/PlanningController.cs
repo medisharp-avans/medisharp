@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Server.Models;
 using Server.Models.DTO.Responses;
 using Server.Services.InterFaces;
 
@@ -14,14 +15,23 @@ namespace Server.Controllers
         {
             _service = service;
         }
+
         [HttpGet("search/patients")]
         public async Task<ActionResult<List<PlanningResponseDTO>>> SearchPatients()
         {
-            var patients = await _service.GetPatientsAsync();
+            return Ok(await _service.GetPatientsAsync());
+        }
 
-            if (!patients.Any()) return NotFound();
+        [HttpGet("treatmentcodes")]
+        public async Task<ActionResult<List<TreatmentCode>>> GetTreatmentCodesBySpecialist([FromQuery] string specialism)
+        {
+            return Ok(await _service.GetCodesBySpecialist(specialism));
+        }
 
-            return Ok(patients);
+        [HttpGet("search/specialists")]
+        public async Task<ActionResult<List<PlanningResponseDTO>>> GetSpecialistsBySpecialism([FromQuery] string specialism)
+        {
+            return Ok(await _service.GetSpecialistsBySpecialism(specialism));
         }
     }
 }

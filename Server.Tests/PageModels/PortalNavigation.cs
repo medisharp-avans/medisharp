@@ -7,6 +7,7 @@ namespace Server.Tests.PageModels
     {
         public void GoToHome() => Click(By.Id("HomeRoute-link"), "menu Home");
         public void GoToAppointments() => Click(By.Id("AppointmentsRoute-link"), "menu Afspraken");
+        public void GoToNewAppointment() => Click(By.Id("NewAppointmentRoute-link"), "menu Afspraak aanmaken");
         public void GoToMedicalFile() => Click(By.Id("MedicalFileRoute-link"), "menu Medisch Dossier");
         public void GoToReferrals() => Click(By.Id("ReferralsRoute-link"), "menu Verwijsbrieven");
         public void GoToPatients() => Click(By.Id("PatientsRoute-link"), "menu Patiënten");

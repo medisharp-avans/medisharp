@@ -91,7 +91,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         {
             Code = $"{TreatmentCodePrefix}CONSULT",
             Description = "Standaard eerste consult (ontwikkeldata)",
-            Specialism = nameof(Specialism.Cardiologie),
+            Specialism = Specialism.Cardiologie,
             DurationInQuarters = 4,
             Cost = 75.00m
         };
@@ -100,7 +100,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         {
             Code = $"{TreatmentCodePrefix}FOLLOWUP",
             Description = "Vervolgconsult (ontwikkeldata)",
-            Specialism = nameof(Specialism.Cardiologie),
+            Specialism = Specialism.Cardiologie,
             DurationInQuarters = 2,
             Cost = 45.00m
         };
@@ -109,7 +109,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         {
             Code = $"{TreatmentCodePrefix}CHECK",
             Description = "Controleafspraak (ontwikkeldata)",
-            Specialism = nameof(Specialism.Dermatologie),
+            Specialism = Specialism.KNO,
             DurationInQuarters = 2,
             Cost = 35.00m
         };

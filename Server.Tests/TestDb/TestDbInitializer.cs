@@ -1,4 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Server.Models;
+using Server.Models.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Server.Tests.TestDb
 {
@@ -8,77 +11,291 @@ namespace Server.Tests.TestDb
     /// </summary>
     public static class TestDbInitializer
     {
-        /// <summary>
-        /// Inserts the seed data. Only use fictitious data here (DoD 19).
-        ///
-        /// Users (FullName is the name the tests use):
-        ///   1 Jan Jansen (patient)         2 Dr. Visser (huisarts)       3 Dr. De Vries (specialist, KNO)
-        ///   4 Piet Pietersen (patient)     5 Anna de Boer (patient)      6 Dr. Bakker (specialist, KNO)
-        ///   7 Dr. Smit (specialist, Cardiologie)   8 and 9 Medewerker A and B   10 Beheerder Een
-        /// Patient, specialist and GP ids: patients 1-3, specialists 1-3 (same order as the users), GP 1.
-        /// Referrals 1 and 2 belong to patient 1. Availability: 08:00-17:00 on every day of January 2027.
-        /// </summary>
         public static async Task SeedAsync(DbContext context)
         {
-            // Fixed ids keep the test cases readable ("patient 1"). The password hash is not a real hash,
-            // so this data cannot be used to log in. Use ExecuteSqlAsync (not Raw) for real hashes.
-            await context.Database.ExecuteSqlRawAsync(@"
-                SET IDENTITY_INSERT Users ON;
-                INSERT INTO Users (Id, Username, SurName, LastName, FullName, PasswordHash, Email, Role, IsActive, IsLockedOut) VALUES
-                    (1,  'jan.jansen',      'Jan',        'Jansen',    'Jan Jansen',      'fake-hash-niet-echt', 'jan.jansen@test.nl',      0, 1, 0),
-                    (2,  'huisarts.visser', 'Dr.',        'Visser',    'Dr. Visser',      'fake-hash-niet-echt', 'visser@test.nl',          1, 1, 0),
-                    (3,  'dr.devries',      'Dr.',        'De Vries',  'Dr. De Vries',    'fake-hash-niet-echt', 'devries@test.nl',         2, 1, 0),
-                    (4,  'piet.pietersen',  'Piet',       'Pietersen', 'Piet Pietersen',  'fake-hash-niet-echt', 'piet.pietersen@test.nl',  0, 1, 0),
-                    (5,  'anna.deboer',     'Anna',       'de Boer',   'Anna de Boer',    'fake-hash-niet-echt', 'anna.deboer@test.nl',     0, 1, 0),
-                    (6,  'dr.bakker',       'Dr.',        'Bakker',    'Dr. Bakker',      'fake-hash-niet-echt', 'bakker@test.nl',          2, 1, 0),
-                    (7,  'dr.smit',         'Dr.',        'Smit',      'Dr. Smit',        'fake-hash-niet-echt', 'smit@test.nl',            2, 1, 0),
-                    (8,  'medewerker.a',    'Medewerker', 'A',         'Medewerker A',    'fake-hash-niet-echt', 'medewerker.a@test.nl',    3, 1, 0),
-                    (9,  'medewerker.b',    'Medewerker', 'B',         'Medewerker B',    'fake-hash-niet-echt', 'medewerker.b@test.nl',    3, 1, 0),
-                    (10, 'beheerder1',      'Beheerder',  'Een',       'Beheerder Een',   'fake-hash-niet-echt', 'beheerder1@test.nl',      4, 1, 0);
-                SET IDENTITY_INSERT Users OFF;
+            // Users
+            var patientUser1 = new User
+            {
+                Username = "jan.jansen",
+                SurName = "Jan",
+                LastName = "Jansen",
+                FullName = "Jan Jansen",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "jan.jansen@test.nl",
+                Role = UserRole.Patient
+            };
 
-                SET IDENTITY_INSERT GeneralPractitioners ON;
-                INSERT INTO GeneralPractitioners (Id, UserId) VALUES (1, 2);
-                SET IDENTITY_INSERT GeneralPractitioners OFF;
+            var gpUser = new User
+            {
+                Username = "huisarts.visser",
+                SurName = "Dr.",
+                LastName = "Visser",
+                FullName = "Dr. Visser",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "visser@test.nl",
+                Role = UserRole.Huisarts
+            };
 
-                -- Specialism: 4 = KNO, 0 = Cardiologie
-                SET IDENTITY_INSERT Specialists ON;
-                INSERT INTO Specialists (Id, UserId, Specialism) VALUES
-                    (1, 3, 4),   -- Dr. De Vries (KNO)
-                    (2, 6, 4),   -- Dr. Bakker   (KNO)
-                    (3, 7, 0);   -- Dr. Smit     (Cardiologie)
-                SET IDENTITY_INSERT Specialists OFF;
+            var specialistUser1 = new User
+            {
+                Username = "dr.devries",
+                SurName = "Dr.",
+                LastName = "De Vries",
+                FullName = "Dr. De Vries",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "devries@test.nl",
+                Role = UserRole.Specialist
+            };
 
-                SET IDENTITY_INSERT Patients ON;
-                INSERT INTO Patients (Id, UserId, Bsn, PhoneNumber, Address, City, GeneralPractitionerId, HasInsurance) VALUES
-                    (1, 1, '111222333', '0612345678', 'Teststraat 1', 'Utrecht', 1, 1),
-                    (2, 4, '111222334', '0612345679', 'Teststraat 2', 'Utrecht', 1, 1),
-                    (3, 5, '111222335', '0612345680', 'Teststraat 3', 'Utrecht', 1, 1);
-                SET IDENTITY_INSERT Patients OFF;
+            var patientUser2 = new User
+            {
+                Username = "piet.pietersen",
+                SurName = "Piet",
+                LastName = "Pietersen",
+                FullName = "Piet Pietersen",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "piet.pietersen@test.nl",
+                Role = UserRole.Patient
+            };
 
-                -- Code is the primary key (no identity). KNO002 lasts 4 quarters = 60 minutes.
-                INSERT INTO TreatmentCodes (Code, Description, Specialism, DurationInQuarters, Cost) VALUES
-                    ('ABC123', 'Consult cardiologie',    'Cardiologie',  2, 100.00),
-                    ('DER001', 'Consult dermatologie',   'Dermatologie', 1,  60.00),
-                    ('KNO002', 'Uitgebreid consult KNO', 'KNO',          4, 180.00);
+            var patientUser3 = new User
+            {
+                Username = "anna.deboer",
+                SurName = "Anna",
+                LastName = "de Boer",
+                FullName = "Anna de Boer",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "anna.deboer@test.nl",
+                Role = UserRole.Patient
+            };
 
-                SET IDENTITY_INSERT Referrals ON;
-                INSERT INTO Referrals (Id, PatientId, GeneralPractitionerId, Specialism, PreferredSpecialistId, Reason, Questionnaire, Urgency, TreatmentCode, Status, CreatedAt) VALUES
-                    (1, 1, 1, 0, NULL, 'Pijn op de borst', '', 'Regulier', 'ABC123', 'Open', '2026-01-01T09:00:00'),
-                    (2, 1, 1, 1, NULL, 'Huiduitslag',      '', 'Regulier', 'DER001', 'Open', '2026-01-02T09:00:00');
-                SET IDENTITY_INSERT Referrals OFF;
+            var specialistUser2 = new User
+            {
+                Username = "dr.bakker",
+                SurName = "Dr.",
+                LastName = "Bakker",
+                FullName = "Dr. Bakker",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "bakker@test.nl",
+                Role = UserRole.Specialist
+            };
 
-                -- Availability: every specialist 08:00-17:00 on every day of January 2027
-                ;WITH D AS (
-                    SELECT CAST('2027-01-01' AS date) AS Dag
-                    UNION ALL
-                    SELECT DATEADD(DAY, 1, Dag) FROM D WHERE Dag < '2027-01-31'
-                )
-                INSERT INTO Availabilities (SpecialistId, StartTime, EndTime)
-                SELECT s.Id,
-                       DATEADD(HOUR, 8,  CAST(D.Dag AS datetime2)),
-                       DATEADD(HOUR, 17, CAST(D.Dag AS datetime2))
-                FROM D CROSS JOIN Specialists s;");
+            var specialistUser3 = new User
+            {
+                Username = "dr.smit",
+                SurName = "Dr.",
+                LastName = "Smit",
+                FullName = "Dr. Smit",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "smit@test.nl",
+                Role = UserRole.Specialist
+            };
+
+            var employeeUser1 = new User
+            {
+                Username = "medewerker.a",
+                SurName = "Medewerker",
+                LastName = "A",
+                FullName = "Medewerker A",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "medewerker.a@test.nl",
+                Role = UserRole.Ziekenhuismedewerker
+            };
+
+            var employeeUser2 = new User
+            {
+                Username = "medewerker.b",
+                SurName = "Medewerker",
+                LastName = "B",
+                FullName = "Medewerker B",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "medewerker.b@test.nl",
+                Role = UserRole.Ziekenhuismedewerker
+            };
+
+            var adminUser = new User
+            {
+                Username = "beheerder1",
+                SurName = "Beheerder",
+                LastName = "Een",
+                FullName = "Beheerder Een",
+                PasswordHash = "fake-hash-niet-echt",
+                Email = "beheerder1@test.nl",
+                Role = UserRole.Systeembeheerder
+            };
+
+            context.Set<User>().AddRange(
+                patientUser1,
+                gpUser,
+                specialistUser1,
+                patientUser2,
+                patientUser3,
+                specialistUser2,
+                specialistUser3,
+                employeeUser1,
+                employeeUser2,
+                adminUser
+            );
+
+            await context.SaveChangesAsync();
+
+            // General practitioner
+            var generalPractitioner = new GeneralPractitioner
+            {
+                User = gpUser
+            };
+
+            context.Set<GeneralPractitioner>().Add(generalPractitioner);
+
+            // Specialists
+            var specialist1 = new Specialist
+            {
+                User = specialistUser1,
+                Specialism = Specialism.KNO
+            };
+
+            var specialist2 = new Specialist
+            {
+                User = specialistUser2,
+                Specialism = Specialism.KNO
+            };
+
+            var specialist3 = new Specialist
+            {
+                User = specialistUser3,
+                Specialism = Specialism.Cardiologie
+            };
+
+            context.Set<Specialist>().AddRange(
+                specialist1,
+                specialist2,
+                specialist3
+            );
+
+            await context.SaveChangesAsync();
+
+            // Patients
+            var patient1 = new Patient
+            {
+                User = patientUser1,
+                Bsn = "111222333",
+                PhoneNumber = "0612345678",
+                Address = "Teststraat 1",
+                City = "Utrecht",
+                GeneralPractitioner = generalPractitioner,
+                HasInsurance = true
+            };
+
+            var patient2 = new Patient
+            {
+                User = patientUser2,
+                Bsn = "111222334",
+                PhoneNumber = "0612345679",
+                Address = "Teststraat 2",
+                City = "Utrecht",
+                GeneralPractitioner = generalPractitioner,
+                HasInsurance = true
+            };
+
+            var patient3 = new Patient
+            {
+                User = patientUser3,
+                Bsn = "111222335",
+                PhoneNumber = "0612345680",
+                Address = "Teststraat 3",
+                City = "Utrecht",
+                GeneralPractitioner = generalPractitioner,
+                HasInsurance = true
+            };
+
+            context.Set<Patient>().AddRange(patient1, patient2, patient3);
+
+            // Treatment codes
+            var cardiologyCode = new TreatmentCode
+            {
+                Code = "ABC123",
+                Description = "Consult cardiologie",
+                Specialism = Specialism.Cardiologie,
+                DurationInQuarters = 2,
+                Cost = 100.00m
+            };
+
+            var dermatologyCode = new TreatmentCode
+            {
+                Code = "DER001",
+                Description = "Consult dermatologie",
+                Specialism = Specialism.Dermatologie,
+                DurationInQuarters = 1,
+                Cost = 60.00m
+            };
+
+            var knoCode = new TreatmentCode
+            {
+                Code = "KNO002",
+                Description = "Uitgebreid consult KNO",
+                Specialism = Specialism.KNO,
+                DurationInQuarters = 4,
+                Cost = 180.00m
+            };
+
+            context.Set<TreatmentCode>().AddRange(
+                cardiologyCode,
+                dermatologyCode,
+                knoCode
+            );
+
+            await context.SaveChangesAsync();
+
+            // Referrals
+            var referral1 = new Referral
+            {
+                Patient = patient1,
+                GeneralPractitioner = generalPractitioner,
+                Specialism = Specialism.Cardiologie,
+                Reason = "Pijn op de borst",
+                Questionnaire = string.Empty,
+                Urgency = "Regulier",
+                TreatmentCode = cardiologyCode.Code,
+                TreatmentCodeDetails = cardiologyCode,
+                Status = "Open",
+                CreatedAt = new DateTime(2026, 1, 1, 9, 0, 0)
+            };
+
+            var referral2 = new Referral
+            {
+                Patient = patient1,
+                GeneralPractitioner = generalPractitioner,
+                Specialism = Specialism.Dermatologie,
+                Reason = "Huiduitslag",
+                Questionnaire = string.Empty,
+                Urgency = "Regulier",
+                TreatmentCode = dermatologyCode.Code,
+                TreatmentCodeDetails = dermatologyCode,
+                Status = "Open",
+                CreatedAt = new DateTime(2026, 1, 2, 9, 0, 0)
+            };
+
+            context.Set<Referral>().AddRange(referral1, referral2);
+
+            // Availability: every specialist, every day in January 2027, 08:00-17:00
+            var availabilities = new List<Availability>();
+
+            for (int day = 1; day <= 31; day++)
+            {
+                var date = new DateTime(2027, 1, day);
+
+                foreach (var specialist in new[] { specialist1, specialist2, specialist3 })
+                {
+                    availabilities.Add(new Availability
+                    {
+                        Specialist = specialist,
+                        StartTime = date.AddHours(8),
+                        EndTime = date.AddHours(17)
+                    });
+                }
+            }
+
+            context.Set<Availability>().AddRange(availabilities);
 
             context.ChangeTracker.Clear();
         }

@@ -28,6 +28,8 @@ namespace Server.Data
             {
                 e.Property(t => t.Cost)
                     .HasPrecision(10, 2);
+                e.Property(tc => tc.Specialism)
+                    .HasConversion<string>();
             });
 
             // Patient relaties
@@ -59,6 +61,9 @@ namespace Server.Data
                     .WithOne(a => a.Specialist)
                     .HasForeignKey(a => a.SpecialistId)
                     .OnDelete(DeleteBehavior.NoAction);
+
+                e.Property(s => s.Specialism)
+                    .HasConversion<string>();
             });
 
             // GeneralPractitioner relaties
@@ -97,6 +102,9 @@ namespace Server.Data
                     .WithMany()
                     .HasForeignKey(r => r.TreatmentCode)
                     .OnDelete(DeleteBehavior.NoAction);
+
+                e.Property(r => r.Specialism)
+                    .HasConversion<string>();
             });
 
             // Appointment relaties

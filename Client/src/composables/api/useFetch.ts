@@ -5,7 +5,11 @@ import { messageOf } from './types'
 
 type Params = Record<string, unknown>
 
-export function useFetch<T>(url: string, params: MaybeRefOrGetter<Params> = () => ({})) {
+export function useFetch<T>(
+  url: string,
+  params: MaybeRefOrGetter<Params> = () => ({}),
+  enabled: MaybeRefOrGetter<boolean> = true,
+) {
   const data = ref<T | null>(null) as Ref<T | null>
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -14,6 +18,11 @@ export function useFetch<T>(url: string, params: MaybeRefOrGetter<Params> = () =
 
   async function fetchData(): Promise<void> {
     controller?.abort()
+    if (!toValue(enabled)) {
+      data.value = null
+      loading.value = false
+      return
+    }
     controller = new AbortController()
     const signal = controller.signal
 
@@ -30,7 +39,7 @@ export function useFetch<T>(url: string, params: MaybeRefOrGetter<Params> = () =
     }
   }
 
-  watch(() => toValue(params), fetchData, { immediate: true, deep: true })
+  watch(() => [toValue(params), toValue(enabled)], fetchData, { immediate: true, deep: true })
 
   return { data, loading, error, refetch: fetchData }
 }

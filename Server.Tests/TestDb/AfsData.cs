@@ -104,7 +104,35 @@ namespace Server.Tests.Helpers
                 new SqlParameter("@st", start));
 
             var row = t.Rows[0];
-            return (row["Status"].ToString()!, row["TreatmentCode"].ToString()!, Convert.ToInt32(row["Specialism"]));
+
+            return (
+                row["Status"].ToString()!,
+                row["TreatmentCode"].ToString()!,
+                (int)Enum.Parse<Specialism>(row["Specialism"].ToString()!)
+            );
+        }
+
+        /// <summary>
+        /// Maakt deze specialist de enige beschikbare specialist van het specialisme op die dag (08:00-18:00).
+        /// De server kiest zelf een specialist (voorkeur eerst, daarna de eerste beschikbare), dus zonder
+        /// deze beperking zouden de tests afhangen van welke andere specialisten er in de seed zitten.
+        /// </summary>
+        public static async Task MakeOnlyAvailableAsync(string specialist, Specialism specialism, DateTime day)
+        {
+            var date = day.Date;
+
+            await TestDatabase.ExecuteAsync(@"
+                DELETE a FROM Availabilities a
+                JOIN Specialists s ON s.Id = a.SpecialistId
+                WHERE s.Specialism = @spec AND CAST(a.StartTime AS date) = @d;
+
+                INSERT INTO Availabilities (SpecialistId, StartTime, EndTime)
+                VALUES (@s, @from, @to);",
+                new SqlParameter("@spec", (int)specialism),
+                new SqlParameter("@d", date),
+                new SqlParameter("@s", await SpecialistIdAsync(specialist)),
+                new SqlParameter("@from", date.AddHours(8)),
+                new SqlParameter("@to", date.AddHours(18)));
         }
     }
 

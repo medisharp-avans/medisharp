@@ -86,19 +86,6 @@ namespace Server.Repositories
             return appointment;
         }
 
-        public Task<bool> HasOverlapAsync(int specialistId, DateTime start, DateTime end) =>
-            _context.Appointments.AnyAsync(a =>
-                a.SpecialistId == specialistId
-                && a.Status != AppointmentStatus.Geannuleerd
-                && a.StartTime < end
-                && a.EndTime > start);
-
-        public Task<bool> IsWithinAvailabilityAsync(int specialistId, DateTime start, DateTime end) =>
-            _context.Availabilities.AnyAsync(a =>
-                a.SpecialistId == specialistId
-                && a.StartTime <= start
-                && a.EndTime >= end);
-
         private static bool IsUniqueViolation(DbUpdateException ex) =>
             ex.InnerException is SqlException { Number: UniqueIndexViolation or UniqueConstraintViolation };
     }
