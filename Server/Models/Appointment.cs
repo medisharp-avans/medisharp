@@ -30,6 +30,7 @@ namespace Server.Models
         public DateTime EndTime { get; set; }
 
         [Required]
+        [EnumDataType(typeof(AppointmentStatus))]
         public AppointmentStatus Status { get; set; }
     }
 }

@@ -45,8 +45,9 @@ namespace Server.Migrations
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -296,8 +297,9 @@ namespace Server.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("int");
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SurName")
                         .IsRequired()

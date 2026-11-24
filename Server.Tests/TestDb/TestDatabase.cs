@@ -25,7 +25,7 @@ namespace Server.Tests.TestDb
         /// and recreates it with the migrations, so new migrations are always applied.
         /// After that only the tables are emptied, which is much faster.
         /// </summary>
-        public static async Task ResetAsync()
+        public static async Task ResetAsync(Func<DbContext, Task>? seed = null)
         {
             // Safety check: this deletes all data, so never on a database that is not meant for testing
             var databaseName = new SqlConnectionStringBuilder(TestSettings.ConnectionString).InitialCatalog;
@@ -43,7 +43,11 @@ namespace Server.Tests.TestDb
                 await context.Database.MigrateAsync();
                 _isRecreated = true;
             }
-            await TestDbInitializer.SeedAsync(context);
+
+            if (seed != null)
+            {
+                await seed(context);
+            }
             TestLog.Step("Test database reset");
         }
 

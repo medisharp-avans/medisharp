@@ -13,9 +13,10 @@ namespace Server.Tests.Integration
         private IPlanningRepository _sut = null!;
 
         [TestInitialize]
-        public void CreateSut()
+        public async Task CreateSut()
         {
             _sut = new PlanningRepository(DbContext);
+            await TestDatabase.ResetAsync(TestAFSDataInitializer.SeedAsync);
         }
 
         public async Task CreateAppointmentAsync(Specialist specialist)

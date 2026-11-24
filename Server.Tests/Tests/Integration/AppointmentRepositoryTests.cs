@@ -21,9 +21,10 @@ namespace Server.Tests.Integration
         private IAppointmentRepository _sut = null!;
 
         [TestInitialize]
-        public void CreateSut()
+        public async Task CreateSut()
         {
             _sut = new AppointmentRepository(DbContext);
+            await TestDatabase.ResetAsync(TestAFSDataInitializer.SeedAsync);
         }
 
         private static CreateAppointmentDTO AppointmentDto(int specialistId = 1) => new()

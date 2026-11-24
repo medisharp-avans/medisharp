@@ -9,7 +9,7 @@ namespace Server.Tests.TestDb
     /// Fills the empty test database with the fixed test data of the test cases.
     /// Runs before every database and end-to-end test, right after the tables were emptied.
     /// </summary>
-    public static class TestDbInitializer
+    public static class TestAFSDataInitializer
     {
         public static async Task SeedAsync(DbContext context)
         {

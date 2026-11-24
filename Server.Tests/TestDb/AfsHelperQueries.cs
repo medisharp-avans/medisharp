@@ -13,7 +13,7 @@ namespace Server.Tests.Helpers
     /// omdat Patient en Specialist zelf geen naam hebben (die staat via UserId op User).
     /// Een afspraak maakt zelf een verwijzing aan; de helpers hier doen dat ook voor bestaande afspraken.
     /// </summary>
-    public static class AfsData
+    public static class AfsHelperQueries
     {
         private static SqlParameter NameParam(string name) => new("@u", name);
 
@@ -49,11 +49,8 @@ namespace Server.Tests.Helpers
                 new SqlParameter("@p", await PatientIdAsync(patient)),
                 new SqlParameter("@s", await SpecialistIdAsync(specialist)),
                 new SqlParameter("@st", start),
-                new SqlParameter("@spec", (int)Specialism.KNO),
-                new SqlParameter("@status", SqlDbType.Int)
-                {
-                    Value = (int)AppointmentStatus.Ingepland
-                });
+                new SqlParameter("@spec", Specialism.KNO.ToString()),
+                new SqlParameter("@status", AppointmentStatus.Ingepland.ToString()));
             return Convert.ToInt32(t.Rows[0][0]);
         }
 
@@ -128,7 +125,7 @@ namespace Server.Tests.Helpers
 
                 INSERT INTO Availabilities (SpecialistId, StartTime, EndTime)
                 VALUES (@s, @from, @to);",
-                new SqlParameter("@spec", (int)specialism),
+                new SqlParameter("@spec", specialism.ToString()),
                 new SqlParameter("@d", date),
                 new SqlParameter("@s", await SpecialistIdAsync(specialist)),
                 new SqlParameter("@from", date.AddHours(8)),
@@ -145,69 +142,58 @@ namespace Server.Tests.Helpers
     {
         /// <summary>Plant een afspraak (de API maakt zelf een verwijzing aan). Geeft de HTTP-statuscode (-1 bij een netwerkfout).</summary>
 
-        public static long PostAppointment(
-            IWebDriver driver,
-            int patientId,
-            int specialistId,
-            DateTime start,
-            string treatmentCode = "KNO002",
-            int generalPractitionerId = 1,
-            Specialism specialism = Specialism.KNO)
+        public static (long Status, string Body) PostAppointmentWithResponse(
+    IWebDriver driver,
+    int patientId,
+    int specialistId,
+    string treatmentCode = "KNO002",
+    Specialism specialism = Specialism.KNO)
         {
             var js = (IJavaScriptExecutor)driver;
 
             var body = System.Text.Json.JsonSerializer.Serialize(new
             {
                 patientId,
-                specialistId,
-                startTime = start.ToString("yyyy-MM-ddTHH:mm:ss"),
-                generalPractitionerId,
                 specialism = (int)specialism,
                 preferredSpecialistId = specialistId,
                 reason = "Testafspraak",
+                questionnaire = "",
                 urgency = "Regulier",
                 treatmentCode
             });
 
             var result = js.ExecuteAsyncScript(@"
-                const done = arguments[arguments.length - 1];
+        const done = arguments[arguments.length - 1];
 
-                fetch(arguments[1] + '/api/appointments', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: arguments[0]
-                })
-                .then(async response => {
-                    const responseBody = await response.text();
+        fetch(arguments[1] + '/api/appointments', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: arguments[0]
+        })
+        .then(async response => {
+            const responseBody = await response.text();
 
-                    done(JSON.stringify({
-                        status: response.status,
-                        body: responseBody
-                    }));
-                })
-                .catch(error => {
-                    done(JSON.stringify({
-                        status: -1,
-                        error: error.message
-                    }));
-                });
-            ", body, TestSettings.ApiUrl);
+            done(JSON.stringify({
+                status: response.status,
+                body: responseBody
+            }));
+        })
+        .catch(error => {
+            done(JSON.stringify({
+                status: -1,
+                body: error.toString()
+            }));
+        });
+    ", body, TestSettings.ApiUrl);
 
-            using var document = System.Text.Json.JsonDocument.Parse(result.ToString()!);
+            using var json = System.Text.Json.JsonDocument.Parse(
+                Convert.ToString(result)!);
 
-            var root = document.RootElement;
-            var status = root.GetProperty("status").GetInt64();
-
-            if (status == -1)
-            {
-                var error = root.GetProperty("error").GetString();
-
-                throw new InvalidOperationException(
-                    $"Het API-verzoek kon niet worden uitgevoerd: {error}");
-            }
-
-            return status;
+            return (
+                json.RootElement.GetProperty("status").GetInt32(),
+                json.RootElement.GetProperty("body").GetString() ?? ""
+            );
         }
 
     }

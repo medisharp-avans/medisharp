@@ -23,6 +23,13 @@ namespace Server.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // User
+            modelBuilder.Entity<User>(e =>
+            {
+                e.Property(u => u.Role)
+                    .HasConversion<string>();
+            });
+
             // TreatmentCode configuratie
             modelBuilder.Entity<TreatmentCode>(e =>
             {
@@ -131,6 +138,9 @@ namespace Server.Data
 
                 e.HasIndex(a => new { a.SpecialistId, a.StartTime })
                     .IsUnique();
+
+                e.Property(a => a.Status)
+                    .HasConversion<string>();
             });
 
 
