@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
-import AuthTemplate from './AuthTemplate.vue'
+import AuthLayout from '@/components/Layout/AuthLayout.vue'
 import BaseInput from '@/components/elements/BaseInput.vue'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -52,7 +52,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <AuthTemplate :error="error" @submit="onSubmit">
+  <AuthLayout :error="error" @submit="onSubmit">
     <template #title>Inloggen</template>
     <template #subtitle>Log in met uw MediSharp-account.</template>
 
@@ -90,5 +90,5 @@ async function onSubmit() {
       </RouterLink>
     </template>
     -->
-  </AuthTemplate>
+  </AuthLayout>
 </template>
