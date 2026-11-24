@@ -1,11 +1,18 @@
 import { computed, ref, toValue, type MaybeRefOrGetter } from 'vue'
 
 /**
- * Logica achter een DatalistInput: de getypte tekst, de opties voor de lijst
- * en het item waar de tekst precies mee overeenkomt (bijvoorbeeld om het ID
- * te versturen in plaats van de naam).
- *
- * Items zonder sleutel of zonder label komen niet in de lijst.
+ * Encapsulates the logic for a `DatalistInput` component.
+ * 
+ * Manages the typed text, filters and formats the available options, 
+ * and tracks the exact matching item (e.g., to resolve and submit an ID instead of a name).
+ * 
+ * Items missing a valid key or label are automatically filtered out.
+ * 
+ * @template T - The type of the source items.
+ * @param items - A reactive reference, getter, or array of raw data items.
+ * @param getKey - Function to extract a unique key or ID from an item.
+ * @param getLabel - Function to extract the display label string from an item.
+ * @param getDescription - Optional function to extract a secondary description for an item.
  */
 export function useLookup<T>(
   items: MaybeRefOrGetter<T[] | null | undefined>,

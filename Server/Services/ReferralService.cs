@@ -14,6 +14,7 @@ namespace Server.Services
             _repository = repository;
         }
 
+        /// <inheritdoc />
         public async Task<Referral> CreateAsync(CreateReferralRequestDTO dto)
         {
             return await _repository.CreateAsync(dto);

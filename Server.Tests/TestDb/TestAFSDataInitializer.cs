@@ -297,6 +297,8 @@ namespace Server.Tests.TestDb
 
             context.Set<Availability>().AddRange(availabilities);
 
+            await context.SaveChangesAsync();
+
             context.ChangeTracker.Clear();
         }
     }

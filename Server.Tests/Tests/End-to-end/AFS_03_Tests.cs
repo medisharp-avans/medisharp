@@ -1,4 +1,5 @@
 
+using Microsoft.EntityFrameworkCore;
 using OpenQA.Selenium;
 using Server.Models.Enums;
 using Server.Tests.Helpers;
@@ -34,13 +35,14 @@ namespace Server.Tests.EndToEnd
         // =========================================================
         // Helpers
         // =========================================================
+        protected override Func<DbContext, Task>? GetTestDataInitializer()
+        {
+            return TestAFSDataInitializer.SeedAsync;
+        }
 
         [TestInitialize]
         public async Task ArrangeTestDataAsync()
         {
-            // Maak de database leeg en vul hem met AFS-03-testdata.
-            await TestDatabase.ResetAsync(TestAFSDataInitializer.SeedAsync);
-
             // Zorg dat alleen Dr. De Vries beschikbaar is.
             await AfsHelperQueries.MakeOnlyAvailableAsync(
                 DeVries,

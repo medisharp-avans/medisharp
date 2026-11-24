@@ -1,23 +1,26 @@
-﻿using Server.Repositories.InterFaces;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Server.Repositories.InterFaces;
 
 namespace Server.Repositories
 {
-    /// <summary>Dependency injection registrations for the program repositories.</summary>
+    /// <summary>
+    /// Provides extension methods for registering repository dependencies in the dependency injection container.
+    /// </summary>
     public static class RepositoryRegistration
     {
         /// <summary>
-        /// Registers all program repositories and the system />.
-        /// Call from <c>Program.cs</c>: <c>builder.Services.AddRegisteredRepositories();</c>
+        /// Registers all application repositories and the generic repository implementation.
+        /// Call this from <c>Program.cs</c> using: <c>builder.Services.AddRegisteredRepositories();</c>
         /// </summary>
-        /// <param name="repositories">The service collection to add the registrations to.</param>
-        /// <returns>The same repositories collection, to allow chaining.</returns>
+        /// <param name="repositories">The service collection to add the repository registrations to.</param>
+        /// <returns>The same service collection instance, enabling method chaining.</returns>
         public static IServiceCollection AddRegisteredRepositories(this IServiceCollection repositories)
         {
             repositories.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             repositories.AddScoped<ITreatmentCodeRepository, TreatmentCodeRepository>();
-            repositories.AddScoped<IAppointmentRepository,AppointmentRepository>();
-            repositories.AddScoped<IReferralRepository,ReferralRepository>();
-            repositories.AddScoped<IPlanningRepository,PlanningRepository>();
+            repositories.AddScoped<IAppointmentRepository, AppointmentRepository>();
+            repositories.AddScoped<IReferralRepository, ReferralRepository>();
+            repositories.AddScoped<IPlanningRepository, PlanningRepository>();
             return repositories;
         }
     }

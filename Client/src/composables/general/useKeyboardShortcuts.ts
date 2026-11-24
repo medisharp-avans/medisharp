@@ -1,6 +1,8 @@
 import { onMounted, onUnmounted } from 'vue'
 
-// Per sneltoets (Alt + letter) het element dat focus moet krijgen.
+/** 
+ * A lookup record mapping shortcut keys to functions that resolve the target HTMLElement.
+ */
 const shortcutTargets: Record<string, () => HTMLElement | null | undefined> = {
   n: () => document.getElementById('main-navigation')?.querySelector<HTMLElement>('a, button'),
   p: () => document.getElementById('profile-button'),
@@ -8,8 +10,12 @@ const shortcutTargets: Record<string, () => HTMLElement | null | undefined> = {
 }
 
 /**
- * Verwerkt een keydown-event: bij Alt + N/P/M krijgt respectievelijk de navigatie,
- * de profielknop of de hoofdinhoud focus. Andere toetsen worden genegeerd.
+ * Handles a keydown event for keyboard shortcuts.
+ * 
+ * Listens for the `Alt` key combined with `N`, `P`, or `M` to shift focus to 
+ * the navigation, profile button, or main content respectively. Other keys are ignored.
+ * 
+ * @param event - The KeyboardEvent triggered by the user input.
  */
 export function handleKeyboardShortcut(event: KeyboardEvent): void {
   if (!event.altKey) return
@@ -22,8 +28,10 @@ export function handleKeyboardShortcut(event: KeyboardEvent): void {
 }
 
 /**
- * Registreert de toetsenbord-sneltoetsen zolang het aanroepende component gemount is.
- * Roep aan vanuit <script setup>.
+ * Automatically registers and cleans up global keyboard shortcuts while the 
+ * calling component is mounted.
+ * 
+ * Designed to be called inside a `<script setup>` block.
  */
 export function useKeyboardShortcuts(): void {
   onMounted(() => window.addEventListener('keydown', handleKeyboardShortcut))

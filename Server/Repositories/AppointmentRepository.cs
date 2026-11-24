@@ -20,11 +20,7 @@ namespace Server.Repositories
         {
         }
 
-        public async Task<List<Appointment>> GetAsync()
-        {
-            return await _context.Appointments.ToListAsync();
-        }
-
+        /// <inheritdoc />
         public async Task<Appointment> CreateAsync(CreateAppointmentDTO dto)
         {
             var appointment = new Appointment
@@ -42,6 +38,7 @@ namespace Server.Repositories
             return appointment;
         }
 
+        /// <inheritdoc />
         public async Task<Appointment> CreateWithReferralAsync(
             CreateAppointmentDTO appointmentDto,
             CreateReferralRequestDTO referralDto)
@@ -70,7 +67,6 @@ namespace Server.Repositories
                 Referral = referral
             };
 
-            // Eén SaveChanges is één transactie: mislukt de afspraak, dan blijft er ook geen verwijzing achter
             _context.Appointments.Add(appointment);
 
             try
@@ -79,7 +75,6 @@ namespace Server.Repositories
             }
             catch (DbUpdateException ex) when (IsUniqueViolation(ex))
             {
-                // Twee gelijktijdige boekingen: de unique index op (SpecialistId, StartTime) laat er maar één door
                 throw new SlotUnavailableException("Dit tijdslot is niet meer beschikbaar.", ex);
             }
 

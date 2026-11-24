@@ -20,13 +20,10 @@ namespace Server.Services
             _planningRepository = planningRepository;
         }
 
-        public async Task<List<Appointment>> GetAppointmentAsync()
-        {
-            return await _repository.GetAsync();
-        }
 
-        /// <exception cref="KeyNotFoundException">De behandelcode bestaat niet.</exception>
-        /// <exception cref="SlotUnavailableException">De specialist is niet beschikbaar of heeft het tijdslot al.</exception>
+        /// <inheritdoc />
+        /// <exception cref="KeyNotFoundException">Thrown when the specified patient does not exist in the database.</exception>
+        /// <exception cref="SlotUnavailableException">Thrown when the specialist is unavailable or the time slot is already taken.</exception>
         public async Task<Appointment> CreateAppointment(AppointmentManualRequestDTO dto)
         {
             var newDto = await _planningService.SetSpecialistForAppointment(dto);
