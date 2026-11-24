@@ -21,14 +21,12 @@ const EXPIRES_KEY = 'auth_expires_at'
 
 function readStorage(key: string): string | null {
   try {
-    return localStorage.getItem(key)
+    return sessionStorage.getItem(key)
   } catch {
     return null
   }
 }
 
-// Houdt het JWT en de ingelogde gebruiker bij. Het token wordt in localStorage bewaard
-// zodat de gebruiker ingelogd blijft na een refresh.
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(readStorage(TOKEN_KEY))
   const expiresAt = ref<string | null>(readStorage(EXPIRES_KEY))
@@ -49,8 +47,8 @@ export const useAuthStore = defineStore('auth', () => {
     expiresAt.value = data.expiresAt
     user.value = data.user
     try {
-      localStorage.setItem(TOKEN_KEY, data.token)
-      localStorage.setItem(EXPIRES_KEY, data.expiresAt)
+      sessionStorage.setItem(TOKEN_KEY, data.token)
+      sessionStorage.setItem(EXPIRES_KEY, data.expiresAt)
     } catch {
       // Opslag niet beschikbaar: alleen ingelogd voor deze sessie.
     }
@@ -61,8 +59,8 @@ export const useAuthStore = defineStore('auth', () => {
     expiresAt.value = null
     user.value = null
     try {
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(EXPIRES_KEY)
+      sessionStorage.removeItem(TOKEN_KEY)
+      sessionStorage.removeItem(EXPIRES_KEY)
     } catch {
       // negeren
     }

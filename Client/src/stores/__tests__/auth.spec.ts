@@ -25,7 +25,7 @@ function futureDate(): string {
 
 describe('useAuthStore', () => {
   beforeEach(() => {
-    localStorage.clear()
+    sessionStorage.clear()
     post.mockReset()
     setActivePinia(createPinia())
   })
@@ -65,8 +65,8 @@ describe('useAuthStore', () => {
     expect(auth.expiresAt).toBe(expiresAt)
     expect(auth.user).toEqual(user)
     expect(auth.isAuthenticated).toBe(true)
-    expect(localStorage.getItem('auth_token')).toBe('jwt')
-    expect(localStorage.getItem('auth_expires_at')).toBe(expiresAt)
+    expect(sessionStorage.getItem('auth_token')).toBe('jwt')
+    expect(sessionStorage.getItem('auth_expires_at')).toBe(expiresAt)
   })
 
   it('laat de fout door en blijft uitgelogd bij een mislukte login', async () => {
@@ -79,7 +79,7 @@ describe('useAuthStore', () => {
     expect(auth.token).toBeNull()
     expect(auth.user).toBeNull()
     expect(auth.isAuthenticated).toBe(false)
-    expect(localStorage.getItem('auth_token')).toBeNull()
+    expect(sessionStorage.getItem('auth_token')).toBeNull()
   })
 
   it('blijft ingelogd voor de sessie als localStorage niet beschikbaar is', async () => {
@@ -96,8 +96,8 @@ describe('useAuthStore', () => {
   })
 
   it('leest een opgeslagen, geldig token in na een refresh', () => {
-    localStorage.setItem('auth_token', 'jwt')
-    localStorage.setItem('auth_expires_at', futureDate())
+    sessionStorage.setItem('auth_token', 'jwt')
+    sessionStorage.setItem('auth_expires_at', futureDate())
 
     const auth = useAuthStore()
 
@@ -106,8 +106,8 @@ describe('useAuthStore', () => {
   })
 
   it('is niet ingelogd met een verlopen token', () => {
-    localStorage.setItem('auth_token', 'jwt')
-    localStorage.setItem('auth_expires_at', new Date(Date.now() - 1000).toISOString())
+    sessionStorage.setItem('auth_token', 'jwt')
+    sessionStorage.setItem('auth_expires_at', new Date(Date.now() - 1000).toISOString())
 
     const auth = useAuthStore()
 
@@ -125,7 +125,7 @@ describe('useAuthStore', () => {
     expect(auth.expiresAt).toBeNull()
     expect(auth.user).toBeNull()
     expect(auth.isAuthenticated).toBe(false)
-    expect(localStorage.getItem('auth_token')).toBeNull()
-    expect(localStorage.getItem('auth_expires_at')).toBeNull()
+    expect(sessionStorage.getItem('auth_token')).toBeNull()
+    expect(sessionStorage.getItem('auth_expires_at')).toBeNull()
   })
 })
