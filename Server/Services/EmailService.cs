@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using System.Text;
 using Microsoft.Extensions.Options;
 using Server.Services.InterFaces;
 
@@ -24,6 +25,12 @@ namespace Server.Services
         public string Password { get; set; } = string.Empty;
 
         public string FromName { get; set; } = "MediSharp";
+
+        /// <summary>
+        /// When set, emails are written as .eml files to this folder instead of being sent (relative to the content root).
+        /// The 'Tests' launch profile uses it so the end-to-end tests can read the login code.
+        /// </summary>
+        public string PickupDirectory { get; set; } = string.Empty;
     }
 
     public class EmailService(IOptions<SMTPOptions> options, IHostEnvironment env, ILogger<EmailService> logger) : IEmailService
@@ -32,6 +39,12 @@ namespace Server.Services
 
         public async Task SendAsync(string to, string subject, string body)
         {
+            if (!string.IsNullOrEmpty(_smtp.PickupDirectory))
+            {
+                await WriteToPickupDirectoryAsync(to, subject, body);
+                return;
+            }
+
             if (string.IsNullOrEmpty(_smtp.Username) || string.IsNullOrEmpty(_smtp.Password))
             {
                 // Without SMTP settings, development (and the E2E tests) can still log in via the console log.
@@ -42,11 +55,7 @@ namespace Server.Services
                 return;
             }
 
-            using var message = new MailMessage(new MailAddress(_smtp.Username, _smtp.FromName), new MailAddress(to))
-            {
-                Subject = subject,
-                Body = body
-            };
+            using var message = CreateMessage(_smtp.Username, to, subject, body);
             using var client = new SmtpClient(_smtp.Host, _smtp.Port)
             {
                 EnableSsl = true,
@@ -54,5 +63,31 @@ namespace Server.Services
             };
             await client.SendMailAsync(message);
         }
+
+        private async Task WriteToPickupDirectoryAsync(string to, string subject, string body)
+        {
+            var directory = Path.GetFullPath(Path.Combine(env.ContentRootPath, _smtp.PickupDirectory));
+            Directory.CreateDirectory(directory);
+
+            var from = string.IsNullOrEmpty(_smtp.Username) ? "noreply@medisharp.test" : _smtp.Username;
+            using var message = CreateMessage(from, to, subject, body);
+            using var client = new SmtpClient
+            {
+                DeliveryMethod = SmtpDeliveryMethod.SpecifiedPickupDirectory,
+                PickupDirectoryLocation = directory
+            };
+            await client.SendMailAsync(message);
+            logger.LogInformation("Email to {To} written to {Directory}", to, directory);
+        }
+
+        // Quoted-printable keeps the text (and the login code) readable in the .eml file.
+        private MailMessage CreateMessage(string from, string to, string subject, string body) =>
+            new(new MailAddress(from, _smtp.FromName), new MailAddress(to))
+            {
+                Subject = subject,
+                Body = body,
+                BodyEncoding = Encoding.UTF8,
+                BodyTransferEncoding = System.Net.Mime.TransferEncoding.QuotedPrintable
+            };
     }
 }

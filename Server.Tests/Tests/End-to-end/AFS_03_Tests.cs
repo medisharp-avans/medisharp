@@ -40,7 +40,7 @@ namespace Server.Tests.EndToEnd
 
         private static void LoginAs(IWebDriver driver, string email)
         {
-            // new LoginPage(driver).LoginAs(email);
+            new LoginPage(driver).LoginAs(email);
         }
 
         private Task<PlanAppointmentPage> OpenPlanningAsync(
@@ -162,7 +162,7 @@ namespace Server.Tests.EndToEnd
             // Arrange
             var referralsBefore = await AfsData.CountReferralsAsync();
 
-            LoginAs(Driver, "huisarts.visser");
+            LoginAs(Driver, "visser@test.nl");
 
             // Act
             var status = await PostAsync(
@@ -409,7 +409,7 @@ namespace Server.Tests.EndToEnd
         public void TC_AFS_03_5_1_Patient_HeeftGeenFunctieOmZelfAfspraakTePlannen()
         {
             // Arrange
-            LoginAs(Driver, "jan.jansen");
+            LoginAs(Driver, "jan.jansen@test.nl");
 
             var nav = new PortalNavigation(Driver);
             var appointments = new PatientAppointmentsPage(Driver);
@@ -438,7 +438,7 @@ namespace Server.Tests.EndToEnd
             var referralsBefore =
                 await AfsData.CountReferralsAsync();
 
-            LoginAs(Driver, "jan.jansen");
+            LoginAs(Driver, "jan.jansen@test.nl");
 
             // Act
             var status = await PostAsync(
