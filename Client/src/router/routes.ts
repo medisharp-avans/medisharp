@@ -40,6 +40,11 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       {
+        path: 'open',
+        name: 'OpenReferrals',
+        component: () => import('@/views/referrals/OpenReferralsView.vue'),
+      },
+      {
         path: 'nieuw',
         name: 'ReferralCreate',
         component: () => import('@/views/referrals/ReferralCreateView.vue'),

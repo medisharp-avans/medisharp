@@ -8,6 +8,7 @@ public static class RepositoryRegistration
     public static IServiceCollection AddRegisteredRepositories(this IServiceCollection repositories)
     {
         repositories.AddScoped<IReferralRepository, ReferralRepository>();
+        repositories.AddScoped<ReferralRepository>();
         repositories.AddScoped<ITreatmentCatalogRepository, TreatmentCatalogRepository>();
         return repositories;
     }
