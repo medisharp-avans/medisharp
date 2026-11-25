@@ -4,7 +4,6 @@ import api from '@/services/api'
 
 export interface AuthUser {
   id: number
-  username: string
   fullName: string
   email: string
   role: number | string
@@ -36,11 +35,11 @@ export const useAuthStore = defineStore('auth', () => {
     () => !!token.value && (!expiresAt.value || new Date(expiresAt.value) > new Date()),
   )
 
-  async function login(username: string, password: string): Promise<void> {
+  async function login(email: string, password: string): Promise<void> {
     // skipErrorRedirect: een 401 betekent hier "verkeerde gegevens", geen redirect naar /401.
     const { data } = await api.post<LoginResponse>(
       '/api/login',
-      { username, password },
+      { email, password },
       { skipErrorRedirect: true },
     )
     token.value = data.token

@@ -38,16 +38,16 @@ namespace Server.Tests.EndToEnd
         // Helpers
         // =========================================================
 
-        private static void LoginAs(IWebDriver driver, string username)
+        private static void LoginAs(IWebDriver driver, string email)
         {
-            // new LoginPage(driver).LoginAs(username);
+            // new LoginPage(driver).LoginAs(email);
         }
 
         private Task<PlanAppointmentPage> OpenPlanningAsync(
             IWebDriver driver,
-            string staffUser)
+            string staffEmail)
         {
-            LoginAs(driver, staffUser);
+            LoginAs(driver, staffEmail);
 
             var plan = new PlanAppointmentPage(driver).Open();
 
@@ -104,7 +104,7 @@ namespace Server.Tests.EndToEnd
                 await AfsData.CountReferralsOfPatientAsync(Jan);
 
             var plan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             // Act
             await Book(plan, Jan, DeVries, Jan12_1000);
@@ -138,7 +138,7 @@ namespace Server.Tests.EndToEnd
                 Piet, DeVries, Jan12_0900);
 
             var plan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             // Act
             await Book(plan, Jan, DeVries, Jan12_1000);
@@ -193,7 +193,7 @@ namespace Server.Tests.EndToEnd
                 await AfsData.CountReferralsOfPatientAsync(Piet));
 
             var plan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             // Act
             await Book(plan, Piet, DeVries, Jan12_1000);
@@ -229,7 +229,7 @@ namespace Server.Tests.EndToEnd
                 await AfsData.CountReferralsOfPatientAsync(Jan);
 
             var plan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             // Act
             await Book(plan, Jan, DeVries, Jan19_1100);
@@ -261,7 +261,7 @@ namespace Server.Tests.EndToEnd
         {
             // Arrange
             Driver.Navigate().GoToUrl(TestSettings.ClientUrl);
-            //LoginAs(Driver, "medewerker.a");
+            //LoginAs(Driver, "medewerker.a@test.nl");
 
             // Act
             var status = await PostAsync(
@@ -292,10 +292,10 @@ namespace Server.Tests.EndToEnd
             using var driverB = ExtraBrowser.Start();
 
             var planA =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             var planB =
-                await OpenPlanningAsync(driverB, "medewerker.b");
+                await OpenPlanningAsync(driverB, "medewerker.b@test.nl");
 
             var patientJan = await AfsData.PatientIdAsync(Jan);
             var patientPiet = await AfsData.PatientIdAsync(Piet);
@@ -354,7 +354,7 @@ namespace Server.Tests.EndToEnd
                 Piet, DeVries, Jan12_1000);
 
             var plan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             // Act
             await Book(plan, Jan, DeVries, Jan12_1100);
@@ -386,7 +386,7 @@ namespace Server.Tests.EndToEnd
         {
             // Arrange
             var plan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             // Assert
             Assert.IsTrue(plan.HasField("patient-id"));
@@ -476,7 +476,7 @@ namespace Server.Tests.EndToEnd
                 await AfsData.CountReferralsAsync();
 
             var plan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             // Act
             await Book(plan, Piet, DeVries, Jan12_1000);
@@ -508,12 +508,12 @@ namespace Server.Tests.EndToEnd
 
             // Act
             var planPiet =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             await Book(planPiet, Piet, DeVries, Jan12_0900);
 
             var planAnna =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             await Book(planAnna, Anna, DeVries, Jan12_1100);
 
@@ -560,8 +560,8 @@ namespace Server.Tests.EndToEnd
             Driver.Navigate().GoToUrl(TestSettings.ClientUrl);
             driverB.Navigate().GoToUrl(TestSettings.ClientUrl);
 
-            //LoginAs(Driver, "medewerker.a");
-            //LoginAs(driverB, "medewerker.b");
+            //LoginAs(Driver, "medewerker.a@test.nl");
+            //LoginAs(driverB, "medewerker.b@test.nl");
 
             for (var run = 1; run <= 10; run++)
             {
@@ -626,7 +626,7 @@ namespace Server.Tests.EndToEnd
                 await AfsData.CountReferralsAsync();
 
             var plan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             // Act
             await Book(plan, Jan, DeVries, Jan12_1000);
@@ -656,12 +656,12 @@ namespace Server.Tests.EndToEnd
 
             // Act
             var planJan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             await Book(planJan, Jan, DeVries, jan11);
 
             var planPiet =
-                await OpenPlanningAsync(Driver, "medewerker.a");
+                await OpenPlanningAsync(Driver, "medewerker.a@test.nl");
 
             await Book(planPiet, Piet, DeVries, jan13);
 
@@ -692,7 +692,7 @@ namespace Server.Tests.EndToEnd
 
             Driver.Navigate().GoToUrl(TestSettings.ClientUrl);
 
-            //LoginAs(Driver, "medewerker.a");
+            //LoginAs(Driver, "medewerker.a@test.nl");
 
             // Act
             var status = await PostAsync(

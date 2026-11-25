@@ -11,10 +11,10 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-const username = ref('')
+const email = ref('')
 const password = ref('')
-const fieldErrors = ref<{ username: string | null; password: string | null }>({
-  username: null,
+const fieldErrors = ref<{ email: string | null; password: string | null }>({
+  email: null,
   password: null,
 })
 const error = ref<string | null>(null)
@@ -22,10 +22,10 @@ const loading = ref(false)
 
 function validate(): boolean {
   fieldErrors.value = {
-    username: username.value.trim() ? null : 'Gebruikersnaam is verplicht.',
+    email: email.value.trim() ? null : 'E-mailadres is verplicht.',
     password: password.value ? null : 'Wachtwoord is verplicht.',
   }
-  return !fieldErrors.value.username && !fieldErrors.value.password
+  return !fieldErrors.value.email && !fieldErrors.value.password
 }
 
 async function onSubmit() {
@@ -34,7 +34,7 @@ async function onSubmit() {
 
   loading.value = true
   try {
-    await auth.login(username.value.trim(), password.value)
+    await auth.login(email.value.trim(), password.value)
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
     // Alleen interne paden toestaan.
     await router.push(redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/')
@@ -42,7 +42,7 @@ async function onSubmit() {
     const status = axios.isAxiosError(err) ? err.response?.status : undefined
     error.value =
       status === 401
-        ? 'Ongeldige gebruikersnaam of wachtwoord.'
+        ? 'Ongeldig e-mailadres of wachtwoord.'
         : 'Inloggen is mislukt. Probeer het later opnieuw.'
     password.value = ''
   } finally {
@@ -57,13 +57,14 @@ async function onSubmit() {
     <template #subtitle>Log in met uw MediSharp-account.</template>
 
     <BaseInput
-      v-model="username"
-      label="Gebruikersnaam"
-      autocomplete="username"
+      v-model="email"
+      label="E-mailadres"
+      type="email"
+      autocomplete="email"
       required
       :disabled="loading"
-      :error="fieldErrors.username"
-      data-testid="login-username"
+      :error="fieldErrors.email"
+      data-testid="login-email"
     />
     <BaseInput
       v-model="password"

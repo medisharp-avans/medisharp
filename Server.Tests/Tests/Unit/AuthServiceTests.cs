@@ -48,7 +48,6 @@ namespace Server.Tests.Unit
             _user = new User
             {
                 Id = 5,
-                Username = "jdevries",
                 FullName = "Jan de Vries",
                 Email = "jan@example.com",
                 PasswordHash = "stored-hash",
@@ -57,14 +56,14 @@ namespace Server.Tests.Unit
             };
 
             // Default success path; individual tests override what they need
-            _usersMock.Setup(u => u.GetByUsernameAsync("jdevries")).ReturnsAsync(_user);
+            _usersMock.Setup(u => u.GetByEmailAsync("jan@example.com")).ReturnsAsync(_user);
             _hasherMock
                 .Setup(h => h.VerifyHashedPassword(_user, "stored-hash", "Geheim123!"))
                 .Returns(PasswordVerificationResult.Success);
         }
 
-        private static LoginRequestDTO Request(string username = "jdevries", string password = "Geheim123!") =>
-            new() { Username = username, Password = password };
+        private static LoginRequestDTO Request(string email = "jan@example.com", string password = "Geheim123!") =>
+            new() { Email = email, Password = password };
 
         private JwtSecurityToken ValidateToken(string token)
         {
@@ -87,7 +86,7 @@ namespace Server.Tests.Unit
 
             Assert.IsNotNull(result);
             Assert.AreEqual(5, result.User.Id);
-            Assert.AreEqual("jdevries", result.User.Username);
+            Assert.AreEqual("jan@example.com", result.User.Email);
             Assert.AreEqual("Jan de Vries", result.User.FullName);
             Assert.AreEqual("jan@example.com", result.User.Email);
             Assert.AreEqual(UserRole.Patient, result.User.Role);
@@ -113,7 +112,7 @@ namespace Server.Tests.Unit
             CollectionAssert.Contains(token.Audiences.ToList(), "medisharp-client");
             Assert.AreEqual("5", token.Subject);
             Assert.AreEqual("5", token.Claims.Single(c => c.Type == ClaimTypes.NameIdentifier).Value);
-            Assert.AreEqual("jdevries", token.Claims.Single(c => c.Type == ClaimTypes.Name).Value);
+            Assert.AreEqual("jan@example.com", token.Claims.Single(c => c.Type == ClaimTypes.Name).Value);
             Assert.AreEqual(nameof(UserRole.Patient), token.Claims.Single(c => c.Type == ClaimTypes.Role).Value);
             Assert.AreEqual(Now.UtcDateTime, token.ValidFrom);
             Assert.AreEqual(Now.UtcDateTime.AddMinutes(30), token.ValidTo);
@@ -151,18 +150,18 @@ namespace Server.Tests.Unit
         }
 
         [TestMethod]
-        public async Task LoginAsync_UsernameWithSurroundingWhitespace_IsTrimmed()
+        public async Task LoginAsync_EmailWithSurroundingWhitespace_IsTrimmed()
         {
-            var result = await _sut.LoginAsync(Request(username: "  jdevries  "));
+            var result = await _sut.LoginAsync(Request(email: "  jan@example.com  "));
 
             Assert.IsNotNull(result);
-            _usersMock.Verify(u => u.GetByUsernameAsync("jdevries"), Times.Once);
+            _usersMock.Verify(u => u.GetByEmailAsync("jan@example.com"), Times.Once);
         }
 
         [TestMethod]
         public async Task LoginAsync_UnknownUser_ReturnsNullWithoutCheckingPassword()
         {
-            var result = await _sut.LoginAsync(Request(username: "onbekend"));
+            var result = await _sut.LoginAsync(Request(email: "onbekend@example.com"));
 
             Assert.IsNull(result);
             _hasherMock.Verify(h => h.VerifyHashedPassword(It.IsAny<User>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -226,7 +225,7 @@ namespace Server.Tests.Unit
             var result = await _sut.GetCurrentUserAsync(5);
 
             Assert.IsNotNull(result);
-            Assert.AreEqual("jdevries", result.Username);
+            Assert.AreEqual("jan@example.com", result.Email);
         }
 
         [TestMethod]

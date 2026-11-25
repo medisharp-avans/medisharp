@@ -23,7 +23,7 @@ namespace Server.Services
 
         public async Task<LoginResponseDTO?> LoginAsync(LoginRequestDTO request)
         {
-            var user = await users.GetByUsernameAsync(request.Username.Trim());
+            var user = await users.GetByEmailAsync(request.Email.Trim());
             if (user is null || !user.IsActive)
                 return null;
 
@@ -61,7 +61,7 @@ namespace Server.Services
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Name, user.Email),
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
@@ -80,7 +80,6 @@ namespace Server.Services
         private static AuthUserDTO ToDto(User user) => new()
         {
             Id = user.Id,
-            Username = user.Username,
             FullName = user.FullName,
             Email = user.Email,
             Role = user.Role

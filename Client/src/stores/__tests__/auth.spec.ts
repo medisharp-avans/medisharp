@@ -13,7 +13,6 @@ const post = vi.mocked(api.post)
 
 const user = {
   id: 5,
-  username: 'jdevries',
   fullName: 'Jan de Vries',
   email: 'jan@example.com',
   role: 'Patient',
@@ -45,11 +44,11 @@ describe('useAuthStore', () => {
     post.mockResolvedValue({ data: { token: 'jwt', expiresAt: futureDate(), user } })
     const auth = useAuthStore()
 
-    await auth.login('jdevries', 'Geheim123!')
+    await auth.login('jan@example.com', 'Geheim123!')
 
     expect(post).toHaveBeenCalledWith(
       '/api/login',
-      { username: 'jdevries', password: 'Geheim123!' },
+      { email: 'jan@example.com', password: 'Geheim123!' },
       { skipErrorRedirect: true },
     )
   })
@@ -59,7 +58,7 @@ describe('useAuthStore', () => {
     post.mockResolvedValue({ data: { token: 'jwt', expiresAt, user } })
     const auth = useAuthStore()
 
-    await auth.login('jdevries', 'Geheim123!')
+    await auth.login('jan@example.com', 'Geheim123!')
 
     expect(auth.token).toBe('jwt')
     expect(auth.expiresAt).toBe(expiresAt)
@@ -74,7 +73,7 @@ describe('useAuthStore', () => {
     post.mockRejectedValue(error)
     const auth = useAuthStore()
 
-    await expect(auth.login('jdevries', 'fout')).rejects.toBe(error)
+    await expect(auth.login('jan@example.com', 'fout')).rejects.toBe(error)
 
     expect(auth.token).toBeNull()
     expect(auth.user).toBeNull()
@@ -89,7 +88,7 @@ describe('useAuthStore', () => {
     })
     const auth = useAuthStore()
 
-    await auth.login('jdevries', 'Geheim123!')
+    await auth.login('jan@example.com', 'Geheim123!')
 
     expect(auth.token).toBe('jwt')
     expect(auth.isAuthenticated).toBe(true)
@@ -117,7 +116,7 @@ describe('useAuthStore', () => {
   it('wist alles bij uitloggen', async () => {
     post.mockResolvedValue({ data: { token: 'jwt', expiresAt: futureDate(), user } })
     const auth = useAuthStore()
-    await auth.login('jdevries', 'Geheim123!')
+    await auth.login('jan@example.com', 'Geheim123!')
 
     auth.logout()
 

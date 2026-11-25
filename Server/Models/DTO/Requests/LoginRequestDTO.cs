@@ -2,12 +2,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Server.Models.DTO.Requests
 {
-    /// <summary>Login with a username and a password.</summary>
+    /// <summary>Login with an email address and a password.</summary>
     public class LoginRequestDTO
     {
-        [Required(ErrorMessage = "Gebruikersnaam is verplicht.")]
-        [StringLength(50)]
-        public string Username { get; set; } = string.Empty;
+        [Required(ErrorMessage = "E-mailadres is verplicht.")]
+        [EmailAddress(ErrorMessage = "Ongeldig e-mailadres.")]
+        [StringLength(100)]
+        public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Wachtwoord is verplicht.")]
         [StringLength(128)]

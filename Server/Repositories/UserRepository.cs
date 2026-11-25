@@ -7,9 +7,10 @@ namespace Server.Repositories
 {
     public class UserRepository(AppDbContext context) : Repository<User>(context), IUserRepository
     {
-        public async Task<User?> GetByUsernameAsync(string username)
+        public async Task<User?> GetByEmailAsync(string email)
         {
-            return await _dbSet.FirstOrDefaultAsync(u => u.Username == username);
+            // SQL Server vergelijkt standaard hoofdletterongevoelig.
+            return await _dbSet.FirstOrDefaultAsync(u => u.Email == email);
         }
     }
 }

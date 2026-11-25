@@ -24,17 +24,17 @@ namespace Server.Tests.TestDb
             // so this data cannot be used to log in. Use ExecuteSqlAsync (not Raw) for real hashes.
             await context.Database.ExecuteSqlRawAsync(@"
                 SET IDENTITY_INSERT Users ON;
-                INSERT INTO Users (Id, Username, SurName, LastName, FullName, PasswordHash, Email, Role, IsActive, IsLockedOut) VALUES
-                    (1,  'jan.jansen',      'Jan',        'Jansen',    'Jan Jansen',      'fake-hash-niet-echt', 'jan.jansen@test.nl',      0, 1, 0),
-                    (2,  'huisarts.visser', 'Dr.',        'Visser',    'Dr. Visser',      'fake-hash-niet-echt', 'visser@test.nl',          1, 1, 0),
-                    (3,  'dr.devries',      'Dr.',        'De Vries',  'Dr. De Vries',    'fake-hash-niet-echt', 'devries@test.nl',         2, 1, 0),
-                    (4,  'piet.pietersen',  'Piet',       'Pietersen', 'Piet Pietersen',  'fake-hash-niet-echt', 'piet.pietersen@test.nl',  0, 1, 0),
-                    (5,  'anna.deboer',     'Anna',       'de Boer',   'Anna de Boer',    'fake-hash-niet-echt', 'anna.deboer@test.nl',     0, 1, 0),
-                    (6,  'dr.bakker',       'Dr.',        'Bakker',    'Dr. Bakker',      'fake-hash-niet-echt', 'bakker@test.nl',          2, 1, 0),
-                    (7,  'dr.smit',         'Dr.',        'Smit',      'Dr. Smit',        'fake-hash-niet-echt', 'smit@test.nl',            2, 1, 0),
-                    (8,  'medewerker.a',    'Medewerker', 'A',         'Medewerker A',    'fake-hash-niet-echt', 'medewerker.a@test.nl',    3, 1, 0),
-                    (9,  'medewerker.b',    'Medewerker', 'B',         'Medewerker B',    'fake-hash-niet-echt', 'medewerker.b@test.nl',    3, 1, 0),
-                    (10, 'beheerder1',      'Beheerder',  'Een',       'Beheerder Een',   'fake-hash-niet-echt', 'beheerder1@test.nl',      4, 1, 0);
+                INSERT INTO Users (Id, SurName, LastName, FullName, PasswordHash, Email, Role, IsActive, IsLockedOut) VALUES
+                    (1,  'Jan',        'Jansen',    'Jan Jansen',      'fake-hash-niet-echt', 'jan.jansen@test.nl',      0, 1, 0),
+                    (2,  'Dr.',        'Visser',    'Dr. Visser',      'fake-hash-niet-echt', 'visser@test.nl',          1, 1, 0),
+                    (3,  'Dr.',        'De Vries',  'Dr. De Vries',    'fake-hash-niet-echt', 'devries@test.nl',         2, 1, 0),
+                    (4,  'Piet',       'Pietersen', 'Piet Pietersen',  'fake-hash-niet-echt', 'piet.pietersen@test.nl',  0, 1, 0),
+                    (5,  'Anna',       'de Boer',   'Anna de Boer',    'fake-hash-niet-echt', 'anna.deboer@test.nl',     0, 1, 0),
+                    (6,  'Dr.',        'Bakker',    'Dr. Bakker',      'fake-hash-niet-echt', 'bakker@test.nl',          2, 1, 0),
+                    (7,  'Dr.',        'Smit',      'Dr. Smit',        'fake-hash-niet-echt', 'smit@test.nl',            2, 1, 0),
+                    (8,  'Medewerker', 'A',         'Medewerker A',    'fake-hash-niet-echt', 'medewerker.a@test.nl',    3, 1, 0),
+                    (9,  'Medewerker', 'B',         'Medewerker B',    'fake-hash-niet-echt', 'medewerker.b@test.nl',    3, 1, 0),
+                    (10, 'Beheerder',  'Een',       'Beheerder Een',   'fake-hash-niet-echt', 'beheerder1@test.nl',      4, 1, 0);
                 SET IDENTITY_INSERT Users OFF;
 
                 SET IDENTITY_INSERT GeneralPractitioners ON;

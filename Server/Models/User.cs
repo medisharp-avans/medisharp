@@ -9,10 +9,6 @@ namespace Server.Models
         [Key]
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "Gebruikersnaam is verplicht.")]
-        [StringLength(50, MinimumLength = 3)]
-        public string Username { get; set; } = string.Empty;
-
         [Required] 
         [StringLength(100)] 
         public string SurName { get; set; } = string.Empty;

@@ -19,7 +19,9 @@ namespace Server.Services;
 /// </summary>
 public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : IHostedService
 {
-    private const string UserPrefix = "dev-seed-";
+    // Seed users are recognised by their email address: dev-{name}@example.test
+    private const string UserEmailPrefix = "dev-";
+    private const string UserEmailDomain = "@example.test";
     private const string TreatmentCodePrefix = "DEV-";
 
     /// <summary>Password of every seeded user, e.g. log in as "dev-seed-huisarts" (development only).</summary>
@@ -193,7 +195,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         CancellationToken cancellationToken)
     {
         var seededUserIds = await db.Users
-            .Where(u => u.Username.StartsWith(UserPrefix))
+            .Where(u => u.Email.StartsWith(UserEmailPrefix) && u.Email.EndsWith(UserEmailDomain))
             .Select(u => u.Id)
             .ToListAsync(cancellationToken);
 
@@ -301,11 +303,10 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
 
     private static User CreateUser(string name, UserRole role, int number, string surName, string lastName) => new()
     {
-        Username = $"{UserPrefix}{name}",
         SurName = surName,
         LastName = lastName,
         FullName = $"{surName} {lastName}",
-        Email = $"dev-{name}@example.test",
+        Email = $"{UserEmailPrefix}{name}{UserEmailDomain}",
         PasswordHash = PasswordHasher.HashPassword(null!, DevPassword),
         Role = role,
         IsActive = true

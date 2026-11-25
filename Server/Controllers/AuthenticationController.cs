@@ -12,7 +12,7 @@ namespace Server.Controllers
     [Route("api/")]
     public class AuthenticationController(IAuthService authService) : ControllerBase
     {
-        /// <summary>Logs in with a username and a password.</summary>
+        /// <summary>Logs in with an email address and a password.</summary>
         /// <response code="200">Login succeeded; the response contains the JWT.</response>
         /// <response code="400">The request is invalid (missing fields).</response>
         /// <response code="401">Wrong credentials, or the account is inactive.</response>
