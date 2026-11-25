@@ -1,4 +1,4 @@
-
+﻿
 using Microsoft.EntityFrameworkCore;
 using Server.Models;
 
@@ -18,10 +18,23 @@ namespace Server.Data
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<TreatmentCode> TreatmentCodes { get; set; }
         public DbSet<Availability> Availabilities { get; set; }
+        public DbSet<HospitalEmployee> HospitalEmployees { get; set; }
+
+        // Claims and invoices (DEC)
+        public DbSet<Claim> Claims { get; set; }
+        public DbSet<ClaimBatch> ClaimBatches { get; set; }
+        public DbSet<ClaimLine> ClaimLines { get; set; }
+        public DbSet<Invoice> Invoices { get; set; }
+        public DbSet<InvoiceLine> InvoiceLines { get; set; }
+        public DbSet<PaymentPlan> PaymentPlans { get; set; }
+        public DbSet<PaymentReminder> PaymentReminders { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Picks up every IEntityTypeConfiguration in Data/Configurations
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
             // User
             modelBuilder.Entity<User>(e =>
