@@ -313,6 +313,10 @@ You do not set these in `.env`. `docker-compose.prod.yml` builds them for the se
 | `ASPNETCORE_ENVIRONMENT`               | `Production`                                                                                                     |
 | `ASPNETCORE_HTTP_PORTS`                | `8080`                                                                                                           |
 | `ConnectionStrings__DefaultConnection` | `Server=db,1433;Database=${MSSQL_DB_NAME};User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;` |
-| `Jwt__Key`                             | `${JWT_KEY}`                                                                                                     |
+| `JWT__Token`                           | `${JWT_KEY}`                                                                                                     |
+| `SMTP__Username`                       | `${SMTP_USERNAME}` (the Purelymail address that sends the login codes)                                           |
+| `SMTP__Password`                       | `${SMTP_PASSWORD}`                                                                                               |
+
+Locally: `dotnet user-secrets set "SMTP:Username" "..."` and `dotnet user-secrets set "SMTP:Password" "..."` in `Server/`. Without them, Development logs the login code to the console instead of mailing it.
 
 In code you read the connection string with `builder.Configuration.GetConnectionString("DefaultConnection")`.

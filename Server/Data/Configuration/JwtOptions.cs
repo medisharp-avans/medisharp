@@ -4,11 +4,10 @@ namespace Server.Configuration
 {
     /// <summary>
     /// JWT settings from the "Jwt" configuration section.
-    /// In production set the key via the <c>Jwt__Key</c> environment variable, never in appsettings.json.
     /// </summary>
     public class JwtOptions
     {
-        public const string SectionName = "Jwt";
+        public const string SectionName = "JWT";
 
         [Required]
         public string Issuer { get; set; } = string.Empty;

@@ -11,6 +11,19 @@ namespace Server.Models.DTO.Responses
         public UserRole Role { get; set; }
     }
 
+    /// <summary>Result of a correct username and password: a code was sent by email.</summary>
+    public class LoginChallengeDTO
+    {
+        /// <summary>Send this back with the code to <c>POST /api/login/verify</c>.</summary>
+        public Guid ChallengeId { get; set; }
+
+        /// <summary>When the code expires (UTC).</summary>
+        public DateTime ExpiresAt { get; set; }
+
+        /// <summary>Partly hidden email address, e.g. <c>j***@example.com</c>.</summary>
+        public string MaskedEmail { get; set; } = string.Empty;
+    }
+
     /// <summary>Result of a successful login.</summary>
     public class LoginResponseDTO
     {

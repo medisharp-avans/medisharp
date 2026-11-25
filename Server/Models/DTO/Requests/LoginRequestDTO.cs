@@ -14,4 +14,15 @@ namespace Server.Models.DTO.Requests
         [StringLength(128)]
         public string Password { get; set; } = string.Empty;
     }
+
+    /// <summary>Second login step: the code that was sent by email.</summary>
+    public class VerifyLoginRequestDTO
+    {
+        [Required]
+        public Guid ChallengeId { get; set; }
+
+        [Required(ErrorMessage = "Verificatiecode is verplicht.")]
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "De verificatiecode bestaat uit 6 cijfers.")]
+        public string Code { get; set; } = string.Empty;
+    }
 }

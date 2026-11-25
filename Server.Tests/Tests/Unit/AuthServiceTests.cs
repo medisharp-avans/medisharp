@@ -1,16 +1,20 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
 using Server.Configuration;
 using Server.Models;
 using Server.Models.DTO.Requests;
+using Server.Models.DTO.Responses;
 using Server.Models.Enums;
 using Server.Repositories.InterFaces;
 using Server.Services;
+using Server.Services.InterFaces;
 
 namespace Server.Tests.Unit
 {
@@ -19,6 +23,10 @@ namespace Server.Tests.Unit
     {
         private Mock<IUserRepository> _usersMock = null!;
         private Mock<IPasswordHasher<User>> _hasherMock = null!;
+        private Mock<IEmailService> _emailMock = null!;
+        private FixedTimeProvider _clock = null!;
+        private string? _sentTo;
+        private string? _sentBody;
         private JwtOptions _jwt = null!;
         private AuthService _sut = null!;
         private User _user = null!;
@@ -28,7 +36,8 @@ namespace Server.Tests.Unit
         /// <summary>Clock that always returns <see cref="Now"/>, so expiry times are predictable.</summary>
         private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
         {
-            public override DateTimeOffset GetUtcNow() => now;
+            public DateTimeOffset Now { get; set; } = now;
+            public override DateTimeOffset GetUtcNow() => Now;
         }
 
         [TestInitialize]
@@ -43,7 +52,14 @@ namespace Server.Tests.Unit
                 Key = "test-signing-key-that-is-at-least-32-chars",
                 ExpiresMinutes = 30
             };
-            _sut = new AuthService(_usersMock.Object, _hasherMock.Object, Options.Create(_jwt), new FixedTimeProvider(Now));
+            _emailMock = new Mock<IEmailService>();
+            _emailMock
+                .Setup(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Callback<string, string, string>((to, _, body) => { _sentTo = to; _sentBody = body; })
+                .Returns(Task.CompletedTask);
+            _clock = new FixedTimeProvider(Now);
+            _sut = new AuthService(_usersMock.Object, _hasherMock.Object, Options.Create(_jwt), _clock,
+                _emailMock.Object, new MemoryCache(new MemoryCacheOptions()));
 
             _user = new User
             {
@@ -57,6 +73,7 @@ namespace Server.Tests.Unit
 
             // Default success path; individual tests override what they need
             _usersMock.Setup(u => u.GetByEmailAsync("jan@example.com")).ReturnsAsync(_user);
+            _usersMock.Setup(u => u.GetByIdAsync(5)).ReturnsAsync(_user);
             _hasherMock
                 .Setup(h => h.VerifyHashedPassword(_user, "stored-hash", "Geheim123!"))
                 .Returns(PasswordVerificationResult.Success);
@@ -64,6 +81,22 @@ namespace Server.Tests.Unit
 
         private static LoginRequestDTO Request(string email = "jan@example.com", string password = "Geheim123!") =>
             new() { Email = email, Password = password };
+
+        /// <summary>The 6 digit code from the last email that was sent.</summary>
+        private string SentCode() => Regex.Match(_sentBody!, @"\b\d{6}\b").Value;
+
+        private static string OtherCode(string code) => code == "000000" ? "111111" : "000000";
+
+        /// <summary>Step 1 and step 2 with the emailed code.</summary>
+        private async Task<LoginResponseDTO?> FullLoginAsync()
+        {
+            var challenge = await _sut.LoginAsync(Request());
+            Assert.IsNotNull(challenge);
+            return await _sut.VerifyLoginAsync(Verify(challenge.ChallengeId, SentCode()));
+        }
+
+        private static VerifyLoginRequestDTO Verify(Guid challengeId, string code) =>
+            new() { ChallengeId = challengeId, Code = code };
 
         private JwtSecurityToken ValidateToken(string token)
         {
@@ -79,10 +112,102 @@ namespace Server.Tests.Unit
             return (JwtSecurityToken)validated;
         }
 
+        // ---------- Step 1: password -> email code (AC-PRI-04_1) ----------
+
         [TestMethod]
-        public async Task LoginAsync_ValidCredentials_ReturnsUserWithoutSensitiveFields()
+        public async Task LoginAsync_ValidCredentials_SendsSixDigitCodeToUsersEmail()
         {
             var result = await _sut.LoginAsync(Request());
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual("jan@example.com", _sentTo);
+            Assert.MatchesRegex(@"^\d{6}$", SentCode());
+            _emailMock.Verify(e => e.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task LoginAsync_ValidCredentials_ReturnsChallengeWithoutLoggingIn()
+        {
+            var result = await _sut.LoginAsync(Request());
+
+            Assert.IsNotNull(result);
+            Assert.AreNotEqual(Guid.Empty, result.ChallengeId);
+            Assert.AreEqual("j***@example.com", result.MaskedEmail);
+            Assert.AreEqual(Now.UtcDateTime.Add(AuthService.CodeLifetime), result.ExpiresAt);
+            Assert.IsNull(_user.LastLoginAt, "Not logged in before the code is checked");
+        }
+
+        // ---------- Wrong code (AC-PRI-04_2) ----------
+
+        [TestMethod]
+        public async Task VerifyLoginAsync_WrongCode_DeniesAccess()
+        {
+            var challenge = await _sut.LoginAsync(Request());
+            Assert.IsNotNull(challenge);
+
+            var result = await _sut.VerifyLoginAsync(Verify(challenge.ChallengeId, OtherCode(SentCode())));
+
+            Assert.IsNull(result);
+            Assert.IsNull(_user.LastLoginAt);
+        }
+
+        [TestMethod]
+        public async Task VerifyLoginAsync_UnknownChallenge_DeniesAccess()
+        {
+            await _sut.LoginAsync(Request());
+
+            Assert.IsNull(await _sut.VerifyLoginAsync(Verify(Guid.NewGuid(), SentCode())));
+        }
+
+        [TestMethod]
+        public async Task VerifyLoginAsync_ExpiredCode_DeniesAccess()
+        {
+            var challenge = await _sut.LoginAsync(Request());
+            Assert.IsNotNull(challenge);
+            _clock.Now = Now.Add(AuthService.CodeLifetime);
+
+            Assert.IsNull(await _sut.VerifyLoginAsync(Verify(challenge.ChallengeId, SentCode())));
+        }
+
+        [TestMethod]
+        public async Task VerifyLoginAsync_CodeUsedTwice_SecondTimeDenied()
+        {
+            var challenge = await _sut.LoginAsync(Request());
+            Assert.IsNotNull(challenge);
+
+            Assert.IsNotNull(await _sut.VerifyLoginAsync(Verify(challenge.ChallengeId, SentCode())));
+            Assert.IsNull(await _sut.VerifyLoginAsync(Verify(challenge.ChallengeId, SentCode())));
+        }
+
+        [TestMethod]
+        public async Task VerifyLoginAsync_TooManyWrongAttempts_CorrectCodeDeniedAfterwards()
+        {
+            var challenge = await _sut.LoginAsync(Request());
+            Assert.IsNotNull(challenge);
+            var code = SentCode();
+
+            for (var i = 0; i < AuthService.MaxCodeAttempts; i++)
+                await _sut.VerifyLoginAsync(Verify(challenge.ChallengeId, OtherCode(code)));
+
+            Assert.IsNull(await _sut.VerifyLoginAsync(Verify(challenge.ChallengeId, code)));
+        }
+
+        [TestMethod]
+        public async Task VerifyLoginAsync_UserDeactivatedBetweenSteps_DeniesAccess()
+        {
+            var challenge = await _sut.LoginAsync(Request());
+            Assert.IsNotNull(challenge);
+            _user.IsActive = false;
+
+            Assert.IsNull(await _sut.VerifyLoginAsync(Verify(challenge.ChallengeId, SentCode())));
+        }
+
+        // ---------- Step 2: correct code -> JWT ----------
+
+        [TestMethod]
+        public async Task VerifyLoginAsync_CorrectCode_ReturnsUserWithoutSensitiveFields()
+        {
+            var result = await FullLoginAsync();
 
             Assert.IsNotNull(result);
             Assert.AreEqual(5, result.User.Id);
@@ -93,18 +218,18 @@ namespace Server.Tests.Unit
         }
 
         [TestMethod]
-        public async Task LoginAsync_ValidCredentials_ExpiresAfterConfiguredMinutes()
+        public async Task VerifyLoginAsync_CorrectCode_ExpiresAfterConfiguredMinutes()
         {
-            var result = await _sut.LoginAsync(Request());
+            var result = await FullLoginAsync();
 
             Assert.IsNotNull(result);
             Assert.AreEqual(Now.UtcDateTime.AddMinutes(30), result.ExpiresAt);
         }
 
         [TestMethod]
-        public async Task LoginAsync_ValidCredentials_ReturnsSignedTokenWithUserClaims()
+        public async Task VerifyLoginAsync_CorrectCode_ReturnsSignedTokenWithUserClaims()
         {
-            var result = await _sut.LoginAsync(Request());
+            var result = await FullLoginAsync();
 
             Assert.IsNotNull(result);
             var token = ValidateToken(result.Token);
@@ -119,9 +244,9 @@ namespace Server.Tests.Unit
         }
 
         [TestMethod]
-        public async Task LoginAsync_TokenSignedWithOtherKey_FailsValidation()
+        public async Task VerifyLoginAsync_TokenSignedWithOtherKey_FailsValidation()
         {
-            var result = await _sut.LoginAsync(Request());
+            var result = await FullLoginAsync();
             Assert.IsNotNull(result);
 
             _jwt.Key = "a-completely-different-key-of-32-chars!";
@@ -130,10 +255,10 @@ namespace Server.Tests.Unit
         }
 
         [TestMethod]
-        public async Task LoginAsync_TwoLogins_GiveDifferentTokenIds()
+        public async Task VerifyLoginAsync_TwoLogins_GiveDifferentTokenIds()
         {
-            var first = await _sut.LoginAsync(Request());
-            var second = await _sut.LoginAsync(Request());
+            var first = await FullLoginAsync();
+            var second = await FullLoginAsync();
 
             Assert.IsNotNull(first);
             Assert.IsNotNull(second);
@@ -141,9 +266,9 @@ namespace Server.Tests.Unit
         }
 
         [TestMethod]
-        public async Task LoginAsync_ValidCredentials_StoresLastLoginAndSaves()
+        public async Task VerifyLoginAsync_CorrectCode_StoresLastLoginAndSaves()
         {
-            await _sut.LoginAsync(Request());
+            await FullLoginAsync();
 
             Assert.AreEqual(Now.UtcDateTime, _user.LastLoginAt);
             _usersMock.Verify(u => u.SaveChangesAsync(), Times.Once);

@@ -15,7 +15,13 @@ interface LoginResponse {
   user: AuthUser
 }
 
-const TOKEN_KEY = 'auth_token'
+export interface LoginChallenge {
+  challengeId: string
+  expiresAt: string
+  maskedEmail: string
+}
+
+const TOKEN_KEY = 'jwt_token'
 const EXPIRES_KEY = 'auth_expires_at'
 
 function readStorage(key: string): string | null {
@@ -35,11 +41,22 @@ export const useAuthStore = defineStore('auth', () => {
     () => !!token.value && (!expiresAt.value || new Date(expiresAt.value) > new Date()),
   )
 
-  async function login(email: string, password: string): Promise<void> {
+  /** Stap 1: controleert email en wachtwoord; de server mailt een verificatiecode. */
+  async function login(email: string, password: string): Promise<LoginChallenge> {
     // skipErrorRedirect: een 401 betekent hier "verkeerde gegevens", geen redirect naar /401.
-    const { data } = await api.post<LoginResponse>(
+    const { data } = await api.post<LoginChallenge>(
       '/api/login',
       { email, password },
+      { skipErrorRedirect: true },
+    )
+    return data
+  }
+
+  /** Stap 2: controleert de code uit de e-mail en slaat het JWT op. */
+  async function verifyCode(challengeId: string, code: string): Promise<void> {
+    const { data } = await api.post<LoginResponse>(
+      '/api/login/verify',
+      { challengeId, code },
       { skipErrorRedirect: true },
     )
     token.value = data.token
@@ -65,5 +82,5 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { token, expiresAt, user, isAuthenticated, login, logout }
+  return { token, expiresAt, user, isAuthenticated, login, verifyCode, logout }
 })

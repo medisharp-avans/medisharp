@@ -12,13 +12,13 @@ namespace Server.Controllers
     [Route("api/")]
     public class AuthenticationController(IAuthService authService) : ControllerBase
     {
-        /// <summary>Logs in with an email address and a password.</summary>
-        /// <response code="200">Login succeeded; the response contains the JWT.</response>
+        /// <summary>Step 1: checks email and password and emails a verification code (PRI-04).</summary>
+        /// <response code="200">Credentials correct; a code was sent. Continue with <c>POST /api/login/verify</c>.</response>
         /// <response code="400">The request is invalid (missing fields).</response>
         /// <response code="401">Wrong credentials, or the account is inactive.</response>
         [HttpPost("login")]
         [AllowAnonymous]
-        [ProducesResponseType<LoginResponseDTO>(StatusCodes.Status200OK)]
+        [ProducesResponseType<LoginChallengeDTO>(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Login(LoginRequestDTO request)
@@ -26,6 +26,24 @@ namespace Server.Controllers
             var result = await authService.LoginAsync(request);
             if (result is null)
                 return Unauthorized(new { message = "Ongeldige inloggegevens." });
+
+            return Ok(result);
+        }
+
+        /// <summary>Step 2: checks the emailed verification code and returns the JWT.</summary>
+        /// <response code="200">Code correct; the response contains the JWT.</response>
+        /// <response code="400">The request is invalid (code is not 6 digits).</response>
+        /// <response code="401">Wrong or expired code, or too many attempts.</response>
+        [HttpPost("login/verify")]
+        [AllowAnonymous]
+        [ProducesResponseType<LoginResponseDTO>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> VerifyLogin(VerifyLoginRequestDTO request)
+        {
+            var result = await authService.VerifyLoginAsync(request);
+            if (result is null)
+                return Unauthorized(new { message = "Ongeldige of verlopen verificatiecode." });
 
             return Ok(result);
         }
