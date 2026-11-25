@@ -48,6 +48,37 @@ namespace Server.Controllers
             return Ok(result);
         }
 
+        /// <summary>Swaps a refresh token for a new JWT and refresh token, extending the session.</summary>
+        /// <response code="200">New JWT and new refresh token; the old refresh token no longer works.</response>
+        /// <response code="400">The request is invalid (missing refresh token).</response>
+        /// <response code="401">Unknown, expired or already used refresh token. Log in again.</response>
+        [HttpPost("login/refresh")]
+        [AllowAnonymous]
+        [ProducesResponseType<LoginResponseDTO>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> Refresh(RefreshTokenRequestDTO request)
+        {
+            var result = await authService.RefreshAsync(request);
+            if (result is null)
+                return Unauthorized(new { message = "Sessie is verlopen. Log opnieuw in." });
+
+            return Ok(result);
+        }
+
+        /// <summary>Ends the session: the refresh token stops working. The JWT stays valid until it expires (a few minutes).</summary>
+        /// <response code="204">Logged out (also when the token was unknown or already revoked).</response>
+        /// <response code="400">The request is invalid (missing refresh token).</response>
+        [HttpPost("logout")]
+        [AllowAnonymous]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Logout(RefreshTokenRequestDTO request)
+        {
+            await authService.LogoutAsync(request);
+            return NoContent();
+        }
+
         /// <summary>Returns the user that belongs to the JWT in the Authorization header.</summary>
         /// <response code="200">The logged in user.</response>
         /// <response code="401">No valid token, or the user no longer exists or is inactive.</response>

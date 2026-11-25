@@ -1,4 +1,4 @@
-﻿using Server.Repositories.InterFaces;
+using Server.Repositories.InterFaces;
 
 namespace Server.Repositories
 {
@@ -19,6 +19,7 @@ namespace Server.Repositories
             repositories.AddScoped<IReferralRepository,ReferralRepository>();
             repositories.AddScoped<IPatientRepository,PatientRepository>();
             repositories.AddScoped<IUserRepository, UserRepository>();
+            repositories.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             return repositories;
         }
     }

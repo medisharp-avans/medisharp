@@ -12,6 +12,8 @@ export interface AuthUser {
 interface LoginResponse {
   token: string
   expiresAt: string
+  refreshToken: string
+  refreshTokenExpiresAt: string
   user: AuthUser
 }
 
@@ -21,8 +23,14 @@ export interface LoginChallenge {
   maskedEmail: string
 }
 
-const TOKEN_KEY = 'jwt_token'
+export const TOKEN_KEY = 'jwt_token'
 const EXPIRES_KEY = 'auth_expires_at'
+const REFRESH_KEY = 'refresh_token'
+const REFRESH_EXPIRES_KEY = 'refresh_expires_at'
+const STORAGE_KEYS = [TOKEN_KEY, EXPIRES_KEY, REFRESH_KEY, REFRESH_EXPIRES_KEY]
+
+/** Ververs het JWT als het binnen deze marge verloopt, zodat een request niet halverwege afloopt. */
+const REFRESH_MARGIN_MS = 30_000
 
 function readStorage(key: string): string | null {
   try {
@@ -32,14 +40,54 @@ function readStorage(key: string): string | null {
   }
 }
 
+function isFuture(date: string | null, marginMs = 0): boolean {
+  return !!date && new Date(date).getTime() - marginMs > Date.now()
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(readStorage(TOKEN_KEY))
   const expiresAt = ref<string | null>(readStorage(EXPIRES_KEY))
+  const refreshToken = ref<string | null>(readStorage(REFRESH_KEY))
+  const refreshExpiresAt = ref<string | null>(readStorage(REFRESH_EXPIRES_KEY))
   const user = ref<AuthUser | null>(null)
 
-  const isAuthenticated = computed(
-    () => !!token.value && (!expiresAt.value || new Date(expiresAt.value) > new Date()),
+  const hasValidAccessToken = computed(
+    () => !!token.value && (!expiresAt.value || isFuture(expiresAt.value)),
   )
+
+  /** Ingelogd zolang het JWT geldig is, of zolang het met de refresh token vernieuwd kan worden. */
+  const isAuthenticated = computed(
+    () => hasValidAccessToken.value || (!!refreshToken.value && isFuture(refreshExpiresAt.value)),
+  )
+
+  function applySession(data: LoginResponse): void {
+    token.value = data.token
+    expiresAt.value = data.expiresAt
+    refreshToken.value = data.refreshToken
+    refreshExpiresAt.value = data.refreshTokenExpiresAt
+    user.value = data.user
+    try {
+      sessionStorage.setItem(TOKEN_KEY, data.token)
+      sessionStorage.setItem(EXPIRES_KEY, data.expiresAt)
+      sessionStorage.setItem(REFRESH_KEY, data.refreshToken)
+      sessionStorage.setItem(REFRESH_EXPIRES_KEY, data.refreshTokenExpiresAt)
+    } catch {
+      // Opslag niet beschikbaar: alleen ingelogd zolang de pagina open is.
+    }
+  }
+
+  function clearSession(): void {
+    token.value = null
+    expiresAt.value = null
+    refreshToken.value = null
+    refreshExpiresAt.value = null
+    user.value = null
+    try {
+      STORAGE_KEYS.forEach((key) => sessionStorage.removeItem(key))
+    } catch {
+      // negeren
+    }
+  }
 
   /** Stap 1: controleert e-mailadres en wachtwoord; de server mailt een verificatiecode. */
   async function login(email: string, password: string): Promise<LoginChallenge> {
@@ -47,40 +95,91 @@ export const useAuthStore = defineStore('auth', () => {
     const { data } = await api.post<LoginChallenge>(
       '/api/login',
       { email, password },
-      { skipErrorRedirect: true },
+      { skipErrorRedirect: true, skipAuthRefresh: true },
     )
     return data
   }
 
-  /** Stap 2: controleert de code uit de e-mail en slaat het JWT op. */
+  /** Stap 2: controleert de code uit de e-mail en slaat het JWT en de refresh token op. */
   async function verifyCode(challengeId: string, code: string): Promise<void> {
     const { data } = await api.post<LoginResponse>(
       '/api/login/verify',
       { challengeId, code },
-      { skipErrorRedirect: true },
+      { skipErrorRedirect: true, skipAuthRefresh: true },
     )
-    token.value = data.token
-    expiresAt.value = data.expiresAt
-    user.value = data.user
+    applySession(data)
+  }
+
+  // Lopende refresh: gelijktijdige requests wachten op dezelfde refresh. Een refresh token
+  // werkt maar één keer; twee refreshes tegelijk zou de server als diefstal zien.
+  let pendingRefresh: Promise<boolean> | null = null
+
+  /**
+   * Vraagt een nieuw JWT aan met de refresh token. Elke refresh verlengt de sessie met 30 minuten.
+   * Geeft `false` (en logt uit) als de sessie verlopen of ingetrokken is.
+   */
+  function refresh(): Promise<boolean> {
+    if (pendingRefresh) return pendingRefresh
+    const current = refreshToken.value
+    if (!current || !isFuture(refreshExpiresAt.value)) {
+      clearSession()
+      return Promise.resolve(false)
+    }
+
+    pendingRefresh = api
+      .post<LoginResponse>(
+        '/api/login/refresh',
+        { refreshToken: current },
+        { skipErrorRedirect: true, skipAuthRefresh: true },
+      )
+      .then(({ data }) => {
+        applySession(data)
+        return true
+      })
+      .catch(() => {
+        clearSession()
+        return false
+      })
+      .finally(() => {
+        pendingRefresh = null
+      })
+    return pendingRefresh
+  }
+
+  /** Geeft een geldig JWT terug (vernieuwt het eerst als het bijna verlopen is), of `null`. */
+  async function getValidToken(): Promise<string | null> {
+    if (token.value && isFuture(expiresAt.value, REFRESH_MARGIN_MS)) return token.value
+    if (!refreshToken.value) return hasValidAccessToken.value ? token.value : null
+    return (await refresh()) ? token.value : null
+  }
+
+  /** Beëindigt de sessie, ook op de server: de refresh token werkt daarna niet meer. */
+  async function logout(): Promise<void> {
+    const current = refreshToken.value
+    clearSession()
+    if (!current) return
     try {
-      sessionStorage.setItem(TOKEN_KEY, data.token)
-      sessionStorage.setItem(EXPIRES_KEY, data.expiresAt)
+      await api.post(
+        '/api/logout',
+        { refreshToken: current },
+        { skipErrorRedirect: true, skipAuthRefresh: true },
+      )
     } catch {
-      // Opslag niet beschikbaar: alleen ingelogd voor deze sessie.
+      // Lokaal is de sessie al gewist; de token verloopt anders vanzelf.
     }
   }
 
-  function logout(): void {
-    token.value = null
-    expiresAt.value = null
-    user.value = null
-    try {
-      sessionStorage.removeItem(TOKEN_KEY)
-      sessionStorage.removeItem(EXPIRES_KEY)
-    } catch {
-      // negeren
-    }
+  return {
+    token,
+    expiresAt,
+    refreshToken,
+    refreshExpiresAt,
+    user,
+    isAuthenticated,
+    login,
+    verifyCode,
+    refresh,
+    getValidToken,
+    logout,
   }
-
-  return { token, expiresAt, user, isAuthenticated, login, verifyCode, logout }
 })

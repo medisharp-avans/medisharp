@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -17,6 +18,7 @@ namespace Server.Services
 {
     public class AuthService(
         IUserRepository users,
+        IRefreshTokenRepository refreshTokens,
         IPasswordHasher<User> passwordHasher,
         IOptions<JwtOptions> jwtOptions,
         TimeProvider timeProvider,
@@ -102,19 +104,94 @@ namespace Server.Services
             user.LastLoginAt = now;
             await users.SaveChangesAsync();
 
-            var expiresAt = now.AddMinutes(_jwt.ExpiresMinutes);
-            return new LoginResponseDTO
+            return await CreateSessionAsync(user, now);
+        }
+
+        public async Task<LoginResponseDTO?> RefreshAsync(RefreshTokenRequestDTO request)
+        {
+            var stored = await refreshTokens.GetByHashAsync(HashHex(request.RefreshToken));
+            if (stored is null)
+                return null;
+
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+
+            // A token that was already used is presented again: it has probably been stolen.
+            // End every session of this user, so the thief cannot continue either.
+            if (stored.RevokedAt is not null)
             {
-                Token = CreateToken(user, now, expiresAt),
-                ExpiresAt = expiresAt,
-                User = ToDto(user)
-            };
+                await RevokeAllAsync(stored.UserId, now);
+                return null;
+            }
+
+            if (!stored.IsActive(now))
+                return null;
+
+            // Rotation: the token can be used once.
+            stored.RevokedAt = now;
+
+            var user = await users.GetByIdAsync(stored.UserId);
+            if (user is null || !user.IsActive)
+            {
+                await refreshTokens.SaveChangesAsync();
+                return null;
+            }
+
+            return await CreateSessionAsync(user, now);
+        }
+
+        public async Task LogoutAsync(RefreshTokenRequestDTO request)
+        {
+            var stored = await refreshTokens.GetByHashAsync(HashHex(request.RefreshToken));
+            if (stored is null || stored.RevokedAt is not null)
+                return;
+
+            stored.RevokedAt = timeProvider.GetUtcNow().UtcDateTime;
+            await refreshTokens.SaveChangesAsync();
         }
 
         public async Task<AuthUserDTO?> GetCurrentUserAsync(int userId)
         {
             var user = await users.GetByIdAsync(userId);
             return user is { IsActive: true } ? ToDto(user) : null;
+        }
+
+        /// <summary>Creates a new JWT and a new refresh token, and stores the hash of the refresh token.</summary>
+        private async Task<LoginResponseDTO> CreateSessionAsync(User user, DateTime now)
+        {
+            // Tidy up: expired tokens of this user are no longer needed.
+            foreach (var old in await refreshTokens.GetUnrevokedByUserAsync(user.Id))
+            {
+                if (old.ExpiresAt <= now)
+                    refreshTokens.Delete(old);
+            }
+
+            var refreshToken = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
+            var refreshExpiresAt = now.AddMinutes(_jwt.RefreshTokenMinutes);
+            await refreshTokens.AddAsync(new RefreshToken
+            {
+                UserId = user.Id,
+                TokenHash = HashHex(refreshToken),
+                CreatedAt = now,
+                ExpiresAt = refreshExpiresAt
+            });
+            await refreshTokens.SaveChangesAsync();
+
+            var expiresAt = now.AddMinutes(_jwt.ExpiresMinutes);
+            return new LoginResponseDTO
+            {
+                Token = CreateToken(user, now, expiresAt),
+                ExpiresAt = expiresAt,
+                RefreshToken = refreshToken,
+                RefreshTokenExpiresAt = refreshExpiresAt,
+                User = ToDto(user)
+            };
+        }
+
+        private async Task RevokeAllAsync(int userId, DateTime now)
+        {
+            foreach (var token in await refreshTokens.GetUnrevokedByUserAsync(userId))
+                token.RevokedAt = now;
+            await refreshTokens.SaveChangesAsync();
         }
 
         private string CreateToken(User user, DateTime now, DateTime expiresAt)
@@ -141,6 +218,8 @@ namespace Server.Services
         }
 
         private static byte[] Hash(string code) => SHA256.HashData(Encoding.UTF8.GetBytes(code));
+
+        private static string HashHex(string token) => Convert.ToHexString(Hash(token));
 
         private static string MaskEmail(string email)
         {

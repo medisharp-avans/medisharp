@@ -18,6 +18,7 @@ namespace Server.Data
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<TreatmentCode> TreatmentCodes { get; set; }
         public DbSet<Availability> Availabilities { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,6 +28,16 @@ namespace Server.Data
             modelBuilder.Entity<User>(e =>
             {
                 e.HasIndex(u => u.Email).IsUnique();
+            });
+
+            // RefreshToken: opzoeken op hash, verwijderd met de gebruiker
+            modelBuilder.Entity<RefreshToken>(e =>
+            {
+                e.HasIndex(t => t.TokenHash).IsUnique();
+                e.HasOne(t => t.User)
+                    .WithMany()
+                    .HasForeignKey(t => t.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // TreatmentCode configuratie

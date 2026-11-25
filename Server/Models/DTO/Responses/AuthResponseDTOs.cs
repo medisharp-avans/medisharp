@@ -33,6 +33,12 @@ namespace Server.Models.DTO.Responses
         /// <summary>When the token expires (UTC).</summary>
         public DateTime ExpiresAt { get; set; }
 
+        /// <summary>Send this to <c>POST /api/login/refresh</c> for a new JWT. Can be used once.</summary>
+        public string RefreshToken { get; set; } = string.Empty;
+
+        /// <summary>When the refresh token expires (UTC): the end of the session without activity.</summary>
+        public DateTime RefreshTokenExpiresAt { get; set; }
+
         public AuthUserDTO User { get; set; } = new();
     }
 }

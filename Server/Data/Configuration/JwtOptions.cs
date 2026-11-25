@@ -19,7 +19,12 @@ namespace Server.Configuration
         [MinLength(32)]
         public string Key { get; set; } = string.Empty;
 
+        /// <summary>Lifetime of the access token (JWT). Keep it short; the refresh token keeps the user logged in.</summary>
         [Range(1, 1440)]
-        public int ExpiresMinutes { get; set; } = 60;
+        public int ExpiresMinutes { get; set; } = 5;
+
+        
+        [Range(1, 1440)]
+        public int RefreshTokenMinutes { get; set; } = 30;
     }
 }
