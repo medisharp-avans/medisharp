@@ -46,5 +46,7 @@ namespace Server.Models
         public Specialist? SpecialistDetails { get; set; }
 
         public GeneralPractitioner? GeneralPractitionerDetails { get; set; }
+
+        public HospitalEmployee? HospitalEmployeeDetails { get; set; }
     }
 }
