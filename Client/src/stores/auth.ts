@@ -41,7 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
     () => !!token.value && (!expiresAt.value || new Date(expiresAt.value) > new Date()),
   )
 
-  /** Stap 1: controleert email en wachtwoord; de server mailt een verificatiecode. */
+  /** Stap 1: controleert e-mailadres en wachtwoord; de server mailt een verificatiecode. */
   async function login(email: string, password: string): Promise<LoginChallenge> {
     // skipErrorRedirect: een 401 betekent hier "verkeerde gegevens", geen redirect naar /401.
     const { data } = await api.post<LoginChallenge>(

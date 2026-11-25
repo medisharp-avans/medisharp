@@ -11,7 +11,7 @@ namespace Server.Models.DTO.Responses
         public UserRole Role { get; set; }
     }
 
-    /// <summary>Result of a correct username and password: a code was sent by email.</summary>
+    /// <summary>Result of a correct email address and password: a code was sent by email.</summary>
     public class LoginChallengeDTO
     {
         /// <summary>Send this back with the code to <c>POST /api/login/verify</c>.</summary>

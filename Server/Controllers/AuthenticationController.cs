@@ -12,7 +12,7 @@ namespace Server.Controllers
     [Route("api/")]
     public class AuthenticationController(IAuthService authService) : ControllerBase
     {
-        /// <summary>Step 1: checks email and password and emails a verification code (PRI-04).</summary>
+        /// <summary>Step 1: checks email address and password and emails a verification code (PRI-04).</summary>
         /// <response code="200">Credentials correct; a code was sent. Continue with <c>POST /api/login/verify</c>.</response>
         /// <response code="400">The request is invalid (missing fields).</response>
         /// <response code="401">Wrong credentials, or the account is inactive.</response>
