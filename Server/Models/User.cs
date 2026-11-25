@@ -34,6 +34,7 @@ namespace Server.Models
         public string Email { get; set; } = string.Empty;
 
         [Required]
+        [EnumDataType(typeof(UserRole))]
         public UserRole Role { get; set; }
 
         public bool IsActive { get; set; } = true;

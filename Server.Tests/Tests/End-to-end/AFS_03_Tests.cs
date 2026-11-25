@@ -1,10 +1,10 @@
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using Server.Models.Enums;
 using Server.Tests.Helpers;
 using Server.Tests.PageModels;
 using Server.Tests.PageModels.AppointmentPages;
+using Server.Tests.TestDb;
 using Server.Tests.Utils;
 
 namespace Server.Tests.EndToEnd
@@ -19,24 +19,34 @@ namespace Server.Tests.EndToEnd
         private const string Piet = "Piet Pietersen";
         private const string Anna = "Anna de Boer";
 
-        private const string MsgSlotTaken =
-            "Dit tijdslot is niet meer beschikbaar";
+        private const string MsgNoSpecialist =
+            "Geen beschikbare specialist gevonden.";
 
-        private static readonly DateTime Jan12_0900 =
-            new(2027, 1, 12, 9, 0, 0);
-
-        private static readonly DateTime Jan12_1000 =
-            new(2027, 1, 12, 10, 0, 0);
-
-        private static readonly DateTime Jan12_1100 =
-            new(2027, 1, 12, 11, 0, 0);
-
-        private static readonly DateTime Jan19_1100 =
-            new(2027, 1, 19, 11, 0, 0);
+        /// <summary>
+        /// De server plant op dit moment altijd op morgen 10:00 (hardcoded in
+        /// PlanningService.SetSpecialistForAppointment) en kiest zelf een specialist:
+        /// eerst de voorkeursspecialist, daarna de eerste beschikbare van het specialisme.
+        /// Vervang deze regel zodra het tijdstip niet meer vast ligt.
+        /// </summary>
+        private static DateTime Slot =>
+            DateTime.Today.AddDays(1).AddHours(10);
 
         // =========================================================
         // Helpers
         // =========================================================
+
+        [TestInitialize]
+        public async Task ArrangeTestDataAsync()
+        {
+            // Maak de database leeg en vul hem met AFS-03-testdata.
+            await TestDatabase.ResetAsync(TestAFSDataInitializer.SeedAsync);
+
+            // Zorg dat alleen Dr. De Vries beschikbaar is.
+            await AfsHelperQueries.MakeOnlyAvailableAsync(
+                DeVries,
+                Specialism.KNO,
+                Slot);
+        }
 
         private static void LoginAs(IWebDriver driver, string username)
         {
@@ -54,41 +64,37 @@ namespace Server.Tests.EndToEnd
             return Task.FromResult(plan);
         }
 
-        private static async Task Book(
+        /// <summary>Vult het formulier in, bevestigt en wacht op de melding.</summary>
+        private static void Book(
             PlanAppointmentPage plan,
             string patient,
-            string specialist,
-            DateTime start)
+            string? preferredSpecialist = DeVries)
         {
-            var patientId = await AfsData.PatientIdAsync(patient);
-            var specialistId = await AfsData.SpecialistIdAsync(specialist);
-
             plan.FillForm(
-                patientId,
-                specialistId,
-                start,
-                generalPractitionerId: 1,
-                specialism: (int)Specialism.KNO
-            );
+                patient,
+                (int)Specialism.KNO,
+                preferredSpecialist);
 
             plan.Submit();
             plan.WaitForMessage();
         }
 
-        private static async Task<long> PostAsync(
+        /// <summary>
+        /// Plant rechtstreeks via de API (zonder formulier).
+        /// Geeft zowel de HTTP-status als de response-body terug.
+        /// </summary>
+        private static async Task<(long Status, string Body)> PostAsync(
             IWebDriver driver,
             string patient,
-            string specialist,
-            DateTime start)
+            string specialist)
         {
-            var patientId = await AfsData.PatientIdAsync(patient);
-            var specialistId = await AfsData.SpecialistIdAsync(specialist);
+            var patientId = await AfsHelperQueries.PatientIdAsync(patient);
+            var specialistId = await AfsHelperQueries.SpecialistIdAsync(specialist);
 
-            return BrowserApi.PostAppointment(
+            return BrowserApi.PostAppointmentWithResponse(
                 driver,
                 patientId,
-                specialistId,
-                start
+                specialistId
             );
         }
 
@@ -101,58 +107,65 @@ namespace Server.Tests.EndToEnd
         {
             // Arrange
             var referralsBefore =
-                await AfsData.CountReferralsOfPatientAsync(Jan);
+                await AfsHelperQueries.CountReferralsOfPatientAsync(Jan);
 
             var plan =
                 await OpenPlanningAsync(Driver, "medewerker.a");
 
             // Act
-            await Book(plan, Jan, DeVries, Jan12_1000);
+            Book(plan, Jan);
 
             // Assert
             Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
 
             Assert.AreEqual(
-                1,
-                await AfsData.CountAppointmentsAsync(DeVries, Jan12_1000));
+                "patient",
+                plan.CurrentStepId,
+                "Na het opslaan begint het formulier weer bij de eerste stap.");
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsOfPatientAsync(Jan));
+                await AfsHelperQueries.CountAppointmentsAsync(DeVries, Slot));
+
+            Assert.AreEqual(
+                1,
+                await AfsHelperQueries.CountAppointmentsOfPatientAsync(Jan));
 
             Assert.AreEqual(
                 referralsBefore + 1,
-                await AfsData.CountReferralsOfPatientAsync(Jan));
+                await AfsHelperQueries.CountReferralsOfPatientAsync(Jan));
 
             Assert.AreEqual(
                 "Ingepland",
-                (await AfsData.AppointmentReferralAsync(
-                    DeVries, Jan12_1000)).Status);
+                (await AfsHelperQueries.AppointmentReferralAsync(
+                    DeVries, Slot)).Status);
         }
 
         [TestMethod, TestCategory("TC-AFS-03_1_2")]
         public async Task TC_AFS_03_1_2_Medewerker_PlantTijdstipDirectNaBestaandeAfspraak_WordtOpgeslagen()
         {
-            // Arrange: afspraak van 09:00 duurt 60 minuten
-            await AfsData.CreateAppointmentAsync(
-                Piet, DeVries, Jan12_0900);
+            // Arrange: een afspraak van 09:00 duurt 60 minuten en eindigt dus precies om 10:00
+            var before = Slot.AddHours(-1);
+
+            await AfsHelperQueries.CreateAppointmentAsync(
+                Piet, DeVries, before);
 
             var plan =
                 await OpenPlanningAsync(Driver, "medewerker.a");
 
             // Act
-            await Book(plan, Jan, DeVries, Jan12_1000);
+            Book(plan, Jan);
 
             // Assert
             Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(DeVries, Jan12_0900));
+                await AfsHelperQueries.CountAppointmentsAsync(DeVries, before));
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(DeVries, Jan12_1000));
+                await AfsHelperQueries.CountAppointmentsAsync(DeVries, Slot));
         }
 
         [TestMethod, TestCategory("TC-AFS-03_1_3")]
@@ -160,24 +173,24 @@ namespace Server.Tests.EndToEnd
         public async Task TC_AFS_03_1_3_Huisarts_KanGeenAfspraakPlannen_BackendWeigert()
         {
             // Arrange
-            var referralsBefore = await AfsData.CountReferralsAsync();
+            var referralsBefore = await AfsHelperQueries.CountReferralsAsync();
 
             LoginAs(Driver, "huisarts.visser");
 
             // Act
-            var status = await PostAsync(
-                Driver, Jan, DeVries, Jan12_1000);
+            var response = await PostAsync(
+                Driver, Jan, DeVries);
 
             // Assert
-            Assert.AreEqual(403, status);
+            Assert.AreEqual(403, response.Status);
 
             Assert.AreEqual(
                 0,
-                await AfsData.CountAppointmentsAsync(DeVries, Jan12_1000));
+                await AfsHelperQueries.CountAppointmentsAsync(DeVries, Slot));
 
             Assert.AreEqual(
                 referralsBefore,
-                await AfsData.CountReferralsAsync());
+                await AfsHelperQueries.CountReferralsAsync());
         }
 
         // =========================================================
@@ -190,28 +203,28 @@ namespace Server.Tests.EndToEnd
             // Arrange
             Assert.AreEqual(
                 0,
-                await AfsData.CountReferralsOfPatientAsync(Piet));
+                await AfsHelperQueries.CountReferralsOfPatientAsync(Piet));
 
             var plan =
                 await OpenPlanningAsync(Driver, "medewerker.a");
 
             // Act
-            await Book(plan, Piet, DeVries, Jan12_1000);
+            Book(plan, Piet);
 
             // Assert
             Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsOfPatientAsync(Piet));
+                await AfsHelperQueries.CountAppointmentsOfPatientAsync(Piet));
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountReferralsOfPatientAsync(Piet));
+                await AfsHelperQueries.CountReferralsOfPatientAsync(Piet));
 
             var referral =
-                await AfsData.AppointmentReferralAsync(
-                    DeVries, Jan12_1000);
+                await AfsHelperQueries.AppointmentReferralAsync(
+                    DeVries, Slot);
 
             Assert.AreEqual("Ingepland", referral.Status);
             Assert.AreEqual((int)Specialism.KNO, referral.Specialism);
@@ -221,39 +234,41 @@ namespace Server.Tests.EndToEnd
         [TestMethod, TestCategory("TC-AFS-03_2_2")]
         public async Task TC_AFS_03_2_2_Medewerker_PlantVervolgafspraak_KrijgtEigenVerwijzing()
         {
-            // Arrange
-            await AfsData.CreateAppointmentAsync(
-                Jan, DeVries, Jan12_1000);
+            // Arrange: Jan heeft een eerdere afspraak, de nieuwe is de vervolgafspraak
+            var earlier = Slot.AddDays(-7);
+
+            await AfsHelperQueries.CreateAppointmentAsync(
+                Jan, DeVries, earlier);
 
             var referralsBefore =
-                await AfsData.CountReferralsOfPatientAsync(Jan);
+                await AfsHelperQueries.CountReferralsOfPatientAsync(Jan);
 
             var plan =
                 await OpenPlanningAsync(Driver, "medewerker.a");
 
             // Act
-            await Book(plan, Jan, DeVries, Jan19_1100);
+            Book(plan, Jan);
 
             // Assert
             Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
 
             Assert.AreEqual(
                 2,
-                await AfsData.CountAppointmentsOfPatientAsync(Jan));
+                await AfsHelperQueries.CountAppointmentsOfPatientAsync(Jan));
 
             Assert.AreEqual(
                 referralsBefore + 1,
-                await AfsData.CountReferralsOfPatientAsync(Jan));
+                await AfsHelperQueries.CountReferralsOfPatientAsync(Jan));
 
             Assert.AreEqual(
                 "Ingepland",
-                (await AfsData.AppointmentReferralAsync(
-                    DeVries, Jan12_1000)).Status);
+                (await AfsHelperQueries.AppointmentReferralAsync(
+                    DeVries, earlier)).Status);
 
             Assert.AreEqual(
                 "Ingepland",
-                (await AfsData.AppointmentReferralAsync(
-                    DeVries, Jan19_1100)).Status);
+                (await AfsHelperQueries.AppointmentReferralAsync(
+                    DeVries, Slot)).Status);
         }
 
         [TestMethod, TestCategory("TC-AFS-03_2_3")]
@@ -264,21 +279,22 @@ namespace Server.Tests.EndToEnd
             //LoginAs(Driver, "medewerker.a");
 
             // Act
-            var status = await PostAsync(
-                Driver, Piet, DeVries, Jan12_1000);
+            var response = await PostAsync(
+                Driver, Piet, DeVries);
 
             // Assert
             Assert.IsTrue(
-                status is >= 200 and < 300,
-                $"Verwacht succesvolle boeking (2xx), kreeg {status}.");
+                response.Status is >= 200 and < 300,
+                $"Verwacht succesvolle boeking (2xx), kreeg {response.Status}.\n" +
+                $"Backend response: {response.Body}");
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsOfPatientAsync(Piet));
+                await AfsHelperQueries.CountAppointmentsOfPatientAsync(Piet));
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountReferralsOfPatientAsync(Piet));
+                await AfsHelperQueries.CountReferralsOfPatientAsync(Piet));
         }
 
         // =========================================================
@@ -297,32 +313,18 @@ namespace Server.Tests.EndToEnd
             var planB =
                 await OpenPlanningAsync(driverB, "medewerker.b");
 
-            var patientJan = await AfsData.PatientIdAsync(Jan);
-            var patientPiet = await AfsData.PatientIdAsync(Piet);
-            var specialistId = await AfsData.SpecialistIdAsync(DeVries);
+            // Beide medewerkers vullen het formulier in en staan op de controle-stap
+            planA.FillForm(Jan, (int)Specialism.KNO, DeVries);
+            planB.FillForm(Piet, (int)Specialism.KNO, DeVries);
 
-            planA.FillForm(
-                patientJan,
-                specialistId,
-                Jan12_1000,
-                1,
-                (int)Specialism.KNO);
-
-            planB.FillForm(
-                patientPiet,
-                specialistId,
-                Jan12_1000,
-                1,
-                (int)Specialism.KNO);
-
-            // Medewerker B boekt als eerste
+            // Medewerker B bevestigt als eerste
             planB.Submit();
             planB.WaitForMessage();
 
             Assert.IsTrue(planB.HasSuccessMessage, planB.Message);
 
             var referralsBefore =
-                await AfsData.CountReferralsAsync();
+                await AfsHelperQueries.CountReferralsAsync();
 
             // Act: medewerker A probeert hetzelfde tijdstip te boeken
             planA.Submit();
@@ -330,51 +332,72 @@ namespace Server.Tests.EndToEnd
 
             // Assert
             Assert.IsTrue(planA.HasErrorMessage, planA.Message);
+            StringAssert.Contains(planA.Message, MsgNoSpecialist);
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_1000));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, Slot));
 
             Assert.AreEqual(
                 0,
-                await AfsData.CountAppointmentsOfPatientAsync(Jan));
+                await AfsHelperQueries.CountAppointmentsOfPatientAsync(Jan));
 
             Assert.AreEqual(
                 referralsBefore,
-                await AfsData.CountReferralsAsync(),
+                await AfsHelperQueries.CountReferralsAsync(),
                 "Er is een wees-verwijzing achtergebleven.");
         }
 
+        /// <summary>
+        /// Het tijdstip kan niet meer in het formulier gekozen worden. De test controleert daarom
+        /// dat een medewerker na een mislukte boeking op dezelfde pagina opnieuw kan bevestigen
+        /// zodra het tijdstip weer vrij is.
+        /// </summary>
         [TestMethod, TestCategory("TC-AFS-03_3_2")]
-        public async Task TC_AFS_03_3_2_Medewerker_KiestAnderTijdstipNaMislukteBoeking()
+        public async Task TC_AFS_03_3_2_Medewerker_BevestigtOpnieuwNaMislukteBoeking_WanneerTijdstipVrijIs()
         {
             // Arrange
-            await AfsData.CreateAppointmentAsync(
-                Piet, DeVries, Jan12_1000);
+            await AfsHelperQueries.CreateAppointmentAsync(
+                Piet, DeVries, Slot);
 
             var plan =
                 await OpenPlanningAsync(Driver, "medewerker.a");
 
-            // Act
-            await Book(plan, Jan, DeVries, Jan12_1100);
+            plan.FillForm(Jan, (int)Specialism.KNO, DeVries);
+
+            // Act 1: eerste poging mislukt
+            plan.Submit();
+            plan.WaitForMessage();
+
+            Assert.IsTrue(plan.HasErrorMessage, plan.Message);
+
+            Assert.AreEqual(
+                "review",
+                plan.CurrentStepId,
+                "Na een fout blijft de medewerker op de controle-stap met de ingevulde gegevens.");
+
+            // Act 2: het tijdstip komt vrij en de medewerker bevestigt opnieuw
+            await AfsHelperQueries.ResetAppointmentsAsync();
+
+            plan.Submit();
+            plan.WaitForSuccessMessage();
 
             // Assert
             Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_1000));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, Slot));
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_1100));
+                await AfsHelperQueries.CountAppointmentsOfPatientAsync(Jan));
 
             Assert.AreEqual(
-                1,
-                await AfsData.CountAppointmentsOfPatientAsync(Jan));
+                0,
+                await AfsHelperQueries.CountAppointmentsOfPatientAsync(Piet));
         }
 
         // =========================================================
@@ -388,15 +411,21 @@ namespace Server.Tests.EndToEnd
             var plan =
                 await OpenPlanningAsync(Driver, "medewerker.a");
 
-            // Assert
+            // Assert: alleen de velden van de huidige stap staan in de pagina
+            Assert.AreEqual("patient", plan.CurrentStepId);
             Assert.IsTrue(plan.HasField("patient-id"));
-            Assert.IsTrue(plan.HasField("specialist-id"));
-            Assert.IsTrue(plan.HasField("start-time"));
-            Assert.IsTrue(plan.HasField("general-practitioner-id"));
             Assert.IsTrue(plan.HasField("specialism"));
-            Assert.IsTrue(plan.HasField("reason"));
-            Assert.IsTrue(plan.HasField("urgency"));
+
+            plan.FillPatientStep(Jan, (int)Specialism.KNO).NextStep("care");
+            Assert.IsTrue(plan.HasField("specialist-id"));
             Assert.IsTrue(plan.HasField("treatment-code"));
+
+            plan.FillCareStep().NextStep("details");
+            Assert.IsTrue(plan.HasField("reason"));
+            Assert.IsTrue(plan.HasField("questionnaire"));
+            Assert.IsTrue(plan.HasField("urgency"));
+
+            plan.FillDetailsStep().NextStep("review");
             Assert.IsTrue(plan.HasField("submit"));
         }
 
@@ -436,29 +465,29 @@ namespace Server.Tests.EndToEnd
         {
             // Arrange
             var referralsBefore =
-                await AfsData.CountReferralsAsync();
+                await AfsHelperQueries.CountReferralsAsync();
 
             LoginAs(Driver, "jan.jansen");
 
             // Act
-            var status = await PostAsync(
-                Driver, Jan, DeVries, Jan12_1000);
+            var response = await PostAsync(
+                Driver, Jan, DeVries);
 
             // Assert
-            Assert.AreEqual(403, status);
+            Assert.AreEqual(403, response.Status);
 
             Assert.AreEqual(
                 0,
-                await AfsData.CountAppointmentsOfPatientAsync(Jan));
+                await AfsHelperQueries.CountAppointmentsOfPatientAsync(Jan));
 
             Assert.AreEqual(
                 0,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_1000));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, Slot));
 
             Assert.AreEqual(
                 referralsBefore,
-                await AfsData.CountReferralsAsync());
+                await AfsHelperQueries.CountReferralsAsync());
         }
 
         // =========================================================
@@ -469,72 +498,73 @@ namespace Server.Tests.EndToEnd
         public async Task TC_AFS_03_6_1_Medewerker_PlantOpBezetTijdstip_WordtGeweigerd()
         {
             // Arrange
-            await AfsData.CreateAppointmentAsync(
-                Jan, DeVries, Jan12_1000);
+            await AfsHelperQueries.CreateAppointmentAsync(
+                Jan, DeVries, Slot);
 
             var referralsBefore =
-                await AfsData.CountReferralsAsync();
+                await AfsHelperQueries.CountReferralsAsync();
 
             var plan =
                 await OpenPlanningAsync(Driver, "medewerker.a");
 
             // Act
-            await Book(plan, Piet, DeVries, Jan12_1000);
+            Book(plan, Piet);
 
             // Assert
             Assert.IsTrue(plan.HasErrorMessage, plan.Message);
+            StringAssert.Contains(plan.Message, MsgNoSpecialist);
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_1000));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, Slot));
 
             Assert.AreEqual(
                 0,
-                await AfsData.CountAppointmentsOfPatientAsync(Piet));
+                await AfsHelperQueries.CountAppointmentsOfPatientAsync(Piet));
 
             Assert.AreEqual(
                 referralsBefore,
-                await AfsData.CountReferralsAsync(),
+                await AfsHelperQueries.CountReferralsAsync(),
                 "Er is een wees-verwijzing achtergebleven.");
         }
 
         [TestMethod, TestCategory("TC-AFS-03_6_2")]
-        public async Task TC_AFS_03_6_2_Medewerker_PlantDirectVoorEnNaBestaandeAfspraak()
+        public async Task TC_AFS_03_6_2_Medewerker_PlantTussenTweeBestaandeAfspraken()
         {
-            // Arrange
-            await AfsData.CreateAppointmentAsync(
-                Jan, DeVries, Jan12_1000);
+            // Arrange: afspraken die precies voor (09:00-10:00) en na (11:00-12:00) het tijdstip liggen
+            var before = Slot.AddHours(-1);
+            var after = Slot.AddHours(1);
+
+            await AfsHelperQueries.CreateAppointmentAsync(
+                Jan, DeVries, before);
+
+            await AfsHelperQueries.CreateAppointmentAsync(
+                Piet, DeVries, after);
+
+            var plan =
+                await OpenPlanningAsync(Driver, "medewerker.a");
 
             // Act
-            var planPiet =
-                await OpenPlanningAsync(Driver, "medewerker.a");
-
-            await Book(planPiet, Piet, DeVries, Jan12_0900);
-
-            var planAnna =
-                await OpenPlanningAsync(Driver, "medewerker.a");
-
-            await Book(planAnna, Anna, DeVries, Jan12_1100);
+            Book(plan, Anna);
 
             // Assert
-            Assert.IsTrue(planPiet.HasSuccessMessage, planPiet.Message);
-            Assert.IsTrue(planAnna.HasSuccessMessage, planAnna.Message);
+            Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_0900));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, before));
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_1000));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, Slot));
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_1100));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, after));
         }
 
         // =========================================================
@@ -546,13 +576,13 @@ namespace Server.Tests.EndToEnd
         {
             // Arrange
             var patientJan =
-                await AfsData.PatientIdAsync(Jan);
+                await AfsHelperQueries.PatientIdAsync(Jan);
 
             var patientPiet =
-                await AfsData.PatientIdAsync(Piet);
+                await AfsHelperQueries.PatientIdAsync(Piet);
 
             var specialistId =
-                await AfsData.SpecialistIdAsync(DeVries);
+                await AfsHelperQueries.SpecialistIdAsync(DeVries);
 
             using var driverB = ExtraBrowser.Start();
 
@@ -563,50 +593,59 @@ namespace Server.Tests.EndToEnd
             //LoginAs(Driver, "medewerker.a");
             //LoginAs(driverB, "medewerker.b");
 
+            // Dit blijft een API-test: twee klikken in de UI zijn niet gelijktijdig te krijgen.
             for (var run = 1; run <= 10; run++)
             {
-                await AfsData.ResetAppointmentsAsync();
+                await AfsHelperQueries.ResetAppointmentsAsync();
 
                 var referralsBefore =
-                    await AfsData.CountReferralsAsync();
+                    await AfsHelperQueries.CountReferralsAsync();
 
                 // Act: beide verzoeken tegelijkertijd versturen.
                 var taskA = Task.Run(() =>
-                    BrowserApi.PostAppointment(
+                    BrowserApi.PostAppointmentWithResponse(
                         Driver,
                         patientJan,
-                        specialistId,
-                        Jan12_1000));
+                        specialistId));
 
                 var taskB = Task.Run(() =>
-                    BrowserApi.PostAppointment(
+                    BrowserApi.PostAppointmentWithResponse(
                         driverB,
                         patientPiet,
-                        specialistId,
-                        Jan12_1000));
+                        specialistId));
 
-                var statuses = await Task.WhenAll(taskA, taskB);
+                var responses = await Task.WhenAll(taskA, taskB);
+
+                var statuses = responses
+                    .Select(response => response.Status)
+                    .ToArray();
 
                 // Assert
                 Assert.AreEqual(
                     1,
-                    await AfsData.CountAppointmentsAsync(
-                        DeVries, Jan12_1000),
-                    $"Run {run}: verwacht precies één afspraak.");
+                    await AfsHelperQueries.CountAppointmentsAsync(
+                        DeVries, Slot),
+                    $"Run {run}: verwacht precies één afspraak.\n" +
+                    $"Request A: {responses[0].Status} - {responses[0].Body}\n" +
+                    $"Request B: {responses[1].Status} - {responses[1].Body}");
 
                 Assert.AreEqual(
                     1,
                     statuses.Count(s => s is >= 200 and < 300),
-                    $"Run {run}: precies één verzoek moet slagen.");
+                    $"Run {run}: precies één verzoek moet slagen.\n" +
+                    $"Request A: {responses[0].Status} - {responses[0].Body}\n" +
+                    $"Request B: {responses[1].Status} - {responses[1].Body}");
 
                 Assert.AreEqual(
                     1,
                     statuses.Count(s => s is 400 or 409 or 422),
-                    $"Run {run}: het andere verzoek moet geweigerd worden.");
+                    $"Run {run}: het andere verzoek moet geweigerd worden.\n" +
+                    $"Request A: {responses[0].Status} - {responses[0].Body}\n" +
+                    $"Request B: {responses[1].Status} - {responses[1].Body}");
 
                 Assert.AreEqual(
                     referralsBefore + 1,
-                    await AfsData.CountReferralsAsync(),
+                    await AfsHelperQueries.CountReferralsAsync(),
                     $"Run {run}: de geweigerde boeking mag geen verwijzing achterlaten.");
             }
         }
@@ -619,98 +658,90 @@ namespace Server.Tests.EndToEnd
         public async Task TC_AFS_03_8_1_Medewerker_PlantOpNietBeschikbareDag_WordtGeweigerd()
         {
             // Arrange
-            await AfsData.SetUnavailableAsync(
-                DeVries, Jan12_1000);
+            await AfsHelperQueries.SetUnavailableAsync(
+                DeVries, Slot);
 
             var referralsBefore =
-                await AfsData.CountReferralsAsync();
+                await AfsHelperQueries.CountReferralsAsync();
 
             var plan =
                 await OpenPlanningAsync(Driver, "medewerker.a");
 
             // Act
-            await Book(plan, Jan, DeVries, Jan12_1000);
+            Book(plan, Jan);
 
             // Assert
             Assert.IsTrue(plan.HasErrorMessage, plan.Message);
+            StringAssert.Contains(plan.Message, MsgNoSpecialist);
 
             Assert.AreEqual(
                 0,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_1000));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, Slot));
 
             Assert.AreEqual(
                 referralsBefore,
-                await AfsData.CountReferralsAsync());
+                await AfsHelperQueries.CountReferralsAsync());
         }
 
         [TestMethod, TestCategory("TC-AFS-03_8_2")]
-        public async Task TC_AFS_03_8_2_Medewerker_PlantDagVoorEnDagNaNietBeschikbareDag()
+        public async Task TC_AFS_03_8_2_Medewerker_PlantDagMetNietBeschikbareDagenErvoorEnErna()
         {
-            // Arrange
-            var jan11 = new DateTime(2027, 1, 11, 10, 0, 0);
-            var jan13 = new DateTime(2027, 1, 13, 10, 0, 0);
+            // Arrange: de dag ervoor en de dag erna is de specialist niet beschikbaar,
+            // maar op de dag zelf wel (zie ArrangeAvailabilityAsync).
+            await AfsHelperQueries.SetUnavailableAsync(
+                DeVries, Slot.AddDays(-1));
 
-            await AfsData.SetUnavailableAsync(
-                DeVries, Jan12_1000);
+            await AfsHelperQueries.SetUnavailableAsync(
+                DeVries, Slot.AddDays(1));
+
+            var plan =
+                await OpenPlanningAsync(Driver, "medewerker.a");
 
             // Act
-            var planJan =
-                await OpenPlanningAsync(Driver, "medewerker.a");
-
-            await Book(planJan, Jan, DeVries, jan11);
-
-            var planPiet =
-                await OpenPlanningAsync(Driver, "medewerker.a");
-
-            await Book(planPiet, Piet, DeVries, jan13);
+            Book(plan, Jan);
 
             // Assert
-            Assert.IsTrue(planJan.HasSuccessMessage, planJan.Message);
-            Assert.IsTrue(planPiet.HasSuccessMessage, planPiet.Message);
+            Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
 
             Assert.AreEqual(
                 1,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, jan11));
-
-            Assert.AreEqual(
-                1,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, jan13));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, Slot));
         }
 
         [TestMethod, TestCategory("TC-AFS-03_8_3")]
         public async Task TC_AFS_03_8_3_Backend_WeigertAfspraakBuitenBeschikbaarheid()
         {
             // Arrange
-            await AfsData.SetUnavailableAsync(
-                DeVries, Jan12_1000);
+            await AfsHelperQueries.SetUnavailableAsync(
+                DeVries, Slot);
 
             var referralsBefore =
-                await AfsData.CountReferralsAsync();
+                await AfsHelperQueries.CountReferralsAsync();
 
             Driver.Navigate().GoToUrl(TestSettings.ClientUrl);
 
             //LoginAs(Driver, "medewerker.a");
 
             // Act
-            var status = await PostAsync(
-                Driver, Jan, DeVries, Jan12_1000);
+            var response = await PostAsync(
+                Driver, Jan, DeVries);
 
             // Assert
             Assert.IsTrue(
-                status is 400 or 409 or 422,
-                $"Verwacht weigering, kreeg {status}.");
+                response.Status is 400 or 409 or 422,
+                $"Verwacht weigering, kreeg {response.Status}.\n" +
+                $"Backend response: {response.Body}");
 
             Assert.AreEqual(
                 0,
-                await AfsData.CountAppointmentsAsync(
-                    DeVries, Jan12_1000));
+                await AfsHelperQueries.CountAppointmentsAsync(
+                    DeVries, Slot));
 
             Assert.AreEqual(
                 referralsBefore,
-                await AfsData.CountReferralsAsync());
+                await AfsHelperQueries.CountReferralsAsync());
         }
     }
 }

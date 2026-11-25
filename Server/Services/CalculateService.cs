@@ -29,5 +29,7 @@ namespace Server.Services
 
             return startTime.AddMinutes(durationInMinutes);
         }
+
+
     }
 }

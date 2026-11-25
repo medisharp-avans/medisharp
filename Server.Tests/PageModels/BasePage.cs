@@ -65,5 +65,28 @@ namespace Server.Tests.PageModels
 
             dropdown.SelectByValue(value);
         }
+
+        /// <summary>
+        /// Types into a search field with a datalist (DatalistInput.vue). The options are loaded from
+        /// the API, so this first waits until the list contains the text. Text that is not an option
+        /// makes the form refuse to continue to the next step.
+        /// </summary>
+        protected void TypeInDatalist(By by, string text, string? description = null)
+        {
+            var element = Driver.WaitForElement(by);
+            var listId = element.GetDomAttribute("list")
+                ?? throw new InvalidOperationException($"{description ?? by.ToString()} has no datalist.");
+
+            new WebDriverWait(Driver, TimeSpan.FromSeconds(10))
+            {
+                Message = $"'{text}' did not appear in the options of {description ?? by.ToString()}."
+            }.Until(d => d.FindElements(By.CssSelector($"#{listId} option"))
+                          .Any(o => o.GetDomAttribute("value") == text));
+
+            Type(by, text, description);
+
+            // Closes the browser's suggestion popup so it cannot cover the buttons below.
+            element.SendKeys(Keys.Escape);
+        }
     }
 }

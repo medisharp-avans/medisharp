@@ -18,6 +18,9 @@ import {
       <AppNavigationItem route-name="Appointments" :icon="Calendar03Icon">
         Afspraken
       </AppNavigationItem>
+      <AppNavigationItem route-name="NewAppointment" :icon="Calendar03Icon">
+        Afspraak aanmaken
+      </AppNavigationItem>
       <AppNavigationItem route-name="MedicalFile" :icon="MedicalFileIcon">
         Medisch Dossier
       </AppNavigationItem>

@@ -29,11 +29,21 @@ api.interceptors.response.use(
     const status = error.response.status
 
     switch (status) {
-      case 400: router.push({ name: '400' }); break
-      case 401: router.push({ name: '401' }); break
-      case 403: router.push({ name: '403' }); break
-      case 404: router.push({ name: '404' }); break
-      case 500: router.push({ name: '500' }); break
+      case 400:
+        router.push({ name: '400' })
+        break
+      case 401:
+        router.push({ name: '401' })
+        break
+      case 403:
+        router.push({ name: '403' })
+        break
+      case 404:
+        router.push({ name: '404' })
+        break
+      case 500:
+        router.push({ name: '500' })
+        break
       default:
         console.error(`Onbekende foutcode (${status}):`, error.response.data)
     }

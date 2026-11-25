@@ -23,11 +23,20 @@ namespace Server.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // User
+            modelBuilder.Entity<User>(e =>
+            {
+                e.Property(u => u.Role)
+                    .HasConversion<string>();
+            });
+
             // TreatmentCode configuratie
             modelBuilder.Entity<TreatmentCode>(e =>
             {
                 e.Property(t => t.Cost)
                     .HasPrecision(10, 2);
+                e.Property(tc => tc.Specialism)
+                    .HasConversion<string>();
             });
 
             // Patient relaties
@@ -59,6 +68,9 @@ namespace Server.Data
                     .WithOne(a => a.Specialist)
                     .HasForeignKey(a => a.SpecialistId)
                     .OnDelete(DeleteBehavior.NoAction);
+
+                e.Property(s => s.Specialism)
+                    .HasConversion<string>();
             });
 
             // GeneralPractitioner relaties
@@ -97,6 +109,9 @@ namespace Server.Data
                     .WithMany()
                     .HasForeignKey(r => r.TreatmentCode)
                     .OnDelete(DeleteBehavior.NoAction);
+
+                e.Property(r => r.Specialism)
+                    .HasConversion<string>();
             });
 
             // Appointment relaties
@@ -123,6 +138,9 @@ namespace Server.Data
 
                 e.HasIndex(a => new { a.SpecialistId, a.StartTime })
                     .IsUnique();
+
+                e.Property(a => a.Status)
+                    .HasConversion<string>();
             });
 
 

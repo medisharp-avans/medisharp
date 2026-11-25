@@ -13,15 +13,6 @@ namespace Server.Models.DTO.Requests
         public int PatientId { get; set; }
 
         [Required]
-        public int SpecialistId { get; set; }
-
-        [Required]
-        public DateTime StartTime { get; set; }
-
-        [Required]
-        public int GeneralPractitionerId { get; set; }
-
-        [Required]
         [EnumDataType(typeof(Specialism))]
         public Specialism Specialism { get; set; }
 
