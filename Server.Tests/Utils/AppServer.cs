@@ -44,8 +44,10 @@ namespace Server.Tests.Utils
             // Vite is started with node directly (like 'npm run dev'), because npm.cmd cannot be started reliably
             // without a shell on Windows. Run 'npm install' in Client once before the first test run.
             var port = new Uri(TestSettings.ClientUrl).Port.ToString();
+            // API_URL is read by the dev proxy in vite.config.ts, so /api goes to the API started above.
             await StartAsync("Client", TestSettings.ClientUrl, Path.Combine(root, "Client"),
-                "node", [Path.Combine("node_modules", "vite", "bin", "vite.js"), "--mode", "test", "--port", port, "--strictPort"]);
+                "node", [Path.Combine("node_modules", "vite", "bin", "vite.js"), "--mode", "test", "--port", port, "--strictPort"],
+                new() { ["API_URL"] = TestSettings.ApiUrl });
 
             _isStarted = true;
         }
@@ -68,7 +70,8 @@ namespace Server.Tests.Utils
         /// Starts one app and waits until it answers on its URL.
         /// Fails with the last output of the app when it stops or does not answer within the start timeout.
         /// </summary>
-        private static async Task StartAsync(string name, string url, string workingDirectory, string fileName, string[] arguments)
+        private static async Task StartAsync(string name, string url, string workingDirectory, string fileName,
+            string[] arguments, Dictionary<string, string>? environment = null)
         {
             if (await IsRunningAsync(url))
             {
@@ -88,6 +91,12 @@ namespace Server.Tests.Utils
                     RedirectStandardError = true,
                 },
             };
+            // Extra environment variables for this app only, on top of those of the test run
+            if (environment != null)
+            {
+                foreach (var (key, value) in environment)
+                    process.StartInfo.Environment[key] = value;
+            }
             // The output must be read, otherwise the app blocks once the output buffer is full
             process.OutputDataReceived += (_, e) => KeepLast(lastOutput, e.Data);
             process.ErrorDataReceived += (_, e) => KeepLast(lastOutput, e.Data);

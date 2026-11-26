@@ -121,6 +121,7 @@ jobs:
       ConnectionStrings__DefaultConnection: ${{ vars.CI_DB_CONNECTION }};Password=${{ secrets.CI_MSSQL_SA_PASSWORD }}
       # Read by TestSettings: Chrome without a window, because the runner has no screen.
       Headless: "true"
+      API_URL: https://localhost:5071 
     services:
       mssql:
         image: mcr.microsoft.com/mssql/server:2022-latest

@@ -14,7 +14,16 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    strictPort: true 
+    strictPort: true,
+    // Same as nginx in production: the client calls /api on its own port and Vite forwards it to the API.
+    // API_URL is set by the end-to-end tests (AppServer) and the CI, which run the API on another port.
+    proxy: {
+      '/api': {
+        target: process.env.API_URL || 'https://localhost:7004',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   resolve: {
     alias: {
