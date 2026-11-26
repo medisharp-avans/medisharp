@@ -9,16 +9,11 @@ using Server.Repositories.InterFaces;
 
 namespace Server.Repositories
 {
-    public class AppointmentRepository : Repository<Appointment>, IAppointmentRepository
+    public class AppointmentRepository(AppDbContext context) : Repository<Appointment>(context), IAppointmentRepository
     {
         // SQL Server: 2601 = unique index geschonden, 2627 = unique constraint geschonden
         private const int UniqueIndexViolation = 2601;
         private const int UniqueConstraintViolation = 2627;
-
-        public AppointmentRepository(AppDbContext context)
-            : base(context)
-        {
-        }
 
         /// <inheritdoc />
         public async Task<Appointment> CreateAsync(CreateAppointmentDTO dto)

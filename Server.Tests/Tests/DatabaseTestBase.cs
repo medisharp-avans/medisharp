@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Tests.TestDb;
 
-namespace Server.Tests
+namespace Server.Tests.Tests
 {
     /// <summary>
     /// Base of integration tests: every test starts with a test database that only has the seed data.

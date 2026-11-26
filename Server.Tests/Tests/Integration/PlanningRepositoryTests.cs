@@ -5,12 +5,12 @@ using Server.Repositories;
 using Server.Repositories.InterFaces;
 using Server.Tests.TestDb;
 
-namespace Server.Tests.Integration
+namespace Server.Tests.Tests.Integration
 {
     [TestClass]
     public class PlanningRepositoryTests : DatabaseTestBase
     {
-        private IPlanningRepository _sut = null!;
+        private PlanningRepository _sut = null!;
 
         protected override Func<DbContext, Task>? GetTestDataInitializer()
         {
@@ -48,7 +48,7 @@ namespace Server.Tests.Integration
             var result = await _sut.GetAllPatientsAsync();
 
             // Assert
-            Assert.IsTrue(result.Count > 0);
+            Assert.IsNotEmpty(result);
 
             foreach (var patient in result)
             {
@@ -61,14 +61,14 @@ namespace Server.Tests.Integration
         public async Task GetCodesBySpecialism_ValidSpecialism_ReturnsMatchingCodes()
         {
             // Arrange
-            var existingCode = await DbContext.TreatmentCodes.FirstAsync();
+            var existingCode = await DbContext.TreatmentCodes.FirstAsync(TestContext.CancellationToken);
             var specialism = existingCode.Specialism.ToString();
 
             // Act
             var result = await _sut.GetCodesBySpecialism(specialism);
 
             // Assert
-            Assert.IsTrue(result.Count > 0);
+            Assert.IsNotEmpty(result);
             Assert.IsTrue(result.All(c => c.Specialism == existingCode.Specialism));
         }
 
@@ -79,21 +79,21 @@ namespace Server.Tests.Integration
             var result = await _sut.GetCodesBySpecialism("BestaatNiet");
 
             // Assert
-            Assert.AreEqual(0, result.Count);
+            Assert.IsEmpty(result);
         }
 
         [TestMethod]
         public async Task GetSpecialistsBySpecialism_ValidSpecialism_ReturnsMatchingSpecialists()
         {
             // Arrange
-            var existingSpecialist = await DbContext.Specialists.FirstAsync();
+            var existingSpecialist = await DbContext.Specialists.FirstAsync(TestContext.CancellationToken);
             var specialism = existingSpecialist.Specialism.ToString();
 
             // Act
             var result = await _sut.GetSpecialistsBySpecialism(specialism);
 
             // Assert
-            Assert.IsTrue(result.Count > 0);
+            Assert.IsNotEmpty(result);
 
             foreach (var specialist in result)
             {
@@ -107,10 +107,10 @@ namespace Server.Tests.Integration
         public async Task HasOverlapAsync_ExistingAppointment_ReturnsTrue()
         {
             // Arrange
-            var specialist = await DbContext.Specialists.FirstAsync();
+            var specialist = await DbContext.Specialists.FirstAsync(TestContext.CancellationToken);
             await CreateAppointmentAsync(specialist);
 
-            var appointment = await DbContext.Appointments.FirstAsync();
+            var appointment = await DbContext.Appointments.FirstAsync(TestContext.CancellationToken);
 
             // Act
             var result = await _sut.HasOverlapAsync(
@@ -126,7 +126,7 @@ namespace Server.Tests.Integration
         public async Task IsWithinAvailabilityAsync_WithinAvailability_ReturnsTrue()
         {
             // Arrange
-            var specialist = await DbContext.Specialists.FirstAsync();
+            var specialist = await DbContext.Specialists.FirstAsync(TestContext.CancellationToken);
 
             var availability = new Availability
             {
@@ -136,7 +136,7 @@ namespace Server.Tests.Integration
             };
 
             DbContext.Availabilities.Add(availability);
-            await DbContext.SaveChangesAsync();
+            await DbContext.SaveChangesAsync(TestContext.CancellationToken);
 
             // Act
             var result = await _sut.IsWithinAvailabilityAsync(
@@ -152,7 +152,7 @@ namespace Server.Tests.Integration
         public async Task IsWithinAvailabilityAsync_StartsBeforeAvailability_ReturnsFalse()
         {
             // Arrange
-            var specialist = await DbContext.Specialists.FirstAsync();
+            var specialist = await DbContext.Specialists.FirstAsync(TestContext.CancellationToken);
 
             var availability = new Availability
             {
@@ -162,7 +162,7 @@ namespace Server.Tests.Integration
             };
 
             DbContext.Availabilities.Add(availability);
-            await DbContext.SaveChangesAsync();
+            await DbContext.SaveChangesAsync(TestContext.CancellationToken);
 
             var start = availability.StartTime.AddMinutes(-15);
             var end = availability.EndTime;

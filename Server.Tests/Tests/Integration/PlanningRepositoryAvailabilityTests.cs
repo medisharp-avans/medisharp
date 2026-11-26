@@ -5,7 +5,7 @@ using Server.Repositories;
 using Server.Repositories.InterFaces;
 using Server.Tests.TestDb;
 
-namespace Server.Tests.Integration
+namespace Server.Tests.Tests.Integration
 {
     /// <summary>
     /// Integratietests voor HasOverlapAsync en IsWithinAvailabilityAsync van PlanningRepository
@@ -18,8 +18,8 @@ namespace Server.Tests.Integration
         private static readonly DateTime Start = new(2027, 1, 12, 10, 0, 0);
         private static readonly DateTime End = new(2027, 1, 12, 11, 0, 0);
 
-        private IAppointmentRepository _appointments = null!;
-        private IPlanningRepository _sut = null!;
+        private AppointmentRepository _appointments = null!;
+        private PlanningRepository _sut = null!;
 
         protected override Func<DbContext, Task>? GetTestDataInitializer()
         {

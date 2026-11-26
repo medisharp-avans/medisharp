@@ -3,7 +3,7 @@ using Server.Models;
 using Server.Repositories.InterFaces;
 using Server.Services;
 
-namespace Server.Tests.Unit
+namespace Server.Tests.Tests.Unit
 {
     [TestClass]
     public class CalculateServiceTests
