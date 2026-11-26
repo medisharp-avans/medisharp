@@ -11,19 +11,8 @@ namespace Server.Controllers
     [ApiController]
     [Route("api/[controller]")]
     //[Authorize]
-    public class ReferralController : ControllerBase
+    public class ReferralController(IReferralService _service) : ControllerBase
     {
-        private readonly IReferralService _service;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ReferralController"/> class.
-        /// </summary>
-        /// <param name="service">The referral service used for business logic processing.</param>
-        public ReferralController(IReferralService service)
-        {
-            _service = service;
-        }
-
         /// <summary>
         /// Creates a new referral record.
         /// </summary>
@@ -42,7 +31,7 @@ namespace Server.Controllers
                 return Ok(referral);
                 //return CreatedAtAction(nameof(Create), new { id = referral.Id }, referral);
             }
-            catch (Exception ex)
+            catch
             {
                 throw;
             }
