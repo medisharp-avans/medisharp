@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using RevalliDesk.Controllers;
 using Server.Exceptions;
 using Server.Models;
 using Server.Models.DTO.Requests;
@@ -13,19 +14,8 @@ namespace Server.Controllers
     [Route("api/[controller]")]
     [ApiController]
     //[Authorize]
-    public class AppointmentsController : ControllerBase
+    public class AppointmentsController(IAppointmentService _service) : BaseApiController
     {
-        private readonly IAppointmentService _service;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AppointmentsController"/> class.
-        /// </summary>
-        /// <param name="service">The appointment service used for business logic processing.</param>
-        public AppointmentsController(IAppointmentService service)
-        {
-            _service = service;
-        }
-
         /// <summary>
         /// Creates a new manual appointment.
         /// </summary>

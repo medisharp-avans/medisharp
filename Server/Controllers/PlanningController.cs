@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using RevalliDesk.Controllers;
 using Server.Models;
 using Server.Models.DTO.Responses;
 using Server.Services.InterFaces;
@@ -10,19 +11,8 @@ namespace Server.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
-    public class PlanningController : ControllerBase
+    public class PlanningController(IPlanningService _service) : BaseApiController
     {
-        private readonly IPlanningService _service;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PlanningController"/> class.
-        /// </summary>
-        /// <param name="service">The planning service used for business logic operations.</param>
-        public PlanningController(IPlanningService service)
-        {
-            _service = service;
-        }
-
         /// <summary>
         /// Retrieves a list of all patients formatted for planning purposes.
         /// </summary>

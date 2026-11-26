@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using RevalliDesk.Controllers;
 using Server.Models;
 using Server.Models.DTO.Requests;
 using Server.Services.InterFaces;
@@ -11,7 +12,7 @@ namespace Server.Controllers
     [ApiController]
     [Route("api/[controller]")]
     //[Authorize]
-    public class ReferralController(IReferralService _service) : ControllerBase
+    public class ReferralController(IReferralService _service) : BaseApiController
     {
         /// <summary>
         /// Creates a new referral record.
