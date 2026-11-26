@@ -1,14 +1,14 @@
 ﻿using Moq;
-using Server.Models;
-using Server.Models.Enums;
+using Server.Models.DTO.Common;
+using Server.Models.DTO.Responses;
 using Server.Repositories.InterFaces;
 using Server.Services;
 
 namespace Server.Tests.Tests.Unit
 {
     /// <summary>
-    /// Covers the claims overview of DEC-01: claims that still need to be reviewed come first,
-    /// and each row shows the number of lines and the total amount.
+    /// Covers the paging numbers of the claims overview (DEC-01). The search and sort themselves
+    /// are tested against the database in ClaimRepositoryTests.
     /// </summary>
     [TestClass]
     [TestCategory("DEC-01")]
@@ -24,60 +24,41 @@ namespace Server.Tests.Tests.Unit
             _sut = new ClaimService(_repositoryMock.Object);
         }
 
-        private static Claim CreateClaim(int id, ClaimStatus status, DateTime lastModifiedAt, params decimal[] amounts) => new()
-        {
-            Id = id,
-            PatientId = 1,
-            Patient = new Patient { Id = 1, User = new User { FullName = "Jan Jansen" } },
-            PolicyNumber = "ABC123456",
-            Status = status,
-            LastModifiedAt = lastModifiedAt,
-            ClaimLines = [.. amounts.Select(a => new ClaimLine { SubmittedAmount = a })]
-        };
-
         [TestMethod]
-        public async Task GetOverviewAsync_PutsToReviewClaimsFirst()
+        public async Task GetOverviewPageAsync_ReturnsPagingNumbers()
         {
-            var now = DateTime.UtcNow;
-            _repositoryMock.Setup(r => r.GetAllWithDetailsAsync()).ReturnsAsync(
-            [
-                CreateClaim(1, ClaimStatus.Processed, now),
-                CreateClaim(2, ClaimStatus.ToReview, now.AddDays(-5)),
-                CreateClaim(3, ClaimStatus.ReadyToSend, now.AddDays(-1)),
-                CreateClaim(4, ClaimStatus.ToReview, now.AddDays(-1))
-            ]);
+            var query = new PagedQuery { Page = 2, PageSize = 10 };
+            List<ClaimOverviewDTO> items = [new() { Id = 11 }, new() { Id = 12 }];
+            _repositoryMock.Setup(r => r.GetOverviewPageAsync(query)).ReturnsAsync((items, 12));
 
-            var result = await _sut.GetOverviewAsync();
+            var result = await _sut.GetOverviewPageAsync(query);
 
-            int[] expectedIds = [4, 2, 1, 3];
-            int[] actualIds = [.. result.Select(r => r.Id)];
-            Assert.AreSequenceEqual(expectedIds, actualIds);
+            Assert.AreSame(items, result.Items);
+            Assert.AreEqual(2, result.Page);
+            Assert.AreEqual(10, result.PageSize);
+            Assert.AreEqual(12, result.TotalCount);
+            Assert.AreEqual(2, result.TotalPages);
         }
 
         [TestMethod]
-        public async Task GetOverviewAsync_SumsTheLineAmounts()
+        public async Task GetOverviewPageAsync_NoClaims_ReturnsZeroPages()
         {
-            // TC-DEC-01_2_2: 300 + 120 = 420.
-            _repositoryMock.Setup(r => r.GetAllWithDetailsAsync()).ReturnsAsync(
-            [
-                CreateClaim(1, ClaimStatus.ToReview, DateTime.UtcNow, 300.00m, 120.00m)
-            ]);
+            var query = new PagedQuery();
+            List<ClaimOverviewDTO> noItems = [];
+            _repositoryMock.Setup(r => r.GetOverviewPageAsync(query)).ReturnsAsync((noItems, 0));
 
-            var row = (await _sut.GetOverviewAsync()).Single();
+            var result = await _sut.GetOverviewPageAsync(query);
 
-            Assert.AreEqual(2, row.LineCount);
-            Assert.AreEqual(420.00m, row.TotalAmount);
-            Assert.AreEqual("Jan Jansen", row.PatientName);
+            Assert.IsEmpty(result.Items);
+            Assert.AreEqual(0, result.TotalPages);
         }
 
         [TestMethod]
-        public async Task GetOverviewAsync_ReturnsEmptyList_WhenThereAreNoClaims()
+        public async Task CountToReviewAsync_ReturnsRepositoryResult()
         {
-            _repositoryMock.Setup(r => r.GetAllWithDetailsAsync()).ReturnsAsync([]);
+            _repositoryMock.Setup(r => r.CountToReviewAsync()).ReturnsAsync(3);
 
-            var result = await _sut.GetOverviewAsync();
-
-            Assert.IsEmpty(result);
+            Assert.AreEqual(3, await _sut.CountToReviewAsync());
         }
     }
 }
