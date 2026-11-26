@@ -8,7 +8,7 @@ using Server.Tests.PageModels.AppointmentPages;
 using Server.Tests.TestDb;
 using Server.Tests.Utils;
 
-namespace Server.Tests.EndToEnd
+namespace Server.Tests.Tests.EndToEnd
 {
     [TestClass]
     public class AFS_03_Tests : EndToEndTestBase
@@ -53,9 +53,11 @@ namespace Server.Tests.EndToEnd
         private static void LoginAs(IWebDriver driver, string username)
         {
             // new LoginPage(driver).LoginAs(username);
+            _ = driver; // Discards keep the parameters until the login page exists.
+            _ = username;
         }
 
-        private Task<PlanAppointmentPage> OpenPlanningAsync(
+        private static Task<PlanAppointmentPage> OpenPlanningAsync(
             IWebDriver driver,
             string staffUser)
         {
@@ -180,11 +182,11 @@ namespace Server.Tests.EndToEnd
             LoginAs(Driver, "huisarts.visser");
 
             // Act
-            var response = await PostAsync(
+            var (status, _) = await PostAsync(
                 Driver, Jan, DeVries);
 
             // Assert
-            Assert.AreEqual(403, response.Status);
+            Assert.AreEqual(403, status);
 
             Assert.AreEqual(
                 0,
@@ -281,14 +283,14 @@ namespace Server.Tests.EndToEnd
             //LoginAs(Driver, "medewerker.a");
 
             // Act
-            var response = await PostAsync(
+            var (status, body) = await PostAsync(
                 Driver, Piet, DeVries);
 
             // Assert
             Assert.IsTrue(
-                response.Status is >= 200 and < 300,
-                $"Verwacht succesvolle boeking (2xx), kreeg {response.Status}.\n" +
-                $"Backend response: {response.Body}");
+                status is >= 200 and < 300,
+                $"Verwacht succesvolle boeking (2xx), kreeg {status}.\n" +
+                $"Backend response: {body}");
 
             Assert.AreEqual(
                 1,
@@ -334,7 +336,7 @@ namespace Server.Tests.EndToEnd
 
             // Assert
             Assert.IsTrue(planA.HasErrorMessage, planA.Message);
-            StringAssert.Contains(planA.Message, MsgNoSpecialist);
+            Assert.Contains(MsgNoSpecialist, planA.Message);
 
             Assert.AreEqual(
                 1,
@@ -472,11 +474,11 @@ namespace Server.Tests.EndToEnd
             LoginAs(Driver, "jan.jansen");
 
             // Act
-            var response = await PostAsync(
+            var (status, _) = await PostAsync(
                 Driver, Jan, DeVries);
 
             // Assert
-            Assert.AreEqual(403, response.Status);
+            Assert.AreEqual(403, status);
 
             Assert.AreEqual(
                 0,
@@ -514,7 +516,7 @@ namespace Server.Tests.EndToEnd
 
             // Assert
             Assert.IsTrue(plan.HasErrorMessage, plan.Message);
-            StringAssert.Contains(plan.Message, MsgNoSpecialist);
+            Assert.Contains(MsgNoSpecialist, plan.Message);
 
             Assert.AreEqual(
                 1,
@@ -631,16 +633,16 @@ namespace Server.Tests.EndToEnd
                     $"Request A: {responses[0].Status} - {responses[0].Body}\n" +
                     $"Request B: {responses[1].Status} - {responses[1].Body}");
 
-                Assert.AreEqual(
+                Assert.HasCount(
                     1,
-                    statuses.Count(s => s is >= 200 and < 300),
+                    statuses.Where(s => s is >= 200 and < 300),
                     $"Run {run}: precies één verzoek moet slagen.\n" +
                     $"Request A: {responses[0].Status} - {responses[0].Body}\n" +
                     $"Request B: {responses[1].Status} - {responses[1].Body}");
 
-                Assert.AreEqual(
+                Assert.HasCount(
                     1,
-                    statuses.Count(s => s is 400 or 409 or 422),
+                    statuses.Where(s => s is 400 or 409 or 422),
                     $"Run {run}: het andere verzoek moet geweigerd worden.\n" +
                     $"Request A: {responses[0].Status} - {responses[0].Body}\n" +
                     $"Request B: {responses[1].Status} - {responses[1].Body}");
@@ -674,7 +676,7 @@ namespace Server.Tests.EndToEnd
 
             // Assert
             Assert.IsTrue(plan.HasErrorMessage, plan.Message);
-            StringAssert.Contains(plan.Message, MsgNoSpecialist);
+            Assert.Contains(MsgNoSpecialist, plan.Message);
 
             Assert.AreEqual(
                 0,
@@ -727,14 +729,14 @@ namespace Server.Tests.EndToEnd
             //LoginAs(Driver, "medewerker.a");
 
             // Act
-            var response = await PostAsync(
+            var (status, body) = await PostAsync(
                 Driver, Jan, DeVries);
 
             // Assert
             Assert.IsTrue(
-                response.Status is 400 or 409 or 422,
-                $"Verwacht weigering, kreeg {response.Status}.\n" +
-                $"Backend response: {response.Body}");
+                status is 400 or 409 or 422,
+                $"Verwacht weigering, kreeg {status}.\n" +
+                $"Backend response: {body}");
 
             Assert.AreEqual(
                 0,

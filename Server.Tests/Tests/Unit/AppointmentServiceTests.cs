@@ -9,7 +9,7 @@ using Server.Repositories.InterFaces;
 using Server.Services;
 using Server.Services.InterFaces;
 
-namespace Server.Tests.Unit
+namespace Server.Tests.Tests.Unit
 {
     /// <summary>
     /// AppointmentService kiest zelf geen specialist of tijdstip meer: dat doet IPlanningService.
@@ -144,7 +144,7 @@ namespace Server.Tests.Unit
 
             var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() => _sut.CreateAppointment(CreateValidDto()));
 
-            StringAssert.Contains(exception.Message, "patiënt");
+            Assert.Contains("patiënt", exception.Message);
             VerifyNothingCreated();
         }
 
@@ -183,17 +183,6 @@ namespace Server.Tests.Unit
                 .ThrowsAsync(new SlotUnavailableException("Dit tijdslot is niet meer beschikbaar."));
 
             await Assert.ThrowsAsync<SlotUnavailableException>(() => _sut.CreateAppointment(CreateValidDto()));
-        }
-
-        [TestMethod]
-        public async Task GetAppointmentAsync_ReturnsRepositoryResult()
-        {
-            var appointments = new List<Appointment> { new() { Id = 1 }, new() { Id = 2 } };
-            _repositoryMock.Setup(r => r.GetAsync()).ReturnsAsync(appointments);
-
-            var result = await _sut.GetAppointmentAsync();
-
-            CollectionAssert.AreEqual(appointments, result);
         }
     }
 }

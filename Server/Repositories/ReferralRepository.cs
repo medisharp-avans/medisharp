@@ -5,13 +5,8 @@ using Server.Repositories.InterFaces;
 
 namespace Server.Repositories
 {
-    public class ReferralRepository : Repository<Referral>, IReferralRepository
+    public class ReferralRepository(AppDbContext context) : Repository<Referral>(context), IReferralRepository
     {
-        public ReferralRepository(AppDbContext context)
-            : base(context)
-        {
-        }
-
         /// <inheritdoc />
         public async Task<Referral> CreateAsync(CreateReferralRequestDTO dto)
         {

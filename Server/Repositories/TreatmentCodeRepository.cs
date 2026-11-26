@@ -5,13 +5,8 @@ using Server.Repositories.InterFaces;
 
 namespace Server.Repositories
 {
-    public class TreatmentCodeRepository : Repository<TreatmentCode>, ITreatmentCodeRepository
+    public class TreatmentCodeRepository(AppDbContext context) : Repository<TreatmentCode>(context), ITreatmentCodeRepository
     {
-        public TreatmentCodeRepository(AppDbContext context)
-            : base(context)
-        {
-        }
-
         /// <inheritdoc />
         public async Task<TreatmentCode?> GetByCodeAsync(string code)
         {

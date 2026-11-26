@@ -6,12 +6,12 @@ using Server.Repositories;
 using Server.Repositories.InterFaces;
 using Server.Tests.TestDb;
 
-namespace Server.Tests.Integration
+namespace Server.Tests.Tests.Integration
 {
     [TestClass]
     public class ReferralRepositoryTests : DatabaseTestBase
     {
-        private IReferralRepository _sut = null!;
+        private ReferralRepository _sut = null!;
 
         protected override Func<DbContext, Task>? GetTestDataInitializer()
         {
@@ -45,13 +45,13 @@ namespace Server.Tests.Integration
             var result = await _sut.CreateAsync(dto);
 
             // Assert
-            Assert.IsTrue(result.Id > 0);
+            Assert.IsGreaterThan(0, result.Id);
 
             var rows = await TestDatabase.QueryAsync(
                 "SELECT * FROM Referrals WHERE Id = @id",
                 new SqlParameter("@id", result.Id));
 
-            Assert.AreEqual(1, rows.Rows.Count);
+            Assert.HasCount(1, rows.Rows);
             var row = rows.Rows[0];
             Assert.AreEqual(dto.PatientId, row["PatientId"]);
             Assert.AreEqual(dto.GeneralPractitionerId, row["GeneralPractitionerId"]);
@@ -107,7 +107,7 @@ namespace Server.Tests.Integration
 
             // Assert
             await using var verifyContext = TestDatabase.CreateDbContext();
-            var stored = await verifyContext.Referrals.SingleAsync(r => r.Id == result.Id);
+            var stored = await verifyContext.Referrals.SingleAsync(r => r.Id == result.Id, TestContext.CancellationToken);
             Assert.AreEqual(specialism, stored.Specialism);
         }
 
@@ -128,7 +128,7 @@ namespace Server.Tests.Integration
                 "SELECT CreatedAt FROM Referrals WHERE Id = @id",
                 new SqlParameter("@id", result.Id));
             var stored = (DateTime)rows.Rows[0]["CreatedAt"];
-            Assert.IsTrue((stored - DateTime.UtcNow).Duration() < TimeSpan.FromSeconds(5));
+            Assert.IsLessThan(TimeSpan.FromSeconds(5), (stored - DateTime.UtcNow).Duration());
         }
 
         [TestMethod]
@@ -181,7 +181,7 @@ namespace Server.Tests.Integration
 
             // Assert
             var sqlException = Assert.IsInstanceOfType<SqlException>(exception.InnerException);
-            StringAssert.Contains(sqlException.Message, "FK_Referrals_Specialists_PreferredSpecialistId");
+            Assert.Contains("FK_Referrals_Specialists_PreferredSpecialistId", sqlException.Message);
         }
 
         [TestMethod]
@@ -196,7 +196,7 @@ namespace Server.Tests.Integration
 
             // Assert
             var sqlException = Assert.IsInstanceOfType<SqlException>(exception.InnerException);
-            StringAssert.Contains(sqlException.Message, "FK_Referrals_TreatmentCodes_TreatmentCode");
+            Assert.Contains("FK_Referrals_TreatmentCodes_TreatmentCode", sqlException.Message);
         }
 
     }

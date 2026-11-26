@@ -2,7 +2,7 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using Server.Tests.Utils;
 
-namespace Server.Tests
+namespace Server.Tests.Tests
 {
     /// <summary>
     /// Base of end-to-end tests: a fresh test database, the API and client running, and a new Chrome browser per test.
