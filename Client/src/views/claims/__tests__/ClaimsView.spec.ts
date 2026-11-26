@@ -107,16 +107,17 @@ describe('ClaimsView', () => {
   it('selects one claim, all claims on the page, and clears the selection', async () => {
     state.data.value = pageOf([claim(1, ClaimStatus.ToReview), claim(2, ClaimStatus.Processed)])
     const wrapper = mount(ClaimsView)
-    const count = () => wrapper.find('[data-testid="claims-selected-count"]').text()
+    const count = () => wrapper.find('[data-testid="selection-count"]').text()
 
     await wrapper.find('[data-testid="claim-select-1"]').trigger('change')
-    expect(count()).toBe('1 geselecteerd')
+    expect(count()).toContain('declaratie geselecteerd')
 
     await wrapper.find('[data-testid="claims-select-page"]').trigger('change')
-    expect(count()).toBe('2 geselecteerd')
+    expect(count()).toContain('2 declaraties geselecteerd')
+    expect(wrapper.find('[data-testid="selection-badge"]').text()).toBe('2')
 
     await wrapper.find('[data-testid="claims-clear-selection"]').trigger('click')
-    expect(count()).toBe('0 geselecteerd')
+    expect(count()).toBe('Selecteer declaraties met de vakjes in de tabel')
   })
 
   it('enables the batch button only when claims are selected', async () => {

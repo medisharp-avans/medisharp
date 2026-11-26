@@ -14,6 +14,11 @@ export const claimStatusLabels: Record<ClaimStatus, string> = {
   [ClaimStatus.HandledManually]: 'Handmatig afgehandeld',
 }
 
+/** All statuses with their label, in workflow order, e.g. for a status filter. */
+export const claimStatusOptions = (
+  Object.values(ClaimStatus).filter((v) => typeof v === 'number') as ClaimStatus[]
+).map((status) => ({ value: status, label: claimStatusLabels[status] }))
+
 /** Tailwind classes for the status badge, so every view shows a status in the same colour. */
 export const claimStatusClasses: Record<ClaimStatus, string> = {
   [ClaimStatus.ToReview]: 'bg-amber-100 text-amber-900 border-amber-300',

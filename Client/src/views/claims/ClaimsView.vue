@@ -6,14 +6,19 @@ import { HugeiconsIcon } from '@hugeicons/vue'
 import { AlertCircleIcon, FilterRemoveIcon, FolderAddIcon } from '@hugeicons/core-free-icons'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import PaginationControls from '@/components/elements/PaginationControls.vue'
+import BaseSelect from '@/components/elements/BaseSelect.vue'
 import SearchField from '@/components/elements/SearchField.vue'
-import SelectionCount from '@/components/elements/SelectionCount.vue'
+import SelectionBar from '@/components/elements/SelectionBar.vue'
 import SortableColumnHeader from '@/components/elements/SortableColumnHeader.vue'
 import ClaimStatusBadge from '@/components/claims/ClaimStatusBadge.vue'
-import ClaimStatusSelect from '@/components/claims/ClaimStatusSelect.vue'
 import { useFetch } from '@/composables/api/useFetch'
 import { endpoints } from '@/services/endpoints'
-import { ClaimStatus, type ClaimOverview, type ClaimSortField } from '@/types/claim'
+import {
+  ClaimStatus,
+  claimStatusOptions,
+  type ClaimOverview,
+  type ClaimSortField,
+} from '@/types/claim'
 import type { PagedResult } from '@/types/pagination'
 
 const PAGE_SIZE = 20
@@ -154,53 +159,34 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
       </p>
     </header>
 
-    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div class="flex w-full max-w-3xl items-end gap-2">
-        <SearchField
-          id="claims-search"
-          v-model="searchInput"
-          placeholder="Nummer, patiënt, polisnummer of medewerker"
-          class="flex-1"
-          data-testid="claims-search"
-        />
-        <ClaimStatusSelect
-          id="claims-status-filter"
-          v-model="statusFilter"
-          class="shrink-0"
-          data-testid="claims-status-filter"
-        />
-        <button
-          type="button"
-          :disabled="!hasFilters"
-          class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
-          title="Zoeken, statusfilter en sortering wissen"
-          aria-label="Zoeken, statusfilter en sortering wissen"
-          data-testid="claims-reset-filters"
-          @click="resetFilters"
-        >
-          <HugeiconsIcon :icon="FilterRemoveIcon" class="w-5 h-5" aria-hidden="true" />
-        </button>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <SelectionCount :count="selectedIds.size" data-testid="claims-selected-count" />
-        <BaseButton
-          variant="secondary"
-          :disabled="selectedIds.size === 0"
-          data-testid="claims-clear-selection"
-          @click="clearSelection"
-        >
-          Selectie wissen
-        </BaseButton>
-        <BaseButton
-          :disabled="selectedIds.size === 0"
-          data-testid="claims-add-to-batch"
-          @click="addSelectionToBatch"
-        >
-          <HugeiconsIcon :icon="FolderAddIcon" class="w-5 h-5" aria-hidden="true" />
-          Toevoegen aan batch
-        </BaseButton>
-      </div>
+    <div class="mb-4 flex w-full max-w-3xl items-end gap-2">
+      <SearchField
+        id="claims-search"
+        v-model="searchInput"
+        placeholder="Nummer, patiënt, polisnummer of medewerker"
+        class="flex-1"
+        data-testid="claims-search"
+      />
+      <BaseSelect
+        id="claims-status-filter"
+        v-model="statusFilter"
+        label="Status"
+        :options="claimStatusOptions"
+        empty-label="Alle statussen"
+        class="w-56 shrink-0"
+        data-testid="claims-status-filter"
+      />
+      <button
+        type="button"
+        :disabled="!hasFilters"
+        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+        title="Zoeken, statusfilter en sortering wissen"
+        aria-label="Zoeken, statusfilter en sortering wissen"
+        data-testid="claims-reset-filters"
+        @click="resetFilters"
+      >
+        <HugeiconsIcon :icon="FilterRemoveIcon" class="w-5 h-5" aria-hidden="true" />
+      </button>
     </div>
 
     <p v-if="loading && !result" data-testid="claims-loading">Declaraties worden geladen...</p>
@@ -218,6 +204,30 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
     </p>
 
     <template v-else>
+      <SelectionBar
+        :count="selectedIds.size"
+        singular="declaratie"
+        plural="declaraties"
+        data-testid="claims-selection"
+      >
+        <BaseButton
+          variant="secondary"
+          :disabled="selectedIds.size === 0"
+          data-testid="claims-clear-selection"
+          @click="clearSelection"
+        >
+          Selectie wissen
+        </BaseButton>
+        <BaseButton
+          :disabled="selectedIds.size === 0"
+          data-testid="claims-add-to-batch"
+          @click="addSelectionToBatch"
+        >
+          <HugeiconsIcon :icon="FolderAddIcon" class="w-5 h-5" aria-hidden="true" />
+          Toevoegen aan batch
+        </BaseButton>
+      </SelectionBar>
+
       <div class="overflow-x-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
         <table class="w-full text-left text-sm" data-testid="claims-table" :aria-busy="loading">
           <caption class="sr-only">
