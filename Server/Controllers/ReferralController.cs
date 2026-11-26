@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using RevalliDesk.Controllers;
+using Server.Controllers;
 using Server.Models;
 using Server.Models.DTO.Requests;
 using Server.Services.InterFaces;
@@ -9,9 +9,8 @@ namespace Server.Controllers
     /// <summary>
     /// Manages referral-related HTTP endpoints.
     /// </summary>
-    [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
+    [ApiController]
     public class ReferralController(IReferralService _service) : BaseApiController
     {
         /// <summary>

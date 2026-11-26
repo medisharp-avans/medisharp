@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RevalliDesk.Authorization;
+using Server.Authorization;
 
-namespace RevalliDesk.Controllers
+namespace Server.Controllers
 {
     /// <summary>
     /// Base class for every controller in RevaliDesk.
@@ -14,7 +14,7 @@ namespace RevalliDesk.Controllers
     /// Class and method attributes are combined with AND, so the role cannot be set here as well.
     /// </summary>
     [ApiController]
-    [Authorize]
+    //[Authorize]
     [Produces("application/json")]
     // GlobalExceptionHandler can answer any endpoint with a 500, so every endpoint documents it.
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]

@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using RevalliDesk.Controllers;
+using Server.Controllers;
 using Server.Models;
 using Server.Models.DTO.Responses;
 using Server.Services.InterFaces;

@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace RevalliDesk.Authorization
+namespace Server.Authorization
 {
     /// <summary>Reads the logged-in user's ID and role from the claims in the validated JWT.</summary>
     public static class CurrentUser

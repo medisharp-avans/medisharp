@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using RevalliDesk.Controllers;
+using Server.Controllers;
 
 namespace Server.Controllers
 {
