@@ -12,6 +12,7 @@ namespace Server.Repositories
         {
         }
 
+        /// <inheritdoc />
         public async Task<TreatmentCode?> GetByCodeAsync(string code)
         {
             return await _context.TreatmentCodes.FirstOrDefaultAsync(t => t.Code == code);

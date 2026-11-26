@@ -12,6 +12,11 @@ namespace Server.Tests.Integration
     {
         private IPlanningRepository _sut = null!;
 
+        protected override Func<DbContext, Task>? GetTestDataInitializer()
+        {
+            return TestAFSDataInitializer.SeedAsync;
+        }
+
         [TestInitialize]
         public async Task CreateSut()
         {

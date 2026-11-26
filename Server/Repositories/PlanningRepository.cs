@@ -15,6 +15,7 @@ namespace Server.Repositories
         {
         }
 
+        /// <inheritdoc />
         public async Task<List<PlanningResponseDTO>> GetAllPatientsAsync()
         {
             return await _context.Patients
@@ -26,6 +27,7 @@ namespace Server.Repositories
                 .ToListAsync();
         }
 
+        /// <inheritdoc />
         public async Task<List<TreatmentCode>> GetCodesBySpecialism(string spec)
         {
             if (!Enum.TryParse<Specialism>(spec, true, out var parsed))
@@ -36,6 +38,7 @@ namespace Server.Repositories
                 .ToListAsync();
         }
 
+        /// <inheritdoc />
         public async Task<List<PlanningResponseDTO>> GetSpecialistsBySpecialism(string spec)
         {
             if (!Enum.TryParse<Specialism>(spec, true, out var parsed))
@@ -52,6 +55,7 @@ namespace Server.Repositories
                 .ToListAsync();
         }
 
+        /// <inheritdoc />
         public Task<bool> HasOverlapAsync(int specialistId, DateTime start, DateTime end) =>
             _context.Appointments.AnyAsync(a =>
                 a.SpecialistId == specialistId
@@ -59,6 +63,7 @@ namespace Server.Repositories
                 && a.StartTime < end
                 && a.EndTime > start);
 
+        /// <inheritdoc />
         public Task<bool> IsWithinAvailabilityAsync(int specialistId, DateTime start, DateTime end) =>
             _context.Availabilities.AnyAsync(a =>
                 a.SpecialistId == specialistId

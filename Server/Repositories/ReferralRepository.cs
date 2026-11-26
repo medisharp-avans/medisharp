@@ -12,6 +12,7 @@ namespace Server.Repositories
         {
         }
 
+        /// <inheritdoc />
         public async Task<Referral> CreateAsync(CreateReferralRequestDTO dto)
         {
             var referral = new Referral

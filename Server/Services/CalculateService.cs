@@ -13,6 +13,7 @@ namespace Server.Services
             _repository = repository;
         }
 
+        /// <inheritdoc />
         public async Task<DateTime> CalculateAppointmentEndTime(
             DateTime startTime,
             string treatmentCode)

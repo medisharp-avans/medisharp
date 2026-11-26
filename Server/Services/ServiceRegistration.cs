@@ -1,16 +1,19 @@
-﻿using Server.Services.InterFaces;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Server.Services.InterFaces;
 
 namespace Server.Services
 {
-    /// <summary>Dependency injection registrations for the RevaliNow services.</summary>
+    /// <summary>
+    /// Provides extension methods for registering application service dependencies in the dependency injection container.
+    /// </summary>
     public static class ServiceRegistration
     {
         /// <summary>
-        /// Registers all services and the system <see cref="TimeProvider"/>.
-        /// Call from <c>Program.cs</c>: <c>builder.Services.AddRegisteredServices();</c>
+        /// Registers all application services and the system <see cref="TimeProvider"/>.
+        /// Call this from <c>Program.cs</c> using: <c>builder.Services.AddRegisteredServices();</c>
         /// </summary>
-        /// <param name="services">The service collection to add the registrations to.</param>
-        /// <returns>The same service collection, to allow chaining.</returns>
+        /// <param name="services">The service collection to add the service registrations to.</param>
+        /// <returns>The same service collection instance, enabling method chaining.</returns>
         public static IServiceCollection AddRegisteredServices(this IServiceCollection services)
         {
             services.AddSingleton(TimeProvider.System);

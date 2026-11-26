@@ -13,11 +13,15 @@ namespace Server.Tests.Integration
     {
         private IReferralRepository _sut = null!;
 
+        protected override Func<DbContext, Task>? GetTestDataInitializer()
+        {
+            return TestAFSDataInitializer.SeedAsync;
+        }
+
         [TestInitialize]
         public async Task CreateSut()
         {
             _sut = new ReferralRepository(DbContext);
-            await TestDatabase.ResetAsync(TestAFSDataInitializer.SeedAsync);
         }
 
         private static CreateReferralRequestDTO CreateValidDto() => new()
