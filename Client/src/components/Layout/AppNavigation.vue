@@ -8,6 +8,7 @@ import {
   FileExportIcon,
   UserGroupIcon,
   ClipboardIcon,
+  Invoice01Icon,
 } from '@hugeicons/core-free-icons'
 </script>
 
@@ -31,6 +32,7 @@ import {
       <AppNavigationItem route-name="MedicalResults" :icon="ClipboardIcon">
         Onderzoeksuitslagen
       </AppNavigationItem>
+      <AppNavigationItem route-name="Claims" :icon="Invoice01Icon">Declaraties</AppNavigationItem>
     </ul>
   </nav>
 </template>

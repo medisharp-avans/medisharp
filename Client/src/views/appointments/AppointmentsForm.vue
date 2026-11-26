@@ -8,6 +8,7 @@ import SummaryList from '@/components/forms/SummaryList.vue'
 import { computed, ref, watch } from 'vue'
 import { useCreate } from '@/composables/api/useCreate'
 import { useFetch } from '@/composables/api/useFetch'
+import { endpoints } from '@/services/endpoints'
 import { useLookup } from '@/composables/forms/useLookup'
 import { useFormMessage } from '@/composables/forms/useFormMessage'
 import { enumOptions } from '@/utils/enumOptions'
@@ -55,17 +56,17 @@ const params = () => ({ specialism: specialismName.value })
 const hasSpecialism = () => specialismName.value !== undefined
 
 const { data: specialists } = useFetch<Specialist[]>(
-  'api/Planning/search/specialists',
+  endpoints.planning.specialists,
   params,
   hasSpecialism,
 )
 const { data: treatmentCodes } = useFetch<TreatmentCode[]>(
-  'api/Planning/treatmentcodes',
+  endpoints.planning.treatmentCodes,
   params,
   hasSpecialism,
 )
-const { data: patients } = useFetch<Patient[]>('api/Planning/search/patients')
-const { create, loading } = useCreate('api/appointments', { skipErrorRedirect: true })
+const { data: patients } = useFetch<Patient[]>(endpoints.planning.patients)
+const { create, loading } = useCreate(endpoints.appointments, { skipErrorRedirect: true })
 
 // Zoekvelden: getypte tekst, opties voor de lijst en het gekozen item (voor het ID)
 const {

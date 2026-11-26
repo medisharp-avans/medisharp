@@ -57,6 +57,12 @@ const routes = [
     component: () => import('@/views/medicalResults/MedicalResultsView.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/declaraties',
+    name: 'Claims',
+    component: () => import('@/views/claims/ClaimsView.vue'),
+    meta: { requiresAuth: true },
+  },
 
   // Error routes
   {
