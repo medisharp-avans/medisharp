@@ -1,4 +1,6 @@
 ﻿using Server.Models;
+using Server.Models.DTO.Common;
+using Server.Models.DTO.Responses;
 
 namespace Server.Repositories.InterFaces
 {
@@ -8,9 +10,14 @@ namespace Server.Repositories.InterFaces
     public interface IClaimRepository : IRepository<Claim>
     {
         /// <summary>
-        /// Retrieves all claims, including the patient (with user) and the claim lines.
+        /// Retrieves one page of the claims overview, after the search and the sort of <paramref name="query"/>.
+        /// SortBy accepts Id, Patient, PolicyNumber, Status, LineCount, TotalAmount, ReviewedBy, CreatedAt and LastModifiedAt.
         /// </summary>
-        /// <returns>All claims, in no particular order.</returns>
-        Task<List<Claim>> GetAllWithDetailsAsync();
+        /// <param name="query">Search, sort and paging options.</param>
+        /// <returns>The rows of the page and the number of rows matching the search.</returns>
+        Task<(List<ClaimOverviewDTO> Items, int TotalCount)> GetOverviewPageAsync(PagedQuery query);
+
+        /// <summary>Counts all claims with status ToReview.</summary>
+        Task<int> CountToReviewAsync();
     }
 }

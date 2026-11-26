@@ -1,4 +1,5 @@
-﻿using Server.Models.DTO.Responses;
+﻿using Server.Models.DTO.Common;
+using Server.Models.DTO.Responses;
 
 namespace Server.Services.InterFaces
 {
@@ -8,10 +9,14 @@ namespace Server.Services.InterFaces
     public interface IClaimService
     {
         /// <summary>
-        /// Retrieves the claims overview. Claims that still need to be reviewed come first,
-        /// then the rest; within each group the most recently changed claim comes first.
+        /// Retrieves one page of the claims overview. Without a sort column, claims that still need
+        /// to be reviewed come first, then the most recently changed claim.
         /// </summary>
-        /// <returns>The sorted overview rows.</returns>
-        Task<List<ClaimOverviewDTO>> GetOverviewAsync();
+        /// <param name="query">Search, sort and paging options.</param>
+        /// <returns>The page, with the paging numbers.</returns>
+        Task<PagedResult<ClaimOverviewDTO>> GetOverviewPageAsync(PagedQuery query);
+
+        /// <summary>Counts all claims that still need to be reviewed.</summary>
+        Task<int> CountToReviewAsync();
     }
 }

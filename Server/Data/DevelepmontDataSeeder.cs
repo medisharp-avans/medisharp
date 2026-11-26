@@ -60,6 +60,10 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
 
         db.GeneralPractitioners.Add(gp);
         db.Specialists.AddRange(specialist1, specialist2);
+
+        // ----- Hospital employee who reviews claims -----
+        var staff = new HospitalEmployee { UserId = staffUser.Id, Department = "Administratie" };
+        db.HospitalEmployees.Add(staff);
         await db.SaveChangesAsync(cancellationToken);
 
         // ----- Patients (only patient #1 is insured) -----
@@ -115,10 +119,10 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         // ----- Claims for the claims overview (DEC-01): 1x Processed, 1x ReadyToSend, 2x ToReview -----
         var processedClaim = CreateClaim(patient1, ClaimStatus.Processed, createdDaysAgo: 9, lastModifiedDaysAgo: 8,
             [CreateReimbursedClaimLine(pastConsult1, consult, reimbursedAmount: 50.00m, submittedDaysAgo: 8)],
-            submittedDaysAgo: 8);
+            submittedDaysAgo: 8, reviewedBy: staff);
 
         var readyToSendClaim = CreateClaim(patient1, ClaimStatus.ReadyToSend, createdDaysAgo: 6, lastModifiedDaysAgo: 5,
-            [CreateClaimLine(pastCheck, check)]);
+            [CreateClaimLine(pastCheck, check)], reviewedBy: staff);
 
         // Two treatment codes on one claim (AC-DEC-01_1): 45 + 75 = 120.
         var toReviewClaimTwoLines = CreateClaim(patient1, ClaimStatus.ToReview, createdDaysAgo: 2, lastModifiedDaysAgo: 2,
@@ -202,6 +206,10 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
             .Where(g => seededGpIds.Contains(g.Id))
             .ToListAsync(cancellationToken);
 
+        var hospitalEmployees = await db.HospitalEmployees
+            .Where(h => seededUserIds.Contains(h.UserId))
+            .ToListAsync(cancellationToken);
+
         var users = await db.Users
             .Where(u => seededUserIds.Contains(u.Id))
             .ToListAsync(cancellationToken);
@@ -219,6 +227,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         db.Patients.RemoveRange(patients);
         db.Specialists.RemoveRange(specialists);
         db.GeneralPractitioners.RemoveRange(generalPractitioners);
+        db.HospitalEmployees.RemoveRange(hospitalEmployees);
         db.Users.RemoveRange(users);
         db.TreatmentCodes.RemoveRange(treatmentCodes);
 
@@ -227,7 +236,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         // Reset identity counters only for tables that are now completely empty,
         // so the seed gets the same ids every run and non-seed records are never affected.
         foreach (var table in new[]
-                 { "claim_lines", "claims", "Users", "Patients", "Specialists", "GeneralPractitioners", "Referrals", "Availabilities", "Appointments" })
+                 { "claim_lines", "claims", "hospital_employees", "Users", "Patients", "Specialists", "GeneralPractitioners", "Referrals", "Availabilities", "Appointments" })
         {
             await ResetIdentityIfUnusedAsync(db, table, cancellationToken);
         }
@@ -365,9 +374,11 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         int createdDaysAgo,
         int lastModifiedDaysAgo,
         List<ClaimLine> claimLines,
-        int? submittedDaysAgo = null) => new()
+        int? submittedDaysAgo = null,
+        HospitalEmployee? reviewedBy = null) => new()
     {
         PatientId = patient.Id,
+        ReviewedById = reviewedBy?.Id,
         PolicyNumber = "DEV-POLIS-0001",
         Status = status,
         CreatedAt = DateTime.UtcNow.AddDays(-createdDaysAgo),

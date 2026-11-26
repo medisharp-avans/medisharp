@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Server.Controllers;
+using Server.Models.DTO.Common;
 using Server.Models.DTO.Responses;
 using Server.Services.InterFaces;
 
@@ -16,15 +16,28 @@ namespace Server.Controllers
     public class ClaimsController(IClaimService _service) : BaseApiController
     {
         /// <summary>
-        /// Retrieves all claims. Claims with status ToReview come first.
+        /// Retrieves one page of the claims overview, with optional search and sort.
+        /// SortBy: Id, Patient, PolicyNumber, Status, LineCount, TotalAmount, ReviewedBy, CreatedAt or LastModifiedAt.
+        /// Without a sort column, claims with status ToReview come first.
         /// </summary>
-        /// <returns>A list of <see cref="ClaimOverviewDTO"/>.</returns>
-        /// <response code="200">Returns the claims overview.</response>
+        /// <param name="query">Search term, sort column and direction, page and page size.</param>
+        /// <response code="200">Returns one page of the claims overview.</response>
+        /// <response code="400">Invalid search or paging values.</response>
         [HttpGet]
-        [ProducesResponseType(typeof(List<ClaimOverviewDTO>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<List<ClaimOverviewDTO>>> GetOverview()
+        [ProducesResponseType(typeof(PagedResult<ClaimOverviewDTO>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<PagedResult<ClaimOverviewDTO>>> GetOverview([FromQuery] PagedQuery query)
         {
-            return Ok(await _service.GetOverviewAsync());
+            return Ok(await _service.GetOverviewPageAsync(query));
+        }
+
+        /// <summary>Counts all claims that still need to be reviewed, for the notice above the overview.</summary>
+        /// <response code="200">Returns the number of claims with status ToReview.</response>
+        [HttpGet("to-review-count")]
+        [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
+        public async Task<ActionResult<int>> GetToReviewCount()
+        {
+            return Ok(await _service.CountToReviewAsync());
         }
     }
 }

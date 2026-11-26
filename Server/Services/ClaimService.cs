@@ -1,39 +1,27 @@
-﻿using Server.Models.DTO.Responses;
-using Server.Models.Enums;
+﻿using Server.Models.DTO.Common;
+using Server.Models.DTO.Responses;
 using Server.Repositories.InterFaces;
 using Server.Services.InterFaces;
 
 namespace Server.Services
 {
-    public class ClaimService : IClaimService
+    public class ClaimService(IClaimRepository _repository) : IClaimService
     {
-        private readonly IClaimRepository _repository;
-
-        public ClaimService(IClaimRepository repository)
+        /// <inheritdoc />
+        public async Task<PagedResult<ClaimOverviewDTO>> GetOverviewPageAsync(PagedQuery query)
         {
-            _repository = repository;
+            var (items, totalCount) = await _repository.GetOverviewPageAsync(query);
+
+            return new PagedResult<ClaimOverviewDTO>
+            {
+                Items = items,
+                Page = query.Page,
+                PageSize = query.PageSize,
+                TotalCount = totalCount
+            };
         }
 
         /// <inheritdoc />
-        public async Task<List<ClaimOverviewDTO>> GetOverviewAsync()
-        {
-            var claims = await _repository.GetAllWithDetailsAsync();
-
-            return claims
-                .OrderBy(c => c.Status == ClaimStatus.ToReview ? 0 : 1)
-                .ThenByDescending(c => c.LastModifiedAt)
-                .Select(c => new ClaimOverviewDTO(
-                    c.Id,
-                    c.PatientId,
-                    c.Patient?.User?.FullName ?? string.Empty,
-                    c.PolicyNumber,
-                    c.Status,
-                    c.ClaimLines.Count,
-                    c.ClaimLines.Sum(l => l.SubmittedAmount),
-                    c.CreatedAt,
-                    c.SubmittedAt,
-                    c.LastModifiedAt))
-                .ToList();
-        }
+        public Task<int> CountToReviewAsync() => _repository.CountToReviewAsync();
     }
 }
