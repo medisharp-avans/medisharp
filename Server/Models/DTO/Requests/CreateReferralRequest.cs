@@ -26,7 +26,6 @@ namespace Server.Models.DTO.Requests
         [StringLength(100, ErrorMessage = "De woonplaats mag maximaal 100 tekens bevatten")]
         public string? PatientCity { get; set; }
 
-        [Required(ErrorMessage = "Vul het telefoonnummer in")]
         [StringLength(32, ErrorMessage = "Het telefoonnummer mag maximaal 32 tekens bevatten")]
         public string? PatientPhoneNumber { get; set; }
 
@@ -45,7 +44,7 @@ namespace Server.Models.DTO.Requests
         [Required(ErrorMessage = "Vul de reden van verwijzing in")]
         public string? ReasonForReferral { get; set; }
 
-        [Required(ErrorMessage = "Vul de vraagstelling in")]
+        /// <summary>Optional separate question from older clients. The current form sends both in ReasonForReferral.</summary>
         public string? ClinicalQuestion { get; set; }
 
         [Required(ErrorMessage = "Vul de medicatie in, of geef aan dat er geen medicatie is")]

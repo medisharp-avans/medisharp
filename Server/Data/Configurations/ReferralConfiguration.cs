@@ -19,7 +19,7 @@ namespace Server.Data.Configurations
             builder.Property(referral => referral.PatientName).HasMaxLength(200).IsRequired();
             builder.Property(referral => referral.PatientAddress).HasMaxLength(300).IsRequired();
             builder.Property(referral => referral.PatientCity).HasMaxLength(100).IsRequired();
-            builder.Property(referral => referral.PatientPhoneNumber).HasMaxLength(32).IsRequired();
+            builder.Property(referral => referral.PatientPhoneNumber).HasMaxLength(32);
             builder.Property(referral => referral.PatientEmailAddress).HasMaxLength(254).IsRequired();
 
             builder.Property(referral => referral.Specialty).HasMaxLength(100).IsRequired();

@@ -67,12 +67,14 @@ namespace Server.Services
                 PatientName = request.PatientName!,
                 PatientAddress = request.PatientAddress!,
                 PatientCity = request.PatientCity!,
-                PatientPhoneNumber = request.PatientPhoneNumber!,
+                PatientPhoneNumber = string.IsNullOrWhiteSpace(request.PatientPhoneNumber)
+                    ? null
+                    : request.PatientPhoneNumber.Trim(),
                 PatientEmailAddress = request.PatientEmailAddress!,
                 Specialty = treatment.Specialty,
                 TreatmentCode = treatment.Code,
                 ReasonForReferral = request.ReasonForReferral!,
-                ClinicalQuestion = request.ClinicalQuestion!,
+                ClinicalQuestion = request.ClinicalQuestion ?? string.Empty,
                 Medication = request.Medication!,
                 MedicalInformation = request.MedicalInformation!,
                 Allergies = request.Allergies!,

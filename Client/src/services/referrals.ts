@@ -8,7 +8,6 @@ export type ReferralDraft = Record<
   | 'patientPhoneNumber'
   | 'patientEmailAddress'
   | 'reasonForReferral'
-  | 'clinicalQuestion'
   | 'medicalInformation'
   | 'medication'
   | 'allergies'
@@ -39,8 +38,9 @@ export async function createReferral(
     if (response.status === 413)
       return { saved: false, fields: ['attachments'], message: 'De bestanden zijn samen te groot.' }
     if (response.status === 400) {
-      const data = await response.json()
-      const fields = data?.errors && typeof data.errors === 'object' ? Object.keys(data.errors) : []
+      const data: unknown = await response.json()
+      const errors = data && typeof data === 'object' && 'errors' in data ? data.errors : null
+      const fields = errors && typeof errors === 'object' ? Object.keys(errors) : []
       return { saved: false, message: 'Controleer de ingevulde gegevens.', fields }
     }
     return {

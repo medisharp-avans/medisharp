@@ -74,7 +74,6 @@ namespace Server.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("PatientPhoneNumber")
-                        .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 

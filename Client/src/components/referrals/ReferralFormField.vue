@@ -12,8 +12,9 @@ const props = withDefaults(
     maxlength?: number
     multiline?: boolean
     rows?: number
+    required?: boolean
   }>(),
-  { type: 'text', multiline: false, rows: 3 },
+  { type: 'text', multiline: false, rows: 3, required: true },
 )
 
 const controlClasses =
@@ -35,7 +36,7 @@ const controlClasses =
       :aria-describedby="props.hint ? `${props.id}-hint` : undefined"
       :class="[controlClasses, 'resize-y']"
       autocomplete="off"
-      required
+      :required="props.required"
     />
     <input
       v-else
@@ -48,7 +49,7 @@ const controlClasses =
       :aria-describedby="props.hint ? `${props.id}-hint` : undefined"
       :class="controlClasses"
       autocomplete="off"
-      required
+      :required="props.required"
     />
     <p v-if="props.hint" :id="`${props.id}-hint`" class="mt-2 text-sm leading-5 text-gray-600">
       {{ props.hint }}

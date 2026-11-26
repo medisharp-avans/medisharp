@@ -13,7 +13,7 @@ namespace Server.Models
         public required string PatientName { get; set; }
         public required string PatientAddress { get; set; }
         public required string PatientCity { get; set; }
-        public required string PatientPhoneNumber { get; set; }
+        public string? PatientPhoneNumber { get; set; }
         public required string PatientEmailAddress { get; set; }
 
         public required string Specialty { get; set; }

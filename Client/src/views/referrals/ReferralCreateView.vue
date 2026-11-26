@@ -7,6 +7,8 @@ import { createReferral } from '@/services/referrals'
 import { RouterLink } from 'vue-router'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import ReferralFormField from '@/components/referrals/ReferralFormField.vue'
+import ReferralMedicalList from '@/components/referrals/ReferralMedicalList.vue'
+import { allergyOptions, medicationOptions } from '@/services/referralReferenceOptions'
 
 const draft = reactive({
   specialty: '',
@@ -18,7 +20,6 @@ const draft = reactive({
   patientPhoneNumber: '',
   patientEmailAddress: '',
   reasonForReferral: '',
-  clinicalQuestion: '',
   medicalInformation: '',
   medication: '',
   allergies: '',
@@ -60,8 +61,7 @@ const fieldLabels: Record<string, string> = {
   patientEmailAddress: 'E-mailadres',
   specialty: 'Specialisme',
   treatmentCode: 'Behandeling',
-  reasonForReferral: 'Reden van verwijzing',
-  clinicalQuestion: 'Vraagstelling aan de specialist',
+  reasonForReferral: 'Reden van verwijzing en vraagstelling aan de specialist',
   medicalInformation: 'Relevante medische gegevens',
   medication: 'Medicatie',
   allergies: 'Allergieën',
@@ -73,7 +73,7 @@ async function saveReferral() {
   saveMessage.value = ''
   invalidFields.value = []
   const blank = Object.entries(draft)
-    .filter(([, value]) => !value.trim())
+    .filter(([key, value]) => key !== 'patientPhoneNumber' && !value.trim())
     .map(([key]) => key)
   if (blank.length) {
     invalidFields.value = blank
@@ -202,7 +202,10 @@ const selectClasses =
         </ul>
       </div>
       <fieldset :disabled="saving" :aria-busy="saving" class="min-w-0 space-y-6">
-        <p class="text-sm text-gray-600">Alle invulvelden zijn verplicht.</p>
+        <p class="text-sm text-gray-600">
+          Vul alle velden in die als verplicht gelden. Het telefoonnummer en bijlagen zijn
+          optioneel.
+        </p>
 
         <fieldset :class="fieldsetClasses">
           <legend class="px-2 text-lg font-semibold">Patiëntgegevens</legend>
@@ -236,9 +239,10 @@ const selectClasses =
             <ReferralFormField
               id="patient-phone"
               v-model="draft.patientPhoneNumber"
-              label="Telefoonnummer"
+              label="Telefoonnummer (optioneel)"
               type="tel"
               :maxlength="32"
+              :required="false"
             />
             <ReferralFormField
               id="patient-email"
@@ -324,14 +328,11 @@ const selectClasses =
               <ReferralFormField
                 id="referral-reason"
                 v-model="draft.reasonForReferral"
-                label="Reden van verwijzing"
+                class="sm:col-span-2"
+                label="Reden van verwijzing en vraagstelling aan de specialist"
+                hint="Beschrijf waarom je verwijst en welke vraag je aan de specialist stelt."
                 multiline
-              />
-              <ReferralFormField
-                id="referral-question"
-                v-model="draft.clinicalQuestion"
-                label="Vraagstelling aan de specialist"
-                multiline
+                :rows="5"
               />
               <div>
                 <label for="referral-urgency" class="mb-2 block text-sm font-medium"
@@ -363,19 +364,19 @@ const selectClasses =
               multiline
               :rows="4"
             />
-            <ReferralFormField
+            <ReferralMedicalList
               id="referral-medication"
               v-model="draft.medication"
               label="Medicatie"
-              hint="Vul ‘Geen’ in als de patiënt geen medicatie gebruikt."
-              multiline
+              :options="medicationOptions"
+              none-label="Geen medicatie"
             />
-            <ReferralFormField
+            <ReferralMedicalList
               id="referral-allergies"
               v-model="draft.allergies"
               label="Allergieën"
-              hint="Vul ‘Geen bekend’ in als er geen allergieën bekend zijn."
-              multiline
+              :options="allergyOptions"
+              none-label="Geen bekende allergieën"
             />
           </div>
         </fieldset>

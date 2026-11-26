@@ -20,6 +20,7 @@ namespace Server.Tests
             StringAssert.Contains(script, "[Bsn] varchar(9) NOT NULL");
             StringAssert.Contains(script, "[Specialty] nvarchar(100) NOT NULL");
             StringAssert.Contains(script, "[TreatmentCode] nvarchar(50) NOT NULL");
+            StringAssert.Contains(script, "[PatientPhoneNumber] nvarchar(32) NULL");
             StringAssert.Contains(script, "[Status] nvarchar(32) NOT NULL DEFAULT N'Open'");
             StringAssert.Contains(script, "CREATE TABLE [ReferralAttachments]");
             StringAssert.Contains(script, "FOREIGN KEY ([ReferralId]) REFERENCES [Referrals] ([Id])");

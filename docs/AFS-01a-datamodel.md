@@ -21,8 +21,8 @@ Het team heeft bevestigd dat er nog geen gezamenlijk patientmodel is afgesproken
 
 ## Gegevens van een verwijzing
 
-Alle onderstaande inhoudelijke velden zijn verplicht in het model; alleen
-bijlagen zijn optioneel. De maximale lengtes zijn technische ontwerpkeuzes,
+Telefoonnummer en bijlagen zijn optioneel. De andere inhoudelijke velden
+zijn verplicht. De maximale lengtes zijn technische ontwerpkeuzes,
 geen aanvullende eisen uit het interview. Medische tekstvelden krijgen
 `nvarchar(max)` om inhoud niet tot een korte omschrijving te beperken.
 
@@ -33,12 +33,12 @@ geen aanvullende eisen uit het interview. Medische tekstvelden krijgen
 | Naam | `PatientName` | 200 tekens |
 | Adres | `PatientAddress` | 300 tekens |
 | Woonplaats | `PatientCity` | 100 tekens |
-| Telefoonnummer | `PatientPhoneNumber` | 32 tekens |
+| Telefoonnummer | `PatientPhoneNumber` | Optioneel, maximaal 32 tekens |
 | E-mailadres | `PatientEmailAddress` | 254 tekens |
 | Specialisme | `Specialty` | 100 tekens |
 | Behandelcode | `TreatmentCode` | 50 tekens |
-| Reden van verwijzing | `ReasonForReferral` | `nvarchar(max)` |
-| Vraagstelling | `ClinicalQuestion` | `nvarchar(max)` |
+| Reden van verwijzing en vraagstelling | `ReasonForReferral` | `nvarchar(max)` |
+| Losse vraagstelling uit oudere aanvragen | `ClinicalQuestion` | `nvarchar(max)`, leeg bij het nieuwe formulier |
 | Medicatie | `Medication` | `nvarchar(max)` |
 | Medische gegevens | `MedicalInformation` | `nvarchar(max)` |
 | Allergieen | `Allergies` | `nvarchar(max)` |

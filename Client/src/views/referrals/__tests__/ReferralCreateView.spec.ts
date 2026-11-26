@@ -41,9 +41,13 @@ async function setup(status = 201, delayed = false) {
   await wrapper.get('#referral-specialty').setValue('KNO')
   await flushPromises()
   await wrapper.get('#referral-treatment').setValue('Z0005')
-  for (const input of wrapper.findAll('input:not([type=file]), textarea')) {
+  for (const input of wrapper.findAll(
+    'input:not([type=file]):not([type=search]):not([data-pending-entry]), textarea',
+  )) {
     await input.setValue(input.attributes('type') === 'email' ? 'test@example.invalid' : 'Fictief')
   }
+  await wrapper.get('#referral-medication').setValue('Geen medicatie')
+  await wrapper.get('#referral-allergies').setValue('Onbekend')
   return { wrapper, post, finish: () => finish?.() }
 }
 
@@ -57,6 +61,45 @@ it('blokkeert dubbele verzending en wist de invoer na bevestiging', async () => 
   await flushPromises()
   expect(wrapper.text()).toContain('opgeslagen met status Open')
   expect(wrapper.find('form').exists()).toBe(false)
+  wrapper.unmount()
+})
+
+it('slaat een verwijzing op zonder telefoonnummer', async () => {
+  const { wrapper, post } = await setup()
+  const phone = wrapper.get('#patient-phone')
+  expect(phone.attributes('required')).toBeUndefined()
+  await phone.setValue('')
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(post).toHaveBeenCalledTimes(1)
+  expect(wrapper.text()).toContain('opgeslagen met status Open')
+  wrapper.unmount()
+})
+
+it('verstuurt meerdere medicijnen en een zelf toegevoegd allergeen met één verwijsbericht', async () => {
+  const { wrapper } = await setup()
+  const fetchMock = vi.mocked(fetch)
+  const medication = wrapper.get('#referral-medication')
+  await wrapper.get('#referral-medication-search').setValue('para')
+  const result = wrapper.findAll('button').find((button) => button.text() === 'Paracetamol')
+  expect(result).toBeDefined()
+  await result!.trigger('click')
+  await medication.setValue('Metformine')
+  const custom = wrapper.get('#referral-allergies-custom')
+  await custom.setValue('Fictieve stof')
+  expect((custom.element as HTMLInputElement).checkValidity()).toBe(false)
+  await custom.trigger('keydown', { key: 'Enter' })
+  await wrapper.get('#referral-reason').setValue('Reden: klachten. Vraag: onderzoek mogelijk?')
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+
+  const request = fetchMock.mock.calls.find(([, options]) => options?.method === 'POST')?.[1]
+  expect(JSON.parse(String(request?.body))).toMatchObject({
+    medication: 'Paracetamol\nMetformine',
+    allergies: 'Fictieve stof',
+    reasonForReferral: 'Reden: klachten. Vraag: onderzoek mogelijk?',
+  })
+  expect(JSON.parse(String(request?.body))).not.toHaveProperty('clinicalQuestion')
   wrapper.unmount()
 })
 

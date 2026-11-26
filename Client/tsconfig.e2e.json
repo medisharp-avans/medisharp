@@ -2,12 +2,12 @@
   "extends": "./tsconfig.app.json",
 
   // Node scripts for Lighthouse/axe. They import the Vue router, so they reuse
-  // the app config (path aliases, .vue types) with Node types instead of DOM.
+  // the app config (including DOM types for the imported views) plus Node types.
   "include": ["e2e/**/*.ts", "env.d.ts"],
   "exclude": [],
 
   "compilerOptions": {
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo"
   }

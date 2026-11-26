@@ -220,6 +220,26 @@ namespace Server.Tests.Tests.Integration
             Assert.AreEqual(0, await CountReferralsAsync(factory));
         }
 
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task OptionalPhoneIsStoredAsNull(bool sendBlankPhone)
+        {
+            using var factory = new ReferralApiFactory();
+            using var client = factory.CreateClient();
+            var request = ValidJson();
+            request.Remove("clinicalQuestion");
+            if (sendBlankPhone) request["patientPhoneNumber"] = "   ";
+            else request.Remove("patientPhoneNumber");
+
+            using var response = await client.PostAsJsonAsync("/api/referrals", request);
+            Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+            using var scope = factory.Services.CreateScope();
+            var saved = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Referrals.SingleAsync();
+            Assert.IsNull(saved.PatientPhoneNumber);
+            Assert.AreEqual(string.Empty, saved.ClinicalQuestion);
+        }
+
         private JsonObject ValidJson() => JsonSerializer.SerializeToNode(
             new ReferralRequests().Valid(), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.AsObject();
 
