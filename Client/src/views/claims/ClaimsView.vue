@@ -144,7 +144,7 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
 </script>
 
 <template>
-  <section class="p-6 text-gray-900" aria-labelledby="claims-title">
+  <section class="p-2 sm:p-6 text-gray-900" aria-labelledby="claims-title">
     <header class="mb-6">
       <h1 id="claims-title" class="text-2xl font-bold">Declaraties</h1>
       <p
@@ -159,12 +159,12 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
       </p>
     </header>
 
-    <div class="mb-4 flex w-full max-w-3xl items-end gap-2">
+    <div class="mb-4 flex w-full max-w-3xl flex-wrap items-end gap-2">
       <SearchField
         id="claims-search"
         v-model="searchInput"
         placeholder="Nummer, patiënt, polisnummer of medewerker"
-        class="flex-1"
+        class="min-w-0 basis-full sm:basis-auto sm:flex-1"
         data-testid="claims-search"
       />
       <BaseSelect
@@ -173,7 +173,7 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
         label="Status"
         :options="claimStatusOptions"
         empty-label="Alle statussen"
-        class="w-56 shrink-0"
+        class="min-w-0 flex-1 sm:w-56 sm:flex-none"
         data-testid="claims-status-filter"
       />
       <button
@@ -238,7 +238,7 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
               <th scope="col" class="w-12 px-4 py-3">
                 <input
                   type="checkbox"
-                  class="h-4 w-4 cursor-pointer accent-blue-600"
+                  class="h-5 w-5 cursor-pointer accent-blue-600"
                   name="claims-select-page"
                   :checked="allOnPageSelected"
                   aria-label="Alle declaraties op deze pagina selecteren"
@@ -275,7 +275,7 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
               <td class="px-4 py-3" @click.stop>
                 <input
                   type="checkbox"
-                  class="h-4 w-4 cursor-pointer accent-blue-600"
+                  class="h-5 w-5 cursor-pointer accent-blue-600"
                   name="selected-claims"
                   :value="claim.id"
                   :checked="selectedIds.has(claim.id)"

@@ -49,7 +49,7 @@ const icon = computed(() => {
       <HugeiconsIcon
         :icon="icon"
         class="w-4 h-4"
-        :class="active ? 'text-blue-700' : 'text-gray-400'"
+        :class="active ? 'text-blue-700' : 'text-gray-500'"
         aria-hidden="true"
       />
     </button>

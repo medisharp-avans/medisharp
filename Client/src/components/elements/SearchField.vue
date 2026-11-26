@@ -35,7 +35,7 @@ const model = defineModel<string>({ required: true })
         type="search"
         :placeholder="placeholder"
         autocomplete="off"
-        class="h-10 w-full rounded-xl border border-gray-300 bg-white pl-10 pr-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+        class="h-10 w-full rounded-xl border border-gray-300 bg-white pl-10 pr-3 placeholder:text-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
       />
     </div>
   </div>

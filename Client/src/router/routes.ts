@@ -11,7 +11,7 @@ const routes = [
     path: '/profiel',
     name: 'Profile',
     component: () => import('@/views/profile/ProfileView.vue'),
-    meta: { requiresAuth: true },
+    meta: { title: 'Profiel', requiresAuth: true },
   },
 
   // Main routes
@@ -19,49 +19,49 @@ const routes = [
     path: '/',
     name: 'Home',
     component: () => import('@/views/HomeView.vue'),
-    meta: { requiresAuth: true },
+    meta: { title: 'Home', requiresAuth: true },
   },
   {
     path: '/afspraken',
     name: 'Appointments',
     component: () => import('@/views/appointments/AppointmentsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { title: 'Afspraken', requiresAuth: true },
   },
   {
     path: '/afspraken/nieuw',
     name: 'NewAppointment',
     component: () => import('@/views/appointments/AppointmentsForm.vue'),
-    meta: { requiresAuth: true },
+    meta: { title: 'Afspraak aanmaken', requiresAuth: true },
   },
   {
     path: '/medisch-dossier',
     name: 'MedicalFile',
     component: () => import('@/views/medicalFiles/MedicalFileView.vue'),
-    meta: { requiresAuth: true },
+    meta: { title: 'Medisch dossier', requiresAuth: true },
   },
   {
     path: '/verwijsbrieven',
     name: 'Referrals',
     component: () => import('@/views/referrals/ReferralsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { title: 'Verwijsbrieven', requiresAuth: true },
   },
   {
     path: '/patienten',
     name: 'Patients',
     component: () => import('@/views/patients/PatientsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { title: 'Patiënten', requiresAuth: true },
   },
   {
     path: '/onderzoeksresultaten',
     name: 'MedicalResults',
     component: () => import('@/views/medicalResults/MedicalResultsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { title: 'Onderzoeksuitslagen', requiresAuth: true },
   },
   {
     path: '/declaraties',
     name: 'Claims',
     component: () => import('@/views/claims/ClaimsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { title: 'Declaraties', requiresAuth: true },
   },
 
   // Error routes
@@ -69,31 +69,31 @@ const routes = [
     path: '/400',
     name: '400',
     component: () => import('@/views/errors/400View.vue'),
-    meta: { hideLayout: true },
+    meta: { title: 'Ongeldig verzoek', hideLayout: true },
   },
   {
     path: '/401',
     name: '401',
     component: () => import('@/views/errors/401View.vue'),
-    meta: { hideLayout: true },
+    meta: { title: 'Niet ingelogd', hideLayout: true },
   },
   {
     path: '/403',
     name: '403',
     component: () => import('@/views/errors/403View.vue'),
-    meta: { hideLayout: true },
+    meta: { title: 'Geen toegang', hideLayout: true },
   },
   {
     path: '/404',
     name: '404',
     component: () => import('@/views/errors/404View.vue'),
-    meta: { hideLayout: true },
+    meta: { title: 'Pagina niet gevonden', hideLayout: true },
   },
   {
     path: '/500',
     name: '500',
     component: () => import('@/views/errors/500View.vue'),
-    meta: { hideLayout: true },
+    meta: { title: 'Er is iets misgegaan', hideLayout: true },
   },
 
   // Catch all route
