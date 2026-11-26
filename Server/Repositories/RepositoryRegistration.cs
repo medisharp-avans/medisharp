@@ -21,6 +21,7 @@ namespace Server.Repositories
             repositories.AddScoped<IAppointmentRepository, AppointmentRepository>();
             repositories.AddScoped<IReferralRepository, ReferralRepository>();
             repositories.AddScoped<IPlanningRepository, PlanningRepository>();
+            repositories.AddScoped<IClaimRepository, ClaimRepository>();
             return repositories;
         }
     }

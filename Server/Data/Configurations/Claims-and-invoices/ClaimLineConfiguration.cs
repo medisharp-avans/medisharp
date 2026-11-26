@@ -15,8 +15,6 @@ namespace Server.Data.Configurations
                 table.HasCheckConstraint("CK_claim_lines_reimbursed_amount", "[reimbursed_amount] IS NULL OR [reimbursed_amount] BETWEEN 0 AND [submitted_amount]");
                 table.HasCheckConstraint("CK_claim_lines_submission_count", "[submission_count] >= 0");
                 table.HasCheckConstraint("CK_claim_lines_status", DbEnum<ClaimLineStatus>.CheckSql("status"));
-                table.HasCheckConstraint("CK_claim_lines_rejection_reason",
-                    $"[rejection_reason] IS NULL OR {DbEnum<ClaimRejectionReason>.CheckSql("rejection_reason")}");
             });
 
             builder.HasKey(cl => cl.Id);
@@ -25,7 +23,7 @@ namespace Server.Data.Configurations
             builder.Property(cl => cl.AppointmentId).HasColumnName("appointment_id");
             builder.Property(cl => cl.SubmittedAmount).HasColumnName("submitted_amount").HasPrecision(10, 2);
             builder.Property(cl => cl.ReimbursedAmount).HasColumnName("reimbursed_amount").HasPrecision(10, 2);
-            builder.Property(cl => cl.RejectionReason).HasColumnName("rejection_reason").HasMaxLength(30).HasConversion<string>();
+            builder.Property(cl => cl.RejectionReason).HasColumnName("rejection_reason").HasMaxLength(50);
             builder.Property(cl => cl.Status).HasColumnName("status").HasMaxLength(50).HasConversion<string>();
             builder.Property(cl => cl.SubmittedAt).HasColumnName("submitted_at");
             builder.Property(cl => cl.SubmissionCount).HasColumnName("submission_count");

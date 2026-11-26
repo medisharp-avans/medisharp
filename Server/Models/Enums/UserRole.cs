@@ -6,6 +6,7 @@
         Huisarts,
         Specialist,
         Ziekenhuismedewerker,
+        Administratiemedewerker,
         Systeembeheerder
     }
 }

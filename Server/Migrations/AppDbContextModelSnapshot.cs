@@ -195,8 +195,8 @@ namespace Server.Migrations
                         .HasColumnName("reimbursed_amount");
 
                     b.Property<string>("RejectionReason")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
                         .HasColumnName("rejection_reason");
 
                     b.Property<string>("Status")
@@ -229,8 +229,6 @@ namespace Server.Migrations
                     b.ToTable("claim_lines", null, t =>
                         {
                             t.HasCheckConstraint("CK_claim_lines_reimbursed_amount", "[reimbursed_amount] IS NULL OR [reimbursed_amount] BETWEEN 0 AND [submitted_amount]");
-
-                            t.HasCheckConstraint("CK_claim_lines_rejection_reason", "[rejection_reason] IS NULL OR [rejection_reason] IN (N'PolicyCondition', N'MaximumReached', N'InvalidPolicyNumber')");
 
                             t.HasCheckConstraint("CK_claim_lines_status", "[status] IN (N'Pending', N'Reimbursed', N'PartiallyReimbursed', N'Rejected')");
 

@@ -15,7 +15,7 @@ namespace Server.Models
 
         public decimal SubmittedAmount { get; set; }
         public decimal? ReimbursedAmount { get; set; }
-        public ClaimRejectionReason? RejectionReason { get; set; }
+        public string? RejectionReason { get; set; }
         public ClaimLineStatus Status { get; set; } = ClaimLineStatus.Pending;
 
         public DateTime? SubmittedAt { get; set; }
