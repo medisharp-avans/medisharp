@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import StepProgress from './StepProgress.vue'
+import PrimaryButton from '../elements/PrimaryButton.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -86,14 +87,12 @@ watch(
         </button>
         <span v-else />
 
-        <button
-          type="submit"
+         <PrimaryButton
           :data-testid="isLast ? 'submit' : 'step-next'"
-          :disabled="isLast && loading"
-          class="rounded-md bg-blue-600 px-5 py-2 font-medium text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
+          :loading="isLast && loading"
         >
-          {{ isLast ? (loading ? 'Bezig...' : submitLabel) : 'Volgende' }}
-        </button>
+          {{ isLast ? submitLabel : 'Volgende' }}
+        </PrimaryButton>
       </div>
     </form>
   </div>

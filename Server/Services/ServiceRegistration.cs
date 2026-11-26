@@ -16,11 +16,13 @@ namespace Server.Services
         /// <returns>The same service collection instance, enabling method chaining.</returns>
         public static IServiceCollection AddRegisteredServices(this IServiceCollection services)
         {
+            services.AddHttpClient();
+            services.AddSingleton<IcalUrlProtector>();
             services.AddSingleton(TimeProvider.System);
+            services.AddHostedService<CalendarBackgroundWorker>();
             services.AddScoped<ICalculateService, CalculateService>();
-
+            services.AddScoped<IAgendaService, CalendarSyncService>();
             services.AddScoped<IAppointmentService, AppointmentService>();
-            services.AddScoped<IReferralService, ReferralService>();
             services.AddScoped<IPlanningService, PlanningService>();
             return services;
         }

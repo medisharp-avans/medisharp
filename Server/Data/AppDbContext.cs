@@ -17,6 +17,8 @@ namespace Server.Data
         public DbSet<Referral> Referrals { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<TreatmentCode> TreatmentCodes { get; set; }
+        public DbSet<UserCalendarConnection> UserCalendarConnections { get; set; }
+        public DbSet<ExternalCalendarEvent> ExternalCalendarEvents { get; set; }
         public DbSet<Availability> Availabilities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -71,6 +73,29 @@ namespace Server.Data
 
                 e.Property(s => s.Specialism)
                     .HasConversion<string>();
+            });
+
+            modelBuilder.Entity<UserCalendarConnection>(e =>
+            {
+                e.HasOne(c => c.Specialist)
+                    .WithOne()
+                    .HasForeignKey<UserCalendarConnection>(c => c.SpecialistId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasIndex(c => c.SpecialistId)
+                    .IsUnique();
+            });
+
+            // ExternalCalendarEvent relaties & unieke index
+            modelBuilder.Entity<ExternalCalendarEvent>(e =>
+            {
+                e.HasOne(ev => ev.Specialist) 
+                    .WithMany()               
+                    .HasForeignKey(ev => ev.SpecialistId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasIndex(ev => new { ev.SpecialistId, ev.ExternalUid })
+                    .IsUnique();
             });
 
             // GeneralPractitioner relaties

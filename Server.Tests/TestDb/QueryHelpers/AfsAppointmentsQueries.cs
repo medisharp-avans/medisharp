@@ -6,14 +6,14 @@ using Server.Tests.TestDb;
 using Server.Tests.Utils;
 using System.Data;
 
-namespace Server.Tests.Helpers
+namespace Server.Tests.TestDb.QueryHelpers
 {
     /// <summary>
     /// Arrange/Assert via de database. Namen uit de tests zijn de FullName van de User van de patiënt of specialist,
     /// omdat Patient en Specialist zelf geen naam hebben (die staat via UserId op User).
     /// Een afspraak maakt zelf een verwijzing aan; de helpers hier doen dat ook voor bestaande afspraken.
     /// </summary>
-    public static class AfsHelperQueries
+    public static class AfsAppointmentsQueries
     {
         private static SqlParameter NameParam(string name) => new("@u", name);
 

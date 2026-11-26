@@ -23,4 +23,3 @@ namespace Server.Repositories.InterFaces
         Task<Appointment> CreateWithReferralAsync(CreateAppointmentDTO appointment, CreateReferralRequestDTO referral);
     }
 }
-}

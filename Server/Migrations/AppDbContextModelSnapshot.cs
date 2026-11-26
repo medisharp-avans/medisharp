@@ -87,6 +87,42 @@ namespace Server.Migrations
                     b.ToTable("Availabilities");
                 });
 
+            modelBuilder.Entity("Server.Models.ExternalCalendarEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("EndUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ExternalUid")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsAllDay")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SpecialistId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpecialistId", "ExternalUid")
+                        .IsUnique();
+
+                    b.ToTable("ExternalCalendarEvents");
+                });
+
             modelBuilder.Entity("Server.Models.GeneralPractitioner", b =>
                 {
                     b.Property<int>("Id")
@@ -316,6 +352,32 @@ namespace Server.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Server.Models.UserCalendarConnection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("EncryptedIcalUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastSyncedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SpecialistId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpecialistId")
+                        .IsUnique();
+
+                    b.ToTable("UserCalendarConnections");
+                });
+
             modelBuilder.Entity("Server.Models.Appointment", b =>
                 {
                     b.HasOne("Server.Models.Patient", "Patient")
@@ -348,6 +410,17 @@ namespace Server.Migrations
                         .WithMany("Availabilities")
                         .HasForeignKey("SpecialistId")
                         .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Specialist");
+                });
+
+            modelBuilder.Entity("Server.Models.ExternalCalendarEvent", b =>
+                {
+                    b.HasOne("Server.Models.Specialist", "Specialist")
+                        .WithMany()
+                        .HasForeignKey("SpecialistId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Specialist");
@@ -425,6 +498,17 @@ namespace Server.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Server.Models.UserCalendarConnection", b =>
+                {
+                    b.HasOne("Server.Models.Specialist", "Specialist")
+                        .WithOne()
+                        .HasForeignKey("Server.Models.UserCalendarConnection", "SpecialistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Specialist");
                 });
 
             modelBuilder.Entity("Server.Models.GeneralPractitioner", b =>

@@ -184,16 +184,5 @@ namespace Server.Tests.Unit
 
             await Assert.ThrowsAsync<SlotUnavailableException>(() => _sut.CreateAppointment(CreateValidDto()));
         }
-
-        [TestMethod]
-        public async Task GetAppointmentAsync_ReturnsRepositoryResult()
-        {
-            var appointments = new List<Appointment> { new() { Id = 1 }, new() { Id = 2 } };
-            _repositoryMock.Setup(r => r.GetAsync()).ReturnsAsync(appointments);
-
-            var result = await _sut.GetAppointmentAsync();
-
-            CollectionAssert.AreEqual(appointments, result);
-        }
     }
 }

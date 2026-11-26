@@ -12,6 +12,7 @@ import { useLookup } from '@/composables/forms/useLookup'
 import { useFormMessage } from '@/composables/forms/useFormMessage'
 import { enumOptions } from '@/utils/enumOptions'
 import { Specialism, type Patient, type Specialist, type TreatmentCode } from '@/types/appointment'
+import ContentCard from '@/components/Layout/ContentCard.vue'
 
 const steps = [
   {
@@ -170,102 +171,104 @@ async function submit() {
 
 <template>
   <div class="mx-auto max-w-3xl p-6">
-    <h1 class="mb-2 text-2xl font-semibold">Afspraak aanmaken</h1>
-    <p class="mb-6 text-sm text-gray-600">Velden zonder "optioneel" zijn verplicht.</p>
+    <ContentCard>
+      <template #title>Afspraak aanmaken</template>
+      <template #description>Velden zonder "optioneel" zijn verplicht.</template>
+  
+      <FormMessage :message="message" class="mb-6" />
 
-    <FormMessage :message="message" class="mb-6" />
+      <StepForm
+        v-model="step"
+        :steps="steps"
+        :loading="loading"
+        submit-label="Afspraak aanmaken"
+        @submit="submit"
+      >
+        <!-- Stap 1: patiënt & specialisme -->
+        <template #step-patient>
+          <DatalistField
+            id="patientId"
+            v-model="patientText"
+            label="Patiënt"
+            hint="Typ een naam en kies een patiënt uit de lijst."
+            :options="patientOptions"
+            placeholder="Zoek op naam…"
+            data-testid="patient-id"
+            required
+          />
 
-    <StepForm
-      v-model="step"
-      :steps="steps"
-      :loading="loading"
-      submit-label="Afspraak aanmaken"
-      @submit="submit"
-    >
-      <!-- Stap 1: patiënt & specialisme -->
-      <template #step-patient>
-        <DatalistField
-          id="patientId"
-          v-model="patientText"
-          label="Patiënt"
-          hint="Typ een naam en kies een patiënt uit de lijst."
-          :options="patientOptions"
-          placeholder="Zoek op naam…"
-          data-testid="patient-id"
-          required
-        />
+          <SelectField
+            id="specialism"
+            v-model="form.specialism"
+            label="Specialisme"
+            :options="specialismOptions"
+            placeholder="Kies een specialisme"
+            data-testid="specialism"
+            required
+          />
+        </template>
 
-        <SelectField
-          id="specialism"
-          v-model="form.specialism"
-          label="Specialisme"
-          :options="specialismOptions"
-          placeholder="Kies een specialisme"
-          data-testid="specialism"
-          required
-        />
-      </template>
+        <!-- Stap 2: behandeling -->
+        <template #step-care>
+          <DatalistField
+            id="specialistId"
+            v-model="specialistText"
+            label="Voorkeursspecialist"
+            hint="Laat leeg als er geen voorkeur is."
+            :options="specialistOptions"
+            :disabled="form.specialism === ''"
+            :placeholder="form.specialism === '' ? 'Kies eerst een specialisme' : 'Zoek op naam…'"
+            data-testid="specialist-id"
+            optional
+          />
 
-      <!-- Stap 2: behandeling -->
-      <template #step-care>
-        <DatalistField
-          id="specialistId"
-          v-model="specialistText"
-          label="Voorkeursspecialist"
-          hint="Laat leeg als er geen voorkeur is."
-          :options="specialistOptions"
-          :disabled="form.specialism === ''"
-          :placeholder="form.specialism === '' ? 'Kies eerst een specialisme' : 'Zoek op naam…'"
-          data-testid="specialist-id"
-          optional
-        />
+          <DatalistField
+            id="treatmentCode"
+            v-model="codeText"
+            label="Behandelcode"
+            :options="codeOptions"
+            :disabled="form.specialism === ''"
+            :placeholder="form.specialism === '' ? 'Kies eerst een specialisme' : 'Zoek op code…'"
+            data-testid="treatment-code"
+            required
+          />
+        </template>
 
-        <DatalistField
-          id="treatmentCode"
-          v-model="codeText"
-          label="Behandelcode"
-          :options="codeOptions"
-          :disabled="form.specialism === ''"
-          :placeholder="form.specialism === '' ? 'Kies eerst een specialisme' : 'Zoek op code…'"
-          data-testid="treatment-code"
-          required
-        />
-      </template>
+        <!-- Stap 3: details -->
+        <template #step-details>
+          <TextAreaField
+            id="reason"
+            v-model="form.reason"
+            label="Reden"
+            hint="Maximaal 500 tekens."
+            :maxlength="500"
+            data-testid="reason"
+            required
+          />
 
-      <!-- Stap 3: details -->
-      <template #step-details>
-        <TextAreaField
-          id="reason"
-          v-model="form.reason"
-          label="Reden"
-          hint="Maximaal 500 tekens."
-          :maxlength="500"
-          data-testid="reason"
-          required
-        />
+          <TextAreaField
+            id="questionnaire"
+            v-model="form.questionnaire"
+            label="Vragenlijst"
+            data-testid="questionnaire"
+            optional
+          />
 
-        <TextAreaField
-          id="questionnaire"
-          v-model="form.questionnaire"
-          label="Vragenlijst"
-          data-testid="questionnaire"
-          optional
-        />
+          <SelectField
+            id="urgency"
+            v-model="form.urgency"
+            label="Urgentie"
+            :options="urgencyOptions"
+            data-testid="urgency"
+            required
+          />
+        </template>
 
-        <SelectField
-          id="urgency"
-          v-model="form.urgency"
-          label="Urgentie"
-          :options="urgencyOptions"
-          data-testid="urgency"
-          required
-        />
-      </template>
-
-      <!-- Stap 4: controleren -->
-      <template #step-review>
-        <SummaryList :items="summaryItems" @edit="step = $event" />
-      </template>
-    </StepForm>
+        <!-- Stap 4: controleren -->
+        <template #step-review>
+          <SummaryList :items="summaryItems" @edit="step = $event" />
+        </template>
+      </StepForm>
+    </ContentCard>
   </div>
 </template>
