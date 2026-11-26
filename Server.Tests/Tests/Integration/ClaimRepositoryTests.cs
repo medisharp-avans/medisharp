@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Server.Models.DTO.Common;
+using Server.Models.Enums;
 using Server.Repositories;
 using Server.Tests.TestDb;
 
@@ -26,9 +27,9 @@ namespace Server.Tests.Tests.Integration
             _sut = new ClaimRepository(DbContext);
         }
 
-        private async Task<string[]> PolicyNumbersAsync(PagedQuery query)
+        private async Task<string[]> PolicyNumbersAsync(PagedQuery query, ClaimStatus? status = null)
         {
-            var (items, _) = await _sut.GetOverviewPageAsync(query);
+            var (items, _) = await _sut.GetOverviewPageAsync(query, status);
             return [.. items.Select(i => i.PolicyNumber)];
         }
 
@@ -51,6 +52,24 @@ namespace Server.Tests.Tests.Integration
         {
             string[] expected = ["POLIS-DDD", "POLIS-BBB", "POLIS-AAA", "POLIS-CCC"];
             CollectionAssert.AreEqual(expected, await PolicyNumbersAsync(new PagedQuery()));
+        }
+
+        [TestMethod]
+        [DataRow(ClaimStatus.ToReview, new[] { "POLIS-DDD", "POLIS-BBB" })]
+        [DataRow(ClaimStatus.ReadyToSend, new[] { "POLIS-CCC" })]
+        [DataRow(ClaimStatus.Processed, new[] { "POLIS-AAA" })]
+        public async Task GetOverviewPageAsync_StatusFilter_ReturnsOnlyClaimsWithThatStatus(ClaimStatus status, string[] expected)
+        {
+            CollectionAssert.AreEqual(expected, await PolicyNumbersAsync(new PagedQuery(), status));
+        }
+
+        [TestMethod]
+        public async Task GetOverviewPageAsync_StatusFilterAndSearch_CountsOnlyRowsMatchingBoth()
+        {
+            var (items, totalCount) = await _sut.GetOverviewPageAsync(new PagedQuery { Search = "jansen" }, ClaimStatus.Processed);
+
+            Assert.AreEqual(1, totalCount);
+            Assert.AreEqual("POLIS-AAA", items.Single().PolicyNumber);
         }
 
         [TestMethod]

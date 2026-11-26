@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Server.Models.DTO.Common;
 using Server.Models.DTO.Responses;
+using Server.Models.Enums;
 using Server.Services.InterFaces;
 
 namespace Server.Controllers
@@ -16,19 +17,22 @@ namespace Server.Controllers
     public class ClaimsController(IClaimService _service) : BaseApiController
     {
         /// <summary>
-        /// Retrieves one page of the claims overview, with optional search and sort.
+        /// Retrieves one page of the claims overview, with optional search, status filter and sort.
         /// SortBy: Id, Patient, PolicyNumber, Status, LineCount, TotalAmount, ReviewedBy, CreatedAt or LastModifiedAt.
         /// Without a sort column, claims with status ToReview come first.
         /// </summary>
         /// <param name="query">Search term, sort column and direction, page and page size.</param>
+        /// <param name="status">Only claims with this status; all claims when empty.</param>
         /// <response code="200">Returns one page of the claims overview.</response>
         /// <response code="400">Invalid search or paging values.</response>
         [HttpGet]
         [ProducesResponseType(typeof(PagedResult<ClaimOverviewDTO>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<PagedResult<ClaimOverviewDTO>>> GetOverview([FromQuery] PagedQuery query)
+        public async Task<ActionResult<PagedResult<ClaimOverviewDTO>>> GetOverview(
+            [FromQuery] PagedQuery query,
+            [FromQuery] ClaimStatus? status = null)
         {
-            return Ok(await _service.GetOverviewPageAsync(query));
+            return Ok(await _service.GetOverviewPageAsync(query, status));
         }
 
         /// <summary>Counts all claims that still need to be reviewed, for the notice above the overview.</summary>

@@ -14,7 +14,7 @@ import {
 
 <template>
   <nav id="main-navigation" aria-label="Hoofdnavigatie" class="h-full py-4 text-gray-900">
-    <ul class="flex flex-col gap-1 px-2">
+    <ul class="flex flex-col gap-1 px-0.5">
       <AppNavigationItem route-name="Home" :icon="Home01Icon">Home</AppNavigationItem>
       <AppNavigationItem route-name="Appointments" :icon="Calendar03Icon">
         Afspraken

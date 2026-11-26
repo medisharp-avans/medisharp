@@ -1,6 +1,7 @@
 ﻿using Moq;
 using Server.Models.DTO.Common;
 using Server.Models.DTO.Responses;
+using Server.Models.Enums;
 using Server.Repositories.InterFaces;
 using Server.Services;
 
@@ -29,7 +30,7 @@ namespace Server.Tests.Tests.Unit
         {
             var query = new PagedQuery { Page = 2, PageSize = 10 };
             List<ClaimOverviewDTO> items = [new() { Id = 11 }, new() { Id = 12 }];
-            _repositoryMock.Setup(r => r.GetOverviewPageAsync(query)).ReturnsAsync((items, 12));
+            _repositoryMock.Setup(r => r.GetOverviewPageAsync(query, null)).ReturnsAsync((items, 12));
 
             var result = await _sut.GetOverviewPageAsync(query);
 
@@ -45,12 +46,25 @@ namespace Server.Tests.Tests.Unit
         {
             var query = new PagedQuery();
             List<ClaimOverviewDTO> noItems = [];
-            _repositoryMock.Setup(r => r.GetOverviewPageAsync(query)).ReturnsAsync((noItems, 0));
+            _repositoryMock.Setup(r => r.GetOverviewPageAsync(query, null)).ReturnsAsync((noItems, 0));
 
             var result = await _sut.GetOverviewPageAsync(query);
 
             Assert.IsEmpty(result.Items);
             Assert.AreEqual(0, result.TotalPages);
+        }
+
+        [TestMethod]
+        public async Task GetOverviewPageAsync_PassesTheStatusFilterToTheRepository()
+        {
+            var query = new PagedQuery();
+            List<ClaimOverviewDTO> items = [new() { Id = 1, Status = ClaimStatus.ReadyToSend }];
+            _repositoryMock.Setup(r => r.GetOverviewPageAsync(query, ClaimStatus.ReadyToSend)).ReturnsAsync((items, 1));
+
+            var result = await _sut.GetOverviewPageAsync(query, ClaimStatus.ReadyToSend);
+
+            Assert.AreSame(items, result.Items);
+            _repositoryMock.Verify(r => r.GetOverviewPageAsync(query, ClaimStatus.ReadyToSend), Times.Once);
         }
 
         [TestMethod]

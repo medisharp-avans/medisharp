@@ -204,6 +204,23 @@ describe('ClaimsView', () => {
     expect(wrapper.find('[data-testid="claims-to-review-count"]').exists()).toBe(false)
   })
 
+  it('filters on status, goes back to page 1 and clears the filter with the reset button', async () => {
+    state.data.value = pageOf([claim(1, ClaimStatus.ToReview)], { totalPages: 3 })
+    const wrapper = mount(ClaimsView)
+    const reset = () => wrapper.find('[data-testid="claims-reset-filters"]')
+
+    await wrapper.find('[data-testid="pagination-next"]').trigger('click')
+    expect(params().status).toBeUndefined()
+
+    await wrapper.find('[data-testid="claims-status-filter"]').setValue(ClaimStatus.ReadyToSend)
+    expect(params()).toMatchObject({ status: ClaimStatus.ReadyToSend, page: 1 })
+    expect(reset().attributes('disabled')).toBeUndefined()
+
+    await reset().trigger('click')
+    expect(params().status).toBeUndefined()
+    expect(reset().attributes('disabled')).toBeDefined()
+  })
+
   it('shows an error message when loading fails', () => {
     state.error.value = 'Er is iets misgegaan.'
     const wrapper = mount(ClaimsView)

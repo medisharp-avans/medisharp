@@ -17,12 +17,14 @@ defineProps<{
   <li>
     <RouterLink
       :to="{ name: routeName }"
-      class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-900 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 transition-all font-medium"
+      class="flex gap-3 px-4 py-3 rounded-xl text-gray-900 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 transition-all font-medium"
       active-class="!bg-blue-100 hover:!bg-blue-200 !text-blue-900 font-semibold shadow-sm"
       :id="routeName + 'Route-link'"
     >
-      <HugeiconsIcon :icon="icon" class="w-6 h-6" aria-hidden="true" />
-      <slot></slot>
+      <div class="flex items-center gap-2">
+        <HugeiconsIcon :icon="icon" class="w-6 h-6" aria-hidden="true" />
+        <slot></slot>
+      </div>
     </RouterLink>
   </li>
 </template>

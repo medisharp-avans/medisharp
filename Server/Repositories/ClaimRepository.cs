@@ -12,9 +12,12 @@ namespace Server.Repositories
     public class ClaimRepository(AppDbContext context) : Repository<Claim>(context), IClaimRepository
     {
         /// <inheritdoc />
-        public async Task<(List<ClaimOverviewDTO> Items, int TotalCount)> GetOverviewPageAsync(PagedQuery query)
+        public async Task<(List<ClaimOverviewDTO> Items, int TotalCount)> GetOverviewPageAsync(PagedQuery query, ClaimStatus? status = null)
         {
-            var rows = ApplySearch(ToOverview(_context.Claims.AsNoTracking()), query.Search);
+            var claims = _context.Claims.AsNoTracking();
+            if (status is { } wanted) claims = claims.Where(c => c.Status == wanted);
+
+            var rows = ApplySearch(ToOverview(claims), query.Search);
 
             var totalCount = await rows.CountAsync();
             var items = await ApplySort(rows, query.SortBy, query.SortDescending)

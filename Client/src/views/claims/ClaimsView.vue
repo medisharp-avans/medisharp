@@ -3,32 +3,25 @@
 // Without a sort column the server puts the claims to review first.
 import { computed, ref, watch } from 'vue'
 import { HugeiconsIcon } from '@hugeicons/vue'
-import {
-  AlertCircleIcon,
-  ArrowDown01Icon,
-  ArrowUp01Icon,
-  ArrowUpDownIcon,
-  FilterRemoveIcon,
-  FolderAddIcon,
-  Search01Icon,
-} from '@hugeicons/core-free-icons'
+import { AlertCircleIcon, FilterRemoveIcon, FolderAddIcon } from '@hugeicons/core-free-icons'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import PaginationControls from '@/components/elements/PaginationControls.vue'
+import SearchField from '@/components/elements/SearchField.vue'
+import SelectionCount from '@/components/elements/SelectionCount.vue'
+import SortableColumnHeader from '@/components/elements/SortableColumnHeader.vue'
+import ClaimStatusBadge from '@/components/claims/ClaimStatusBadge.vue'
+import ClaimStatusSelect from '@/components/claims/ClaimStatusSelect.vue'
 import { useFetch } from '@/composables/api/useFetch'
 import { endpoints } from '@/services/endpoints'
-import {
-  ClaimStatus,
-  claimStatusClasses,
-  claimStatusLabels,
-  type ClaimOverview,
-  type ClaimSortField,
-} from '@/types/claim'
+import { ClaimStatus, type ClaimOverview, type ClaimSortField } from '@/types/claim'
 import type { PagedResult } from '@/types/pagination'
 
 const PAGE_SIZE = 20
 const SEARCH_DELAY_MS = 300
 
 const searchInput = ref('')
+/** Only claims with this status; null shows all claims. */
+const statusFilter = ref<ClaimStatus | null>(null)
 const search = ref('')
 const sortBy = ref<ClaimSortField | null>(null)
 const sortDescending = ref(false)
@@ -40,6 +33,7 @@ const {
   error,
 } = useFetch<PagedResult<ClaimOverview>>(endpoints.claims.overview, () => ({
   search: search.value || undefined,
+  status: statusFilter.value ?? undefined,
   sortBy: sortBy.value ?? undefined,
   sortDescending: sortBy.value ? sortDescending.value : undefined,
   page: page.value,
@@ -61,7 +55,7 @@ watch(searchInput, (value) => {
 })
 
 // A new search or sort starts at page 1 again.
-watch([search, sortBy, sortDescending], () => {
+watch([search, statusFilter, sortBy, sortDescending], () => {
   page.value = 1
 })
 
@@ -87,25 +81,18 @@ function toggleSort(field: ClaimSortField) {
   }
 }
 
-// ----- Reset search and sort -----
-const hasFilters = computed(() => searchInput.value.trim() !== '' || sortBy.value !== null)
+// ----- Reset search, status filter and sort -----
+const hasFilters = computed(
+  () => searchInput.value.trim() !== '' || statusFilter.value !== null || sortBy.value !== null,
+)
 
 function resetFilters() {
   clearTimeout(searchTimer)
   searchInput.value = ''
+  statusFilter.value = null
   search.value = ''
   sortBy.value = null
   sortDescending.value = false
-}
-
-function ariaSort(field: ClaimSortField) {
-  if (sortBy.value !== field) return 'none'
-  return sortDescending.value ? 'descending' : 'ascending'
-}
-
-function sortIcon(field: ClaimSortField) {
-  if (sortBy.value !== field) return ArrowUpDownIcon
-  return sortDescending.value ? ArrowDown01Icon : ArrowUp01Icon
 }
 
 // ----- Selection (for adding claims to a batch, AC-DEC-01_5) -----
@@ -149,7 +136,6 @@ const formatDate = (value: string) =>
   new Date(value).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
 
 const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToReview
-
 </script>
 
 <template>
@@ -169,44 +155,35 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
     </header>
 
     <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div class="w-full max-w-md">
-        <label for="claims-search" class="block text-sm font-medium text-gray-700 mb-1">
-          Zoeken
-        </label>
-        <div class="flex items-center gap-2">
-          <div class="relative flex-1">
-            <HugeiconsIcon
-              :icon="Search01Icon"
-              class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
-              aria-hidden="true"
-            />
-            <input
-              id="claims-search"
-              v-model="searchInput"
-              type="search"
-              placeholder="Nummer, patiënt, polisnummer of medewerker"
-              class="w-full rounded-xl border border-gray-300 bg-white py-2 pl-10 pr-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-              data-testid="claims-search"
-            />
-          </div>
-          <button
-            type="button"
-            :disabled="!hasFilters"
-            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
-            title="Zoeken en sorteren wissen"
-            aria-label="Zoeken en sorteren wissen"
-            data-testid="claims-reset-filters"
-            @click="resetFilters"
-          >
-            <HugeiconsIcon :icon="FilterRemoveIcon" class="w-5 h-5" aria-hidden="true" />
-          </button>
-        </div>
+      <div class="flex w-full max-w-3xl items-end gap-2">
+        <SearchField
+          id="claims-search"
+          v-model="searchInput"
+          placeholder="Nummer, patiënt, polisnummer of medewerker"
+          class="flex-1"
+          data-testid="claims-search"
+        />
+        <ClaimStatusSelect
+          id="claims-status-filter"
+          v-model="statusFilter"
+          class="shrink-0"
+          data-testid="claims-status-filter"
+        />
+        <button
+          type="button"
+          :disabled="!hasFilters"
+          class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+          title="Zoeken, statusfilter en sortering wissen"
+          aria-label="Zoeken, statusfilter en sortering wissen"
+          data-testid="claims-reset-filters"
+          @click="resetFilters"
+        >
+          <HugeiconsIcon :icon="FilterRemoveIcon" class="w-5 h-5" aria-hidden="true" />
+        </button>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <span class="text-sm text-gray-600" aria-live="polite" data-testid="claims-selected-count">
-          {{ selectedIds.size }} geselecteerd
-        </span>
+        <SelectionCount :count="selectedIds.size" data-testid="claims-selected-count" />
         <BaseButton
           variant="secondary"
           :disabled="selectedIds.size === 0"
@@ -232,7 +209,11 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
     </p>
     <p v-else-if="claims.length === 0" data-testid="claims-empty">
       {{
-        search ? 'Geen declaraties gevonden voor deze zoekterm.' : 'Er zijn nog geen declaraties.'
+        search
+          ? 'Geen declaraties gevonden voor deze zoekterm.'
+          : statusFilter !== null
+            ? 'Geen declaraties met deze status.'
+            : 'Er zijn nog geen declaraties.'
       }}
     </p>
 
@@ -248,36 +229,23 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
                 <input
                   type="checkbox"
                   class="h-4 w-4 cursor-pointer accent-blue-600"
+                  name="claims-select-page"
                   :checked="allOnPageSelected"
                   aria-label="Alle declaraties op deze pagina selecteren"
                   data-testid="claims-select-page"
                   @change="toggleAllOnPage"
                 />
               </th>
-              <th
+              <SortableColumnHeader
                 v-for="column in columns"
                 :key="column.field"
-                scope="col"
-                class="px-4 py-3 font-semibold whitespace-nowrap"
-                :class="column.alignRight ? 'text-right' : ''"
-                :aria-sort="ariaSort(column.field)"
-              >
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-1 cursor-pointer hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded"
-                  :class="column.alignRight ? 'flex-row-reverse' : ''"
-                  :data-testid="`claims-sort-${column.field}`"
-                  @click="toggleSort(column.field)"
-                >
-                  {{ column.label }}
-                  <HugeiconsIcon
-                    :icon="sortIcon(column.field)"
-                    class="w-4 h-4"
-                    :class="sortBy === column.field ? 'text-blue-700' : 'text-gray-400'"
-                    aria-hidden="true"
-                  />
-                </button>
-              </th>
+                :label="column.label"
+                :active="sortBy === column.field"
+                :descending="sortDescending"
+                :align-right="column.alignRight"
+                :data-testid="`claims-sort-${column.field}`"
+                @sort="toggleSort(column.field)"
+              />
             </tr>
           </thead>
           <tbody>
@@ -298,6 +266,8 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
                 <input
                   type="checkbox"
                   class="h-4 w-4 cursor-pointer accent-blue-600"
+                  name="selected-claims"
+                  :value="claim.id"
                   :checked="selectedIds.has(claim.id)"
                   :aria-label="`Declaratie ${claim.id} selecteren`"
                   :data-testid="`claim-select-${claim.id}`"
@@ -311,19 +281,10 @@ const isToReview = (claim: ClaimOverview) => claim.status === ClaimStatus.ToRevi
                 {{ claim.id }}
               </td>
               <td class="px-4 py-3">
-                <span
-                  class="inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-semibold whitespace-nowrap"
-                  :class="claimStatusClasses[claim.status]"
+                <ClaimStatusBadge
+                  :status="claim.status"
                   :data-testid="`claim-status-${claim.id}`"
-                >
-                  <HugeiconsIcon
-                    v-if="isToReview(claim)"
-                    :icon="AlertCircleIcon"
-                    class="w-4 h-4"
-                    aria-hidden="true"
-                  />
-                  {{ claimStatusLabels[claim.status] }}
-                </span>
+                />
               </td>
               <td class="px-4 py-3">{{ claim.patientName }}</td>
               <td class="px-4 py-3">{{ claim.policyNumber }}</td>
