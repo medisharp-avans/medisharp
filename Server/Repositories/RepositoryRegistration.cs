@@ -6,7 +6,7 @@ namespace Server.Repositories
     public static class RepositoryRegistration
     {
         /// <summary>
-        /// Registers all program repositories and the system />.
+        /// Registers the scoped repositories for the application.
         /// Call from <c>Program.cs</c>: <c>builder.Services.AddRegisteredRepositories();</c>
         /// </summary>
         /// <param name="repositories">The service collection to add the registrations to.</param>
@@ -16,9 +16,7 @@ namespace Server.Repositories
             repositories.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             repositories.AddScoped<IUserRepository, UserRepository>();
             repositories.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-            repositories.AddScoped<ReferralIntakeRepository>();
-            repositories.AddScoped<IReferralIntakeRepository>(provider => provider.GetRequiredService<ReferralIntakeRepository>());
-            repositories.AddScoped<PatientLookupRepository>();
+            repositories.AddScoped<IReferralIntakeRepository, ReferralIntakeRepository>();
             repositories.AddScoped<ITreatmentCatalogRepository, TreatmentCatalogRepository>();
             return repositories;
         }

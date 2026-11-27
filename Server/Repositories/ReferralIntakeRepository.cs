@@ -1,27 +1,33 @@
 using Referral = Server.Models.Intake.Referral;
 using Server.Data;
 using Server.Repositories.InterFaces;
-using Server.Models;
 using Server.Models.Enums;
+using Server.Models.DTO.Requests;
 using Server.Models.DTO.Responses;
 using Microsoft.EntityFrameworkCore;
 
 namespace Server.Repositories
 {
-    /// <summary>Persists referrals through the request's scoped EF Core context.</summary>
+    /// <summary>Reads and persists referrals and intake patients through a scoped EF Core context.</summary>
     public class ReferralIntakeRepository(ReferralDbContext context) : IReferralIntakeRepository
     {
-        public const int OpenPageSize = 25;
+        /// <inheritdoc />
+        public Task<ReferralPatientResponse?> FindPatientByBsnAsync(string bsn, CancellationToken cancellationToken) =>
+            context.Patients.AsNoTracking()
+                .Where(patient => patient.Bsn == bsn)
+                .Select(patient => new ReferralPatientResponse(patient.FullName, patient.PostalCode,
+                    patient.HouseNumber, patient.PhoneNumber, patient.Email))
+                .SingleOrDefaultAsync(cancellationToken);
 
-        public async Task<IReadOnlyList<OpenReferralResponse>> GetOpenPageAsync(
-            int page, CancellationToken cancellationToken)
+        /// <inheritdoc />
+        public async Task<IReadOnlyList<OpenReferralResponse>> GetOpenPageAsync(int page, CancellationToken cancellationToken)
         {
             return await context.Referrals.AsNoTracking()
                 .Where(referral => referral.Status == ReferralStatus.Open)
                 .OrderBy(referral => referral.CreatedAtUtc)
                 .ThenBy(referral => referral.Id)
-                .Skip((page - 1) * OpenPageSize)
-                .Take(OpenPageSize)
+                .Skip((page - 1) * OpenReferralsRequest.PageSize)
+                .Take(OpenReferralsRequest.PageSize)
                 .Select(referral => new OpenReferralResponse(referral.Specialty, referral.TreatmentCode,
                     referral.PatientName, referral.Bsn))
                 .ToListAsync(cancellationToken);
@@ -39,7 +45,7 @@ namespace Server.Repositories
                 return;
             }
 
-            var newPatient = new Server.Models.Intake.Patient
+            var newPatient = new Models.Intake.Patient
             {
                 Bsn = referral.Bsn,
                 FullName = referral.PatientName,
@@ -52,12 +58,14 @@ namespace Server.Repositories
             context.Referrals.Add(referral);
             try
             {
-                // EF saves both inserts together. The unique BSN index resolves concurrent registration.
+                // EF saves the patient and referral in one transaction.
                 await context.SaveChangesAsync(cancellationToken);
             }
             catch (DbUpdateException exception) when
                 (exception.Entries.Any(entry => ReferenceEquals(entry.Entity, newPatient)))
             {
+                // Another request may have inserted this BSN while this request was saving.
+                // Retry only if that patient exists. Otherwise propagate the original failure.
                 var concurrentlyCreatedPatient = await context.Patients
                     .SingleOrDefaultAsync(patient => patient.Bsn == referral.Bsn, cancellationToken);
                 if (concurrentlyCreatedPatient is null) throw;

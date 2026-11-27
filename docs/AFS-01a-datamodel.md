@@ -102,9 +102,9 @@ Nog af te stemmen:
 `POST /api/referrals` op de backend valideert een `CreateReferralRequest` en slaat
 de verwijzing op via `IReferralIntakeService` en een EF Core-repository, beide scoped.
 Bij succes volgt
-HTTP 201 met uitsluitend `id`, `status` (`Open`) en `createdAtUtc`. Er is nog geen
-GET-endpoint; daarom wordt geen Location-header naar een niet-bestaand detail
-teruggegeven. Een volledig fictief voorbeeld staat in `Server/Server.http` en
+HTTP 201 met uitsluitend `id`, `status` (`Open`) en `createdAtUtc`. Er is
+een overzicht voor ziekenhuispersoneel. Een detailroute voor individuele
+verwijzingen is toekomstig werk. Een volledig fictief voorbeeld staat in `Server/Server.http` en
 kan ook via Swagger worden verstuurd.
 
 De DTO gebruikt dezelfde validatieregels in de HTTP-pipeline en in de service.
@@ -113,8 +113,10 @@ geweigerd met HTTP 400 en veldfouten onder `errors` (camelCase veldnamen).
 De meldingen voor `bsn`, `specialty` en `treatmentCode` zijn respectievelijk
 `Vul het BSN in`, `Kies een specialisme` en `Kies een behandelcode`.
 Bij ongeldige invoer wordt niets opgeslagen. De veldlengtes volgen het datamodel;
-een urgentie moet een bekende waarde zijn. BSN-controlecijfer en overige
-formaatregels zijn nog geen onderdeel van deze stap.
+een urgentie moet een bekende waarde zijn. Het BSN moet uit negen cijfers
+bestaan. Het formulier en de API vereisen voor de Nederlandse postcode vier
+cijfers en twee letters, met of zonder spatie. De service slaat bijvoorbeeld
+`1234ab` op als `1234 AB`. De controle betreft de schrijfwijze.
 
 Een onbekende behandelcode geeft `Kies een geldige behandelcode`. Een bestaande
 code bij een ander of onbekend specialisme geeft `De behandelcode hoort niet bij
@@ -139,6 +141,19 @@ Na PRI-03/04 bevestigt een huisarts de login met een e-mailcode. De API vereist
 een geldig PRI-toegangstoken met de rol `Huisarts` voor aanmaken, uploaden en
 zoeken op BSN. Het overzicht `GET /api/referrals/open` vereist de rol
 `Ziekenhuismedewerker`. Deze toegangsregels gelden in alle omgevingen.
+
+| Endpoint | Rol | Gedrag |
+| --- | --- | --- |
+| `POST /api/referrals` | Huisarts | Slaat een open verwijzing op en koppelt deze aan het bestaande of nieuw aangemaakte patiëntrecord. |
+| `POST /api/referrals/with-attachments` | Huisarts | Accepteert de verwijzing als JSON in een multipart-formulier en valideert de optionele bijlagen. |
+| `POST /api/referrals/patient-lookup` | Huisarts | Zoekt op exact BSN uit de requestbody. Geeft de afgesproken contactvelden terug of HTTP 204 als de patiënt onbekend is. |
+| `GET /api/referrals/open?page=1` | Ziekenhuismedewerker | Geeft maximaal 25 open verwijzingen per pagina, gesorteerd op aanmaaktijd en ID. Een ongeldig paginanummer geeft HTTP 400. |
+
+De controllers verwerken de HTTP-invoer en roepen de service aan. De
+verwijzingsservice valideert de invoer en de behandelcode. De repository doet
+de EF Core-query's en bewaart een nieuw patiëntrecord en de verwijzing samen.
+Bij een gelijktijdige registratie zoekt de repository het inmiddels opgeslagen
+BSN opnieuw op en houdt de verwijzing hetzelfde patiëntrecord.
 
 ## Behandelcatalogus
 
@@ -168,7 +183,7 @@ Maak bij toekomstige wijzigingen in `treatments.json` een nieuwe migratie;
 bewerk reeds toegepaste migraties niet. Pas de catalogus niet los hiervan
 handmatig in de database aan.
 
-Beschikbare endpoints voor het toekomstige formulier:
+Beschikbare catalogusendpoints:
 
 - `GET /api/treatments/specialties`: alfabetische lijst met beschikbare specialismen.
 - `GET /api/treatments?specialty=KNO`: behandelingen voor het geselecteerde
@@ -206,7 +221,8 @@ bevestiging; daarna verdwijnt de invoer en verschijnt status Open. Bij een fout
 blijft de invoer behouden en verschijnt een veilige melding, eventueel met de
 namen van te controleren velden. Een verbindingsfout kan betekenen dat de server
 wel heeft opgeslagen; de melding vraagt daarom eerst de opslag te controleren.
-Er is nog geen idempotentiesleutel of overzicht om deze onzekerheid op te lossen.
+Het overzicht is beschikbaar voor ziekenhuispersoneel. De huisarts ziet na
+bevestigde opslag het bericht met status Open.
 
 Patiëntgegevens worden niet in URL's, logs of browseropslag gezet. Gebruik fictieve
 gegevens voor lokale tests. Vite stuurt `/api` door naar `http://localhost:5174`.
@@ -239,14 +255,15 @@ zijn nog niet door het team vastgesteld. Er is daarom geen termijn verzonnen
 en nog geen automatische opschoonfunctie toegevoegd. Leg deze beslissing vast
 en vermeld gegevens, doel en termijn in de AVG-sectie van de uiteindelijke PR.
 
-Dit is een tussenstap en geen afgeronde user story volgens de DoD. Voor oplevering
-blijven onder meer de hoofdflow als browsertest, een guerrilla-test en de vereiste reviews en
-acceptatie nodig. De DoD vraagt minimaal 90% test coverage; dekking van alleen de
-verwijzingsservice bewijst niet dat het hele project aan die norm voldoet.
-Stem ontbrekende keuzes en afhankelijkheden af voordat de vervolgtaak volgens
-de DoR als Ready wordt ingepland.
+De browsertest `ReferralWorkflowTests` controleert de hoofdflow met een huisarts
+en een ziekenhuismedewerker. Voor oplevering gelden ook de guerrilla-test, review
+en acceptatie uit de DoD. CI controleert 90% regeldekking voor de afgebakende
+verwijsfunctionaliteit op de client en server.
 
 ## Controle
+
+De twee [Lighthouse-rapporten](testbewijs/AFS-01a/lighthouse/README.md) leggen
+de toegankelijkheidsscan van het ingelogde formulier en overzicht vast.
 
 `Server.Tests/ReferralModelTests.cs` controleert beide SQL Server-migratiereeksen,
 de schemaopbouw en de EF Core-koppeling van bijlagen zonder databaseverbinding.

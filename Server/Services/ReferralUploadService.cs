@@ -1,5 +1,4 @@
 using Server.Models.DTO.Requests;
-using Server.Models.DTO.Responses;
 using Server.Models;
 using Server.Services.InterFaces;
 
@@ -11,11 +10,18 @@ public class ReferralUploadService(IReferralIntakeService referrals, IConfigurat
     public const long PerFileLimit = 10 * 1024 * 1024;
     public const long TotalLimit = 25 * 1024 * 1024;
 
+    /// <summary>Validates and stages the submitted files before saving the referral.</summary>
+    /// <remarks>Removes this request's files if validation or database storage fails.</remarks>
     public async Task<CreateReferralResult> CreateAsync(CreateReferralRequest request,
         IReadOnlyList<IFormFile> files, CancellationToken cancellationToken)
     {
-        CreateReferralResult Invalid() => new() { Errors = new() {
-            ["attachments"] = ["Kies maximaal 5 PDF-, JPG- of PNG-bestanden van maximaal 10 MB per bestand en 25 MB samen."] } };
+        CreateReferralResult Invalid() => new()
+        {
+            Errors = new()
+            {
+                ["attachments"] = ["Kies maximaal 5 PDF-, JPG- of PNG-bestanden van maximaal 10 MB per bestand en 25 MB samen."]
+            }
+        };
         if (files.Count > 5 || files.Any(f => f.Length <= 0 || f.Length > PerFileLimit) ||
             files.Sum(f => f.Length) > TotalLimit) return Invalid();
 
@@ -49,8 +55,13 @@ public class ReferralUploadService(IReferralIntakeService referrals, IConfigurat
                 Directory.CreateDirectory(directory);
                 var key = Guid.NewGuid().ToString("N");
                 await File.WriteAllBytesAsync(Path.Combine(directory, key), data, cancellationToken);
-                metadata.Add(new ReferralAttachment { FileName = name, ContentType = type,
-                    StorageKey = Path.Combine(Path.GetFileName(directory), key), SizeInBytes = data.Length });
+                metadata.Add(new ReferralAttachment
+                {
+                    FileName = name,
+                    ContentType = type,
+                    StorageKey = Path.Combine(Path.GetFileName(directory), key),
+                    SizeInBytes = data.Length
+                });
             }
             var result = await referrals.CreateWithAttachmentsAsync(request, metadata, cancellationToken);
             committed = result.Errors.Count == 0;
@@ -62,7 +73,7 @@ public class ReferralUploadService(IReferralIntakeService referrals, IConfigurat
         }
     }
 
-    // Signature and extension must agree. This is not malware scanning or a medical image viewer.
+    // Identify the file type by checking that the signature and filename extension agree.
     private static string? DetectType(byte[] data, string extension)
     {
         if (extension == ".pdf" && data.AsSpan().StartsWith("%PDF-"u8) &&

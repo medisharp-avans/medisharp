@@ -14,21 +14,49 @@ namespace Server.Controllers;
 [Authorize(Roles = nameof(UserRole.Huisarts))]
 public class ReferralUploadsController(ReferralUploadService uploads) : ControllerBase
 {
+    /// <summary>Creates an open referral and stores the submitted attachments.</summary>
+    /// <param name="referral">The JSON-encoded referral request in the multipart form.</param>
+    /// <param name="attachments">Up to five PDF, JPEG or PNG files, at most 10 MiB per file and 25 MiB combined.</param>
+    /// <param name="cancellationToken">Cancels the operation when the request is aborted.</param>
     [HttpPost]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(28 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 28 * 1024 * 1024)]
-    [ProducesResponseType<CreatedReferralResponse>(201)]
-    [ProducesResponseType<ValidationProblemDetails>(400)]
-    public async Task<IActionResult> Create([FromForm] string referral,
+    [ProducesResponseType<CreatedReferralResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<CreatedReferralResponse>> Create([FromForm] string referral,
         [FromForm] List<IFormFile> attachments, CancellationToken cancellationToken)
     {
         CreateReferralRequest? request;
-        try { request = JsonSerializer.Deserialize<CreateReferralRequest>(referral, new JsonSerializerOptions(JsonSerializerDefaults.Web)); }
-        catch (JsonException) { return BadRequest(new ValidationProblemDetails()); }
-        if (request is null) return BadRequest(new ValidationProblemDetails());
+        try
+        {
+            request = JsonSerializer.Deserialize<CreateReferralRequest>(referral, JsonSerializerOptions.Web);
+        }
+        catch (JsonException)
+        {
+            request = null;
+        }
+
+        if (request is null)
+        {
+            ModelState.AddModelError(nameof(referral), "Ongeldige verwijzingsgegevens.");
+            return ValidationProblem(ModelState);
+        }
+
         var result = await uploads.CreateAsync(request, attachments, cancellationToken);
-        return result.Errors.Count > 0 ? BadRequest(new ValidationProblemDetails(result.Errors))
-            : StatusCode(201, result.Referral);
+        if (result.Errors.Count > 0)
+        {
+            return BadRequest(new ValidationProblemDetails(result.Errors)
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Controleer de ingevulde gegevens"
+            });
+        }
+
+        return StatusCode(StatusCodes.Status201Created, result.Referral);
     }
 }

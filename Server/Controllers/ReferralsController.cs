@@ -14,6 +14,7 @@ namespace Server.Controllers
     public class ReferralsController(IReferralIntakeService service) : ControllerBase
     {
         /// <summary>Creates a referral with status Open.</summary>
+        /// <remarks>Links the referral to an existing patient by BSN, or creates the patient with the referral.</remarks>
         [HttpPost]
         [ProducesResponseType<CreatedReferralResponse>(StatusCodes.Status201Created)]
         [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]

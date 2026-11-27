@@ -51,6 +51,7 @@ watch(
   { flush: 'sync' },
 )
 
+/** Past de zoekrespons alleen toe zolang die nog bij het ingevulde BSN hoort. */
 async function lookupPatient() {
   const bsn = draft.bsn
   if (!/^[0-9]{9}$/.test(bsn)) {
@@ -84,6 +85,7 @@ async function lookupPatient() {
 onUnmounted(() => patientLookup?.abort())
 
 const attachmentError = ref('')
+/** Valideert de selectie lokaal, zodat de gebruiker een fout direct kan corrigeren. */
 function selectAttachments(event: Event) {
   const input = event.target as HTMLInputElement
   const selected = Array.from(input.files ?? [])
@@ -124,6 +126,7 @@ const fieldLabels: Record<string, string> = {
   urgency: 'Urgentie',
   attachments: 'Bijlagen: controleer bestandstype, aantal en grootte',
 }
+/** Bewaart de invoer bij een fout en wist de patiëntgegevens na bevestigde opslag. */
 async function saveReferral() {
   if (saving.value || saved.value || attachmentError.value || lookingUpPatient.value) return
   saveMessage.value = ''
@@ -139,6 +142,11 @@ async function saveReferral() {
   if (!/^[0-9]{9}$/.test(draft.bsn)) {
     invalidFields.value = ['bsn']
     saveMessage.value = 'Vul een BSN van 9 cijfers in.'
+    return
+  }
+  if (!/^[0-9]{4} ?[A-Za-z]{2}$/.test(draft.patientPostalCode.trim())) {
+    invalidFields.value = ['patientPostalCode']
+    saveMessage.value = 'Vul een postcode in met 4 cijfers en 2 letters, bijvoorbeeld 1234 AB.'
     return
   }
   saving.value = true
@@ -300,6 +308,8 @@ const selectClasses =
               id="patient-postal-code"
               v-model="draft.patientPostalCode"
               label="Postcode"
+              hint="Bijvoorbeeld 1234 AB."
+              :invalid="invalidFields.includes('patientPostalCode')"
               :maxlength="12"
             />
             <ReferralFormField

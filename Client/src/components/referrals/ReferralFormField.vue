@@ -13,6 +13,7 @@ const props = withDefaults(
     multiline?: boolean
     rows?: number
     required?: boolean
+    invalid?: boolean
   }>(),
   { type: 'text', multiline: false, rows: 3, required: true },
 )
@@ -48,6 +49,7 @@ const controlClasses =
       :maxlength="props.maxlength"
       :aria-describedby="props.hint ? `${props.id}-hint` : undefined"
       :class="controlClasses"
+      :aria-invalid="props.invalid || undefined"
       autocomplete="off"
       :required="props.required"
     />

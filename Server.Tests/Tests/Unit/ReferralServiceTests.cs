@@ -112,13 +112,16 @@ namespace Server.Tests.Tests.Unit
             var service = new ReferralIntakeService(repository, new StubTreatmentCatalogRepository());
             var request = new ReferralRequests().Valid();
             var property = typeof(CreateReferralRequest).GetProperty(propertyName)!;
-            property.SetValue(request, new string('1', limit + 1));
+            var isPostalCode = propertyName == nameof(CreateReferralRequest.PatientPostalCode);
+            var sample = isPostalCode ? "1234 AB" : string.Empty;
+            var padding = isPostalCode ? ' ' : '1';
+            property.SetValue(request, sample.PadRight(limit + 1, padding));
 
             var rejected = await service.CreateAsync(request);
 
             Assert.IsTrue(rejected.Errors.ContainsKey(errorKey));
             Assert.IsEmpty(repository.Saved);
-            property.SetValue(request, new string('1', limit));
+            property.SetValue(request, sample.PadRight(limit, padding));
 
             var accepted = await service.CreateAsync(request);
 
@@ -207,6 +210,12 @@ namespace Server.Tests.Tests.Unit
 
         private class RecordingReferralIntakeRepository : IReferralIntakeRepository
         {
+            public Task<ReferralPatientResponse?> FindPatientByBsnAsync(string bsn, CancellationToken cancellationToken) =>
+                throw new NotSupportedException();
+
+            public Task<IReadOnlyList<OpenReferralResponse>> GetOpenPageAsync(int page, CancellationToken cancellationToken) =>
+                throw new NotSupportedException();
+
             public List<Referral> Saved { get; } = [];
             public CancellationToken ReceivedCancellationToken { get; private set; }
 

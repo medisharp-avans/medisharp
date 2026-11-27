@@ -34,24 +34,24 @@ onMounted(() => load(1))
     <template v-else>
       <p v-if="!rows.length">Geen open verwijzingen op deze pagina.</p>
       <div v-else class="overflow-x-auto">
-        <table class="w-full text-left">
+        <table class="w-full text-left text-xs sm:text-base">
           <caption class="sr-only">
             Open verwijzingen voor afspraakplanning
           </caption>
           <thead>
             <tr class="border-b">
-              <th scope="col" class="p-3">Specialisme</th>
-              <th scope="col" class="p-3">Behandelcode</th>
-              <th scope="col" class="p-3">Naam patiënt</th>
-              <th scope="col" class="p-3">BSN</th>
+              <th scope="col" class="px-1.5 py-2 sm:p-3">Specialisme</th>
+              <th scope="col" class="px-1.5 py-2 sm:p-3">Behandelcode</th>
+              <th scope="col" class="px-1.5 py-2 sm:p-3">Naam patiënt</th>
+              <th scope="col" class="px-1.5 py-2 sm:p-3">BSN</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(row, index) in rows" :key="index" class="border-b">
-              <td class="p-3">{{ row.specialty }}</td>
-              <td class="p-3">{{ row.treatmentCode }}</td>
-              <td class="p-3">{{ row.patientName }}</td>
-              <td class="p-3">{{ row.bsn }}</td>
+              <td class="px-1.5 py-2 sm:p-3">{{ row.specialty }}</td>
+              <td class="px-1.5 py-2 sm:p-3">{{ row.treatmentCode }}</td>
+              <td class="px-1.5 py-2 sm:p-3">{{ row.patientName }}</td>
+              <td class="px-1.5 py-2 sm:p-3">{{ row.bsn }}</td>
             </tr>
           </tbody>
         </table>

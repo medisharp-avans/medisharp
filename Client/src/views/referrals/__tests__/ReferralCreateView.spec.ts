@@ -52,6 +52,7 @@ async function setup(status = 201, delayed = false) {
   )) {
     const values: Record<string, string> = {
       'patient-bsn': '000000000',
+      'patient-postal-code': '1234 AB',
       'patient-email': 'test@example.invalid',
     }
     await input.setValue(values[input.attributes('id') ?? ''] ?? 'Fictief')
@@ -137,6 +138,22 @@ it('slaat een verwijzing op zonder telefoonnummer', async () => {
   await flushPromises()
   expect(post).toHaveBeenCalledTimes(1)
   expect(wrapper.text()).toContain('opgeslagen met status Open')
+  wrapper.unmount()
+})
+
+it('weigert een ongeldige postcode en accepteert kleine letters zonder spatie', async () => {
+  const { wrapper, post } = await setup()
+  const postcode = wrapper.get('#patient-postal-code')
+  await postcode.setValue('t')
+  await wrapper.get('form').trigger('submit')
+  expect(wrapper.get('[role="alert"]').text()).toContain('4 cijfers en 2 letters')
+  expect(postcode.attributes('aria-invalid')).toBe('true')
+  expect(post).not.toHaveBeenCalled()
+
+  await postcode.setValue('1234ab')
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  expect(post).toHaveBeenCalledOnce()
   wrapper.unmount()
 })
 

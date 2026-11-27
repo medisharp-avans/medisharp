@@ -3,26 +3,30 @@ using Microsoft.AspNetCore.Mvc;
 using Server.Models.DTO.Requests;
 using Server.Models.DTO.Responses;
 using Server.Models.Enums;
-using Server.Repositories;
+using Server.Services.InterFaces;
 
 namespace Server.Controllers;
 
+/// <summary>Prefills the referral form for an authenticated general practitioner.</summary>
 [ApiController]
 [Route("api/referrals/patient-lookup")]
 [Authorize(Roles = nameof(UserRole.Huisarts))]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public class ReferralPatientLookupController(PatientLookupRepository patients) : ControllerBase
+public class ReferralPatientLookupController(IReferralIntakeService referrals) : ControllerBase
 {
-    /// <summary>Finds one patient by exact BSN. The POST body keeps the BSN out of the URL.</summary>
+    /// <summary>Finds one patient by exact BSN.</summary>
+    /// <remarks>The BSN is supplied in the POST body. A missing record returns HTTP 204 so the GP can enter a new patient.</remarks>
     [HttpPost]
-    [ProducesResponseType<ReferralPatientResponse>(200)]
-    [ProducesResponseType(204)]
-    [ProducesResponseType(400)]
-    [ProducesResponseType(401)]
-    [ProducesResponseType(403)]
-    public async Task<IActionResult> Find(PatientLookupRequest request, CancellationToken cancellationToken)
+    [ProducesResponseType<ReferralPatientResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ReferralPatientResponse>> Find(
+        PatientLookupRequest request, CancellationToken cancellationToken)
     {
-        var patient = await patients.FindByBsnAsync(request.Bsn, cancellationToken);
+        var patient = await referrals.FindPatientByBsnAsync(request.Bsn, cancellationToken);
         return patient is null ? NoContent() : Ok(patient);
     }
 }

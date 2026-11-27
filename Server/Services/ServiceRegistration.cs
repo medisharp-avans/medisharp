@@ -4,7 +4,7 @@ using Server.Services.InterFaces;
 
 namespace Server.Services
 {
-    /// <summary>Dependency injection registrations for the RevaliNow services.</summary>
+    /// <summary>Dependency injection registrations for the MediSharp services.</summary>
     public static class ServiceRegistration
     {
         /// <summary>

@@ -2,7 +2,6 @@ using Referral = Server.Models.Intake.Referral;
 using Server.Services.InterFaces;
 using Server.Models.DTO.Requests;
 using Server.Models.DTO.Responses;
-using Server.Repositories;
 using Server.Repositories.InterFaces;
 using Server.Models;
 using System.ComponentModel.DataAnnotations;
@@ -10,16 +9,16 @@ using System.Text.Json;
 
 namespace Server.Services
 {
-    /// <summary>Creates a patient snapshot after validating the referral's required fields.</summary>
+    /// <summary>Creates validated referrals and provides the patient lookup and open referral queue.</summary>
     public class ReferralIntakeService(IReferralIntakeRepository repository, ITreatmentCatalogRepository treatmentCatalog)
         : IReferralIntakeService
     {
         /// <inheritdoc />
-        public async Task<CreateReferralResult> CreateAsync(
-            CreateReferralRequest request, CancellationToken cancellationToken = default)
-            => await CreateWithAttachmentsAsync(request, [], cancellationToken);
+        public Task<CreateReferralResult> CreateAsync(
+            CreateReferralRequest request, CancellationToken cancellationToken = default) =>
+            CreateWithAttachmentsAsync(request, [], cancellationToken);
 
-        /// <summary>Persists validated attachment metadata together with the referral in one database save.</summary>
+        /// <inheritdoc />
         public async Task<CreateReferralResult> CreateWithAttachmentsAsync(
             CreateReferralRequest request, IReadOnlyList<ReferralAttachment> attachments,
             CancellationToken cancellationToken = default)
@@ -62,11 +61,12 @@ namespace Server.Services
                 };
             }
 
+            var postalCode = request.PatientPostalCode!.Trim();
             var referral = new Referral
             {
                 Bsn = request.Bsn!,
                 PatientName = request.PatientName!,
-                PatientPostalCode = request.PatientPostalCode!.Trim(),
+                PatientPostalCode = $"{postalCode[..4]} {postalCode[^2..].ToUpperInvariant()}",
                 PatientHouseNumber = request.PatientHouseNumber!.Trim(),
                 PatientPhoneNumber = string.IsNullOrWhiteSpace(request.PatientPhoneNumber)
                     ? null
@@ -95,5 +95,13 @@ namespace Server.Services
                 }
             };
         }
+
+        /// <inheritdoc />
+        public Task<ReferralPatientResponse?> FindPatientByBsnAsync(string bsn, CancellationToken cancellationToken) =>
+            repository.FindPatientByBsnAsync(bsn, cancellationToken);
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<OpenReferralResponse>> GetOpenReferralsAsync(int page, CancellationToken cancellationToken) =>
+            repository.GetOpenPageAsync(page, cancellationToken);
     }
 }

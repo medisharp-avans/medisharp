@@ -121,6 +121,30 @@ namespace Server.Tests.Tests.Integration
         }
 
         [TestMethod]
+        public async Task RejectsAnInvalidPostalCodeAndStoresCorrectedCodeInStandardFormat()
+        {
+            using var factory = new ReferralApiFactory();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
+            var request = new ReferralRequests().Valid();
+            request.PatientPostalCode = "t";
+
+            using var invalid = await client.PostAsJsonAsync("/api/referrals", request);
+            Assert.AreEqual(HttpStatusCode.BadRequest, invalid.StatusCode);
+            var problem = await invalid.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+            Assert.IsTrue(problem?.Errors.ContainsKey("patientPostalCode") == true);
+            Assert.AreEqual(0, await CountReferralsAsync(factory));
+
+            request.PatientPostalCode = "1234ab";
+            using var corrected = await client.PostAsJsonAsync("/api/referrals", request);
+            Assert.AreEqual(HttpStatusCode.Created, corrected.StatusCode);
+
+            using var scope = factory.Services.CreateScope();
+            var database = scope.ServiceProvider.GetRequiredService<ReferralDbContext>();
+            Assert.AreEqual("1234 AB", (await database.Referrals.SingleAsync()).PatientPostalCode);
+            Assert.AreEqual("1234 AB", (await database.Patients.SingleAsync()).PostalCode);
+        }
+
+        [TestMethod]
         [DataRow("dossier")]
         [DataRow("status")]
         [DataRow("id")]
@@ -272,6 +296,12 @@ namespace Server.Tests.Tests.Integration
         // Deliberately include fictional patient values in an exception to exercise the privacy boundary.
         private class FailingReferralIntakeRepository : IReferralIntakeRepository
         {
+            public Task<ReferralPatientResponse?> FindPatientByBsnAsync(string bsn, CancellationToken cancellationToken) =>
+                throw new NotSupportedException();
+
+            public Task<IReadOnlyList<OpenReferralResponse>> GetOpenPageAsync(int page, CancellationToken cancellationToken) =>
+                throw new NotSupportedException();
+
             public Task AddAsync(Referral referral, CancellationToken cancellationToken) =>
                 throw new DbUpdateException($"{referral.Bsn} {referral.PatientName} {referral.MedicalInformation}",
                     new InvalidOperationException("FICTIEVE-INTERNE-DATABASEFOUT"));

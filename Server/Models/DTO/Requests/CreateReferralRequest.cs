@@ -1,5 +1,4 @@
 using Server.Models.Enums;
-using Server.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
@@ -20,6 +19,8 @@ namespace Server.Models.DTO.Requests
 
         [Required(ErrorMessage = "Vul de postcode in")]
         [StringLength(12, ErrorMessage = "De postcode mag maximaal 12 tekens bevatten")]
+        [RegularExpression(@"^\s*[0-9]{4} ?[A-Za-z]{2}\s*$",
+            ErrorMessage = "Vul een postcode in met 4 cijfers en 2 letters, bijvoorbeeld 1234 AB.")]
         public string? PatientPostalCode { get; set; }
 
         [Required(ErrorMessage = "Vul het huisnummer in")]
