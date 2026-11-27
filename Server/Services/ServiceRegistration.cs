@@ -16,12 +16,6 @@ namespace Server.Services
         public static IServiceCollection AddRegisteredServices(this IServiceCollection services)
         {
             services.AddSingleton(TimeProvider.System);
-            services.AddScoped<ICalculateService, CalculateService>();
-
-            services.AddScoped<IAppointmentService, AppointmentService>();
-            services.AddScoped<IReferralService, ReferralService>();
-            services.AddScoped<IPatientService, PatientService>();
-
             services.AddMemoryCache();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();

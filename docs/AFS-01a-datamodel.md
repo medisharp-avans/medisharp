@@ -214,7 +214,8 @@ Nginx stuurt het volledige pad door naar de API-container.
 
 ## Databases voor PRI en AFS-01a
 
-`DefaultConnection` is de database met PRI-accounts en de AFS-03-planning.
+`DefaultConnection` is de database voor PRI-accounts. De bestaande EF-migraties
+bevatten ook planningstabellen en blijven intact voor bestaande databases.
 `ReferralConnection` bevat de AFS-01a-verwijzingen, bijlagenmetadata, catalogus en
 het patiëntregister voor de BSN-zoekactie. Zonder expliciete `ReferralConnection`
 gebruikt de server dezelfde SQL Server met het achtervoegsel `_AFS01a` in de
@@ -222,8 +223,7 @@ databasenaam. De server werkt beide migratiereeksen bij bij het opstarten.
 
 Wie al een AFS-01a-database heeft, stelt `ConnectionStrings:ReferralConnection`
 in op die bestaande database en kiest voor `DefaultConnection` een aparte
-database voor PRI en planning. De AFS-01a-migratie-ID's blijven gelijk. De
-planning en de verwijzingen gebruiken voorlopig hun eigen patiënt- en verwijzings-ID's.
+database voor PRI. De AFS-01a-migratie-ID's blijven gelijk.
 
 ## Privacy en oplevering
 
@@ -288,7 +288,7 @@ De API-testhost schakelt startup-migrations uit met
 Voor normaal starten blijft de standaardwaarde `true`.
 
 ```powershell
-dotnet test Server/Server.slnx --configuration Release --filter "FullyQualifiedName!~EndToEnd&FullyQualifiedName!~AppointmentRepositoryPlanningTests&FullyQualifiedName!~.ReferralRepositoryTests"
+dotnet test Server/Server.slnx --configuration Release --filter "FullyQualifiedName!~EndToEnd"
 ```
 
 Stop een zelf gestarte Debug-backend met Ctrl+C voordat je die opnieuw bouwt of

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Server.Configuration;
 using Server.Data;
+using Server.Models;
 using Server.Repositories;
 using Server.Services;
 using System.Reflection;
@@ -38,12 +40,6 @@ namespace Server
             builder.Services.AddDbContext<ReferralDbContext>(options => options.UseSqlServer(referralConnection));
             builder.Services.AddRegisteredRepositories();
             builder.Services.AddRegisteredServices();
-
-            if (builder.Environment.IsDevelopment() && applyMigrations &&
-                builder.Configuration.GetValue("Database:SeedDemoData", true))
-            {
-                builder.Services.AddHostedService<DevelopmentDataSeeder>();
-            }
 
             // JWT login. The key comes from JWT:Token (appsettings.Development.json locally,
             // JWT__Token environment variable in production). Startup fails when it is missing or too short.
@@ -138,6 +134,11 @@ namespace Server
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 await db.Database.MigrateAsync();
                 await scope.ServiceProvider.GetRequiredService<ReferralDbContext>().Database.MigrateAsync();
+                if (app.Environment.IsDevelopment() && app.Configuration.GetValue("Database:SeedDemoData", true))
+                {
+                    var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
+                    await DevelopmentAccountSeeder.SeedAsync(db, passwordHasher, app.Lifetime.ApplicationStopping);
+                }
             }
 
             app.UseForwardedHeaders();
@@ -180,11 +181,11 @@ namespace Server
 
         private static void ValidateSeparateDatabases(string connectionString, string referralConnection)
         {
-            var planning = new SqlConnectionStringBuilder(connectionString);
+            var accounts = new SqlConnectionStringBuilder(connectionString);
             var referral = new SqlConnectionStringBuilder(referralConnection);
-            if (string.Equals(planning.DataSource, referral.DataSource, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(planning.InitialCatalog, referral.InitialCatalog, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Planning and referral intake require separate databases.");
+            if (string.Equals(accounts.DataSource, referral.DataSource, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(accounts.InitialCatalog, referral.InitialCatalog, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Accounts and referral intake require separate databases.");
         }
 
         /// <summary>Returns a consistent error without copying exception or request details into the response or log.</summary>

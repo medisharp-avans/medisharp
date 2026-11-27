@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Models.Enums;
 using Server.Tests.PageModels;
+using Server.Tests.TestDb;
 using Server.Tests.Utils;
 
 namespace Server.Tests.EndToEnd;
@@ -25,11 +26,10 @@ public class ReferralWorkflowTests : EndToEndTestBase
             .UseSqlServer(TestSettings.ReferralConnectionString).Options);
         Assert.IsFalse(await intake.Patients.AnyAsync(patient => patient.Bsn == bsn),
             "The dedicated test BSN must be unused at the start of the scenario.");
-        var appointmentCount = await DbContext.Appointments.CountAsync();
 
         try
         {
-            login.LoginAs("visser@test.nl");
+            login.LoginAs(TestDbInitializer.GpEmail);
             navigation.GoToReferrals();
             referrals.CreateReferral(bsn, name, specialty, treatment);
 
@@ -37,10 +37,9 @@ public class ReferralWorkflowTests : EndToEndTestBase
             Assert.AreEqual(ReferralStatus.Open, saved.Status);
             Assert.IsNotNull(saved.PatientId);
             Assert.IsNull(saved.PatientPhoneNumber);
-            Assert.AreEqual(appointmentCount, await DbContext.Appointments.CountAsync());
 
             referrals.Logout();
-            login.LoginAs("medewerker.a@test.nl");
+            login.LoginAs(TestDbInitializer.StaffEmail);
             navigation.GoToReferrals();
             CollectionAssert.AreEqual(new[] { specialty, treatment, name, bsn }, referrals.FindOpenReferral(bsn));
         }

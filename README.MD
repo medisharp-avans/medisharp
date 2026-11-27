@@ -79,7 +79,7 @@ dotnet run --launch-profile http
 
 The API runs at <http://localhost:5174>. In Development, Swagger is at <http://localhost:5174/swagger>.
 
-`DefaultConnection` holds the login and scheduling data. Referral intake uses `ReferralConnection`, which defaults to the database name from `DefaultConnection` with `_AFS01a` appended. To keep an existing AFS-01a database, set `ConnectionStrings:ReferralConnection` to that database and use a separate database for `DefaultConnection`. See [the AFS-01a data model](docs/AFS-01a-datamodel.md#databases-voor-pri-en-afs-01a).
+`DefaultConnection` holds the PRI login data. Referral intake uses `ReferralConnection`, which defaults to the database name from `DefaultConnection` with `_AFS01a` appended. To keep an existing AFS-01a database, set `ConnectionStrings:ReferralConnection` to that database and use a separate database for `DefaultConnection`. See [the AFS-01a data model](docs/AFS-01a-datamodel.md#databases-voor-pri-en-afs-01a).
 
 To point the server at the dev database, add a connection string to `Server/appsettings.Development.json` (or use `dotnet user-secrets` so the password stays out of Git):
 
@@ -92,7 +92,7 @@ You can also open `Server/Server.slnx` in Visual Studio and press F5.
 
 #### Logging in during development (verification code)
 
-Logging in takes two steps: the password, then a 6-digit code that is emailed to the user. The seeded test users (`dev-huisarts@example.test`, `dev-specialist-1@example.test`, `dev-patient-1@example.test`, …, all with password `DevWachtwoord123!`, see `Server/Data/DevelepmontDataSeeder.cs`) cannot receive real email. To read the code locally, have the server save every email as a file instead of sending it. Set `SMTP:PickupDirectory` once in `Server/`:
+Logging in takes two steps: the password, then a 6-digit code that is emailed to the user. The seeded test users (`dev-huisarts@example.test`, `dev-specialist-1@example.test`, `dev-patient-1@example.test`, …, all with password `DevWachtwoord123!`, see `Server/Data/DevelopmentAccountSeeder.cs`) cannot receive real email. To read the code locally, have the server save every email as a file instead of sending it. Set `SMTP:PickupDirectory` once in `Server/`:
 
 ```sh
 dotnet user-secrets set "SMTP:PickupDirectory" "bin/test-mails"

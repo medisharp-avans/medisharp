@@ -14,10 +14,6 @@ namespace Server.Repositories
         public static IServiceCollection AddRegisteredRepositories(this IServiceCollection repositories)
         {
             repositories.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-            repositories.AddScoped<ITreatmentCodeRepository, TreatmentCodeRepository>();
-            repositories.AddScoped<IAppointmentRepository,AppointmentRepository>();
-            repositories.AddScoped<IReferralRepository,ReferralRepository>();
-            repositories.AddScoped<IPatientRepository,PatientRepository>();
             repositories.AddScoped<IUserRepository, UserRepository>();
             repositories.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             repositories.AddScoped<ReferralIntakeRepository>();
