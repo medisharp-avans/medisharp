@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Server.Models.Enums;
 
 namespace Server.Models.DTO.Responses
@@ -8,6 +9,8 @@ namespace Server.Models.DTO.Responses
         public int Id { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public UserRole Role { get; set; }
     }
 

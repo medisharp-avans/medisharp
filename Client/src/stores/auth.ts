@@ -6,7 +6,7 @@ export interface AuthUser {
   id: number
   fullName: string
   email: string
-  role: number | string
+  role: UserRole
 }
 
 interface LoginResponse {
@@ -23,11 +23,23 @@ export interface LoginChallenge {
   maskedEmail: string
 }
 
+export type UserRole =
+  'Patient' | 'Huisarts' | 'Specialist' | 'Ziekenhuismedewerker' | 'Systeembeheerder'
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  Patient: 'Patiënt',
+  Huisarts: 'Huisarts',
+  Specialist: 'Specialist',
+  Ziekenhuismedewerker: 'Ziekenhuismedewerker',
+  Systeembeheerder: 'Systeembeheerder',
+}
+
 export const TOKEN_KEY = 'jwt_token'
 const EXPIRES_KEY = 'auth_expires_at'
 const REFRESH_KEY = 'refresh_token'
 const REFRESH_EXPIRES_KEY = 'refresh_expires_at'
-const STORAGE_KEYS = [TOKEN_KEY, EXPIRES_KEY, REFRESH_KEY, REFRESH_EXPIRES_KEY]
+const USER_KEY = 'auth_user'
+const STORAGE_KEYS = [TOKEN_KEY, EXPIRES_KEY, REFRESH_KEY, REFRESH_EXPIRES_KEY, USER_KEY]
 
 /** Ververs het JWT als het binnen deze marge verloopt, zodat een request niet halverwege afloopt. */
 const REFRESH_MARGIN_MS = 30_000
@@ -35,6 +47,16 @@ const REFRESH_MARGIN_MS = 30_000
 function readStorage(key: string): string | null {
   try {
     return sessionStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function readUser(): AuthUser | null {
+  const raw = readStorage(USER_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as AuthUser
   } catch {
     return null
   }
@@ -49,7 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
   const expiresAt = ref<string | null>(readStorage(EXPIRES_KEY))
   const refreshToken = ref<string | null>(readStorage(REFRESH_KEY))
   const refreshExpiresAt = ref<string | null>(readStorage(REFRESH_EXPIRES_KEY))
-  const user = ref<AuthUser | null>(null)
+  const user = ref<AuthUser | null>(readUser())
 
   const hasValidAccessToken = computed(
     () => !!token.value && (!expiresAt.value || isFuture(expiresAt.value)),
@@ -59,6 +81,8 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(
     () => hasValidAccessToken.value || (!!refreshToken.value && isFuture(refreshExpiresAt.value)),
   )
+
+  const roleLabel = computed(() => (user.value ? (ROLE_LABELS[user.value.role] ?? null) : null))
 
   function applySession(data: LoginResponse): void {
     token.value = data.token
@@ -71,6 +95,7 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.setItem(EXPIRES_KEY, data.expiresAt)
       sessionStorage.setItem(REFRESH_KEY, data.refreshToken)
       sessionStorage.setItem(REFRESH_EXPIRES_KEY, data.refreshTokenExpiresAt)
+      sessionStorage.setItem(USER_KEY, JSON.stringify(data.user))
     } catch {
       // Opslag niet beschikbaar: alleen ingelogd zolang de pagina open is.
     }
@@ -172,6 +197,7 @@ export const useAuthStore = defineStore('auth', () => {
     refreshExpiresAt,
     user,
     isAuthenticated,
+    roleLabel,
     login,
     verifyCode,
     refresh,
