@@ -13,21 +13,23 @@ beforeEach(() => {
 })
 
 it('verstuurt bijlagen als multipart zonder een eigen boundary-header', async () => {
-  const fetchMock = vi.fn().mockResolvedValue({ status: 201 })
+  const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 201 }))
   vi.stubGlobal('fetch', fetchMock)
   const file = new File(['%PDF-1.4\n%%EOF'], 'test.pdf', { type: 'application/pdf' })
   await createReferral(draft, [file])
   const [url, options] = fetchMock.mock.calls[0]!
   expect(url).toBe('/api/referrals/with-attachments')
-  expect(options.headers.has('Content-Type')).toBe(false)
-  expect(options.headers.get('Authorization')).toBe('Bearer test-access-token')
-  expect(options.body.get('referral')).toBe(JSON.stringify(draft))
-  expect(options.body.getAll('attachments')).toHaveLength(1)
+  const headers = new Headers(options?.headers)
+  expect(headers.has('Content-Type')).toBe(false)
+  expect(headers.get('Authorization')).toBe('Bearer test-access-token')
+  const form = options?.body as FormData
+  expect(form.get('referral')).toBe(JSON.stringify(draft))
+  expect(form.getAll('attachments')).toHaveLength(1)
 })
 const draft = { bsn: '000000001', patientName: 'Fictieve patiënt' } as ReferralDraft
 
 it('verstuurt invoer in de body en accepteert uitsluitend 201 als bevestiging', async () => {
-  const fetchMock = vi.fn().mockResolvedValue({ status: 201 })
+  const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 201 }))
   vi.stubGlobal('fetch', fetchMock)
   expect(await createReferral(draft)).toEqual({ saved: true })
   expect(fetchMock).toHaveBeenCalledWith('/api/referrals', {
@@ -44,7 +46,7 @@ it('verstuurt invoer in de body en accepteert uitsluitend 201 als bevestiging', 
 it('verstuurt geen gegevens wanneer de sessie verlopen is', async () => {
   useAuthStore().token = null
   useAuthStore().refreshToken = null
-  const fetchMock = vi.fn()
+  const fetchMock = vi.fn<typeof fetch>()
   vi.stubGlobal('fetch', fetchMock)
 
   const result = await createReferral(draft)

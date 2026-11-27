@@ -5,8 +5,7 @@ namespace Server.Tests.Utils
 {
     /// <summary>
     /// Starts the API and the Vue client for the end-to-end tests and stops them after the test run,
-    /// so the tests also work with a plain 'dotnet test'. An app that is already running
-    /// (for example started from Visual Studio) is used as it is and is not stopped afterwards.
+    /// so the tests also work with a plain 'dotnet test'. This requires dedicated test ports.
     /// </summary>
     public static class AppServer
     {
@@ -36,10 +35,17 @@ namespace Server.Tests.Utils
 
             var root = RepositoryRoot;
 
-            // Same as the 'Tests' launch profile in Visual Studio: the URL of ApiUrl and the test database.
-            // '--no-build' because the API is already built together with this test project.
             await StartAsync("API", TestSettings.ApiUrl, Path.Combine(root, "Server"),
-                "dotnet", ["run", "--no-build", "-c", Configuration, "--launch-profile", "Tests"]);
+                "dotnet", ["run", "--no-build", "-c", Configuration, "--no-launch-profile"],
+                new()
+                {
+                    ["ASPNETCORE_ENVIRONMENT"] = "Development",
+                    ["ASPNETCORE_URLS"] = TestSettings.ApiUrl,
+                    ["ConnectionStrings__DefaultConnection"] = TestSettings.ConnectionString,
+                    ["ConnectionStrings__ReferralConnection"] = TestSettings.ReferralConnectionString,
+                    ["Database__SeedDemoData"] = "false",
+                    ["SMTP__PickupDirectory"] = "bin/test-mails"
+                });
 
             // Vite is started with node directly (like 'npm run dev'), because npm.cmd cannot be started reliably
             // without a shell on Windows. Run 'npm install' in Client once before the first test run.
@@ -47,7 +53,7 @@ namespace Server.Tests.Utils
             await StartAsync("Client", TestSettings.ClientUrl, Path.Combine(root, "Client"),
                 "node", [Path.Combine("node_modules", "vite", "bin", "vite.js"), "--mode", "test", "--port", port, "--strictPort"],
                 // The client must call the test API, not the development API it uses by default
-                new() { ["VITE_API_URL"] = TestSettings.ApiUrl });
+                new() { ["VITE_API_PROXY_TARGET"] = TestSettings.ApiUrl, ["VITE_API_URL"] = string.Empty });
 
             _isStarted = true;
         }
@@ -75,12 +81,7 @@ namespace Server.Tests.Utils
         {
             if (await IsRunningAsync(url))
             {
-                TestLog.Logger.Information("{App} is already running on {Url}, using that one", name, url);
-                if (environment != null)
-                    TestLog.Logger.Warning("{App} was not started by the tests, so it may not use {Environment}. " +
-                        "Stop it (for example 'npm run dev') if the tests cannot reach the test API.",
-                        name, string.Join(", ", environment.Select(e => $"{e.Key}={e.Value}")));
-                return;
+                throw new InvalidOperationException($"The {name} test port is already in use at {url}. Use a free test port.");
             }
 
             TestLog.Logger.Information("Starting {App} on {Url}...", name, url);

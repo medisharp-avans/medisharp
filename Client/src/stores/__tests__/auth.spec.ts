@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 
 // De echte api-module importeert de router; vervang hem door een simpele mock.
 vi.mock('@/services/api', () => ({
-  default: { post: vi.fn() },
+  default: { post: vi.fn<typeof api.post>() },
 }))
 
 import api from '@/services/api'
@@ -252,7 +252,9 @@ describe('useAuthStore', () => {
 
     it('logt uit als de server de refresh token weigert', async () => {
       storeSession(pastDate())
-      post.mockRejectedValue(Object.assign(new Error('Unauthorized'), { response: { status: 401 } }))
+      post.mockRejectedValue(
+        Object.assign(new Error('Unauthorized'), { response: { status: 401 } }),
+      )
       const auth = useAuthStore()
 
       expect(await auth.refresh()).toBe(false)

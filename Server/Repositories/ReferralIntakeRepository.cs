@@ -58,12 +58,12 @@ namespace Server.Repositories
             catch (DbUpdateException exception) when
                 (exception.Entries.Any(entry => ReferenceEquals(entry.Entity, newPatient)))
             {
-                var concurrentlyCreatedId = await FindPatientIdAsync(referral.Bsn, cancellationToken);
-                if (concurrentlyCreatedId is null) throw;
+                var concurrentlyCreatedPatient = await context.Patients
+                    .SingleOrDefaultAsync(patient => patient.Bsn == referral.Bsn, cancellationToken);
+                if (concurrentlyCreatedPatient is null) throw;
 
-                referral.Patient = null;
                 context.Entry(newPatient).State = EntityState.Detached;
-                referral.PatientId = concurrentlyCreatedId;
+                context.Entry(referral).Reference(entity => entity.Patient).CurrentValue = concurrentlyCreatedPatient;
                 await context.SaveChangesAsync(cancellationToken);
             }
         }

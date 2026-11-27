@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System.Globalization;
 
@@ -25,12 +26,22 @@ namespace Server.Tests.Utils
         /// <summary>The test database. Its name must end with "Test".</summary>
         public static string ConnectionString { get; } = Required("ConnectionStrings:DefaultConnection");
 
+        /// <summary>The isolated referral-intake database on the same test SQL Server.</summary>
+        public static string ReferralConnectionString { get; } = BuildReferralConnectionString();
+
         /// <summary>How long waits for elements and URLs take before they fail.</summary>
         public static TimeSpan Timeout { get; } =
             TimeSpan.FromSeconds(double.Parse(_config["TimeoutSeconds"] ?? "4", CultureInfo.InvariantCulture));
 
         /// <summary>Runs Chrome without a window, for example on a build server.</summary>
         public static bool Headless { get; } = bool.Parse(_config["Headless"] ?? "false");
+
+        private static string BuildReferralConnectionString()
+        {
+            var connection = new SqlConnectionStringBuilder(ConnectionString);
+            connection.InitialCatalog += "_AFS01aTest";
+            return connection.ConnectionString;
+        }
 
         /// <summary>Reads a setting that must exist.</summary>
         private static string Required(string key) =>

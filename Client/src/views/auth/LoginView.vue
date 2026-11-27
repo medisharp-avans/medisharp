@@ -134,7 +134,9 @@ function restart() {
 
     <template #actions>
       <BaseButton type="submit" :disabled="loading" data-testid="login-submit">
-        <template v-if="challenge">{{ loading ? 'Bezig met controleren…' : 'Bevestigen' }}</template>
+        <template v-if="challenge">{{
+          loading ? 'Bezig met controleren…' : 'Bevestigen'
+        }}</template>
         <template v-else>{{ loading ? 'Bezig met inloggen…' : 'Inloggen' }}</template>
       </BaseButton>
       <button

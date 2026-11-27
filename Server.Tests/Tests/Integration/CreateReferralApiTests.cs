@@ -105,6 +105,22 @@ namespace Server.Tests.Tests.Integration
         }
 
         [TestMethod]
+        [DataRow("1234")]
+        [DataRow("01234567A")]
+        public async Task RejectsAnInvalidBsnFormatWithoutSaving(string bsn)
+        {
+            using var factory = new ReferralApiFactory();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
+            var request = new ReferralRequests().Valid();
+            request.Bsn = bsn;
+
+            using var response = await client.PostAsJsonAsync("/api/referrals", request);
+
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.AreEqual(0, await CountReferralsAsync(factory));
+        }
+
+        [TestMethod]
         [DataRow("dossier")]
         [DataRow("status")]
         [DataRow("id")]

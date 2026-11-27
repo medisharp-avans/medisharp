@@ -6,24 +6,27 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => ({
-  plugins: [
-    vue(),
-    // vueDevTools(),
-    tailwindcss(),
-  ],
-  server: {
-    proxy: {
-      '/api': {
-        target: loadEnv(mode, process.cwd()).VITE_API_URL || 'http://localhost:5174',
-        changeOrigin: true,
-        secure: mode !== 'test',
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd())
+  return {
+    plugins: [
+      vue(),
+      // vueDevTools(),
+      tailwindcss(),
+    ],
+    server: {
+      proxy: {
+        '/api': {
+          target: env.VITE_API_PROXY_TARGET || env.VITE_API_URL || 'http://localhost:5174',
+          changeOrigin: true,
+          secure: mode !== 'test',
+        },
       },
     },
-  },
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
     },
-  },
-}))
+  }
+})

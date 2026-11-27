@@ -19,16 +19,23 @@ namespace Server.Tests.PageModels
         {
             Navigate("login");
             Type(EmailField, email, "e-mailadres");
-            Type(PasswordField, password, "wachtwoord");
+            TypeSecret(PasswordField, password);
 
             var mailsBefore = TestMailbox.Snapshot();
             Click(SubmitButton, "inloggen");
 
             Driver.WaitForElement(CodeField);
-            Type(CodeField, TestMailbox.WaitForLoginCode(email, mailsBefore), "verificatiecode");
+            TypeSecret(CodeField, TestMailbox.WaitForLoginCode(email, mailsBefore));
             Click(SubmitButton, "bevestigen");
 
             new WebDriverWait(Driver, TestSettings.Timeout).Until(d => !new Uri(d.Url).AbsolutePath.StartsWith("/login"));
+        }
+
+        private void TypeSecret(By field, string text)
+        {
+            var input = Driver.WaitForElement(field);
+            input.Clear();
+            input.SendKeys(text);
         }
     }
 }

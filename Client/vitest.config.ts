@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url'
 import { mergeConfig, defineConfig, configDefaults } from 'vitest/config'
 import viteConfig from './vite.config.ts'
 
+const referralCoverage = process.env.AFS01A_COVERAGE === 'true'
+
 export default defineConfig((env) =>
   mergeConfig(viteConfig(env), {
     test: {
@@ -10,10 +12,17 @@ export default defineConfig((env) =>
       root: fileURLToPath(new URL('./', import.meta.url)),
       coverage: {
         provider: 'v8',
-        include: ['src/**/*.{ts,vue}'],
+        include: referralCoverage
+          ? [
+              'src/views/referrals/**/*.{ts,vue}',
+              'src/components/referrals/**/*.{ts,vue}',
+              'src/services/{openReferrals,referralPatients,referralReferenceOptions,referralRequest,referrals,treatmentCatalog}.ts',
+            ]
+          : ['src/**/*.{ts,vue}'],
         exclude: ['src/**/__tests__/**', 'src/main.ts', 'src/env.d.ts'],
         reporter: ['text', 'html', 'lcov', 'json-summary'],
         reportsDirectory: './coverage',
+        thresholds: referralCoverage ? { lines: 90 } : undefined,
       },
     },
   }),

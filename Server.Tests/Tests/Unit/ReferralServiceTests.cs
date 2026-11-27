@@ -1,4 +1,5 @@
 using Referral = Server.Models.Intake.Referral;
+using System.ComponentModel.DataAnnotations;
 using Server.Models.Enums;
 using Server.Models.DTO.Requests;
 using Server.Models.DTO.Responses;
@@ -15,6 +16,17 @@ namespace Server.Tests.Tests.Unit
     [TestCategory("Unit")]
     public class ReferralIntakeServiceTests
     {
+        [TestMethod]
+        public void BsnValidationRejectsAnAbsentValueWhenCalledDirectly()
+        {
+            var request = new ReferralRequests().Valid();
+            request.Bsn = null;
+
+            var error = request.Validate(new ValidationContext(request)).Single();
+
+            CollectionAssert.AreEqual(new[] { nameof(CreateReferralRequest.Bsn) }, error.MemberNames.ToArray());
+        }
+
         [TestMethod]
         public async Task ValidRequestIsSavedAsOpenWithServerGeneratedIdentityAndTime()
         {

@@ -28,12 +28,15 @@ jobs:
           cache-dependency-path: Client/package-lock.json
       - run: npm ci
       - run: npm run check
-      - run: npm run test:coverage
+      - name: Test client with AFS-01a coverage
+        run: npm run test:coverage
+        env:
+          AFS01A_COVERAGE: 'true'
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: client-coverage
+          name: afs01a-client-coverage
           path: Client/coverage/
           if-no-files-found: ignore
       - run: npm run build
@@ -111,7 +114,20 @@ jobs:
       - run: dotnet build Server.slnx --no-restore --configuration Release
       # Same solution as restore and build, so it is clear which projects are tested.
       # End-to-end tests are skipped here: they run in the e2e job below.
-      - run: dotnet test Server.slnx --no-build --configuration Release --filter "FullyQualifiedName!~Server.Tests.EndToEnd"
+      - name: Test server with AFS-01a coverage
+        run: >-
+          dotnet test Server.slnx --no-build --configuration Release
+          --filter "FullyQualifiedName!~Server.Tests.EndToEnd"
+          -p:CollectCoverage=true -p:AFS01aCoverage=true -p:CoverletOutputFormat=cobertura
+          -p:CoverletOutput=../artifacts/ci-coverage/server/
+          -p:Threshold=90 -p:ThresholdType=line -p:ThresholdStat=total
+      - name: Upload server coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: afs01a-server-coverage
+          path: artifacts/ci-coverage/server/
+          if-no-files-found: ignore
 
   e2e:
     # Only when the faster jobs pass, so a broken build does not waste minutes on browser tests.
@@ -152,17 +168,5 @@ jobs:
       # It does not have to be trusted: Chrome and the tests accept it anyway.
       - run: dotnet dev-certs https
       - run: dotnet build Server/Server.slnx --configuration Release
-      # Start the API and the client ourselves. AppServer sees they already run and uses them.
-      # If AppServer started the API itself, the 'Tests' launch profile would point it at LocalDB,
-      # which does not exist on Linux; '--no-launch-profile' keeps the connection string from 'env' above.
-      - name: Start API and client
-        run: |
-          ASPNETCORE_ENVIRONMENT=Development dotnet run --project Server --no-build -c Release \
-            --no-launch-profile --urls https://localhost:5071 > api.log 2>&1 &
-          (cd Client && npx vite --port 5173 --strictPort > ../client.log 2>&1 &)
-          timeout 120 bash -c 'until curl -sk https://localhost:5071 > /dev/null; do sleep 2; done'
-          timeout 60 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 2; done'
+      # AppServer starts both applications with the CI test database and dedicated ports.
       - run: dotnet test Server/Server.slnx --no-build --configuration Release --filter "FullyQualifiedName~Server.Tests.EndToEnd"
-      # On failure, the output of the API and client usually tells why.
-      - if: failure()
-        run: tail -n 50 api.log client.log

@@ -9,7 +9,7 @@ describe('getTreatments', () => {
       { code: 'Z0005', description: 'Consult oren', specialty: 'KNO' },
       { code: 'Z0072', description: 'Consult oren', specialty: 'KNO' },
     ]
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => choices })
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(choices)))
     vi.stubGlobal('fetch', fetchMock)
     expect(await getTreatments('KNO')).toEqual(choices)
     expect(fetchMock).toHaveBeenCalledWith('/api/treatments?specialty=KNO', { signal: undefined })
@@ -28,9 +28,11 @@ describe('getTreatments', () => {
 
   it('geeft een fout bij een mislukte aanvraag en geeft annulering door', async () => {
     const controller = new AbortController()
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false })
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 503 }))
     vi.stubGlobal('fetch', fetchMock)
-    await expect(getTreatments('KNO', controller.signal)).rejects.toThrow()
+    await expect(getTreatments('KNO', controller.signal)).rejects.toThrow(
+      'Catalogus niet beschikbaar',
+    )
     expect(fetchMock).toHaveBeenCalledWith('/api/treatments?specialty=KNO', {
       signal: controller.signal,
     })

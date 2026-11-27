@@ -8,7 +8,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 async function setup(status = 201, delayed = false) {
   let finish: (() => void) | undefined
-  const post = vi.fn(() =>
+  const post = vi.fn<() => Promise<Response>>(() =>
     delayed
       ? new Promise<Response>((resolve) => {
           finish = () => resolve(new Response(null, { status }))
@@ -186,5 +186,103 @@ it('weigert witruimte en wist de behandeling bij een ander specialisme', async (
   await wrapper.get('#referral-specialty').setValue('Oogheelkunde')
   await flushPromises()
   expect((wrapper.get('#referral-treatment').element as HTMLSelectElement).value).toBe('')
+  wrapper.unmount()
+})
+
+it('zoekt en bewaart geen BSN met een onjuist formaat', async () => {
+  const { wrapper, post } = await setup()
+  const requests = vi.mocked(fetch)
+  requests.mockClear()
+  await wrapper.get('#patient-bsn').setValue('1234')
+  await wrapper.get('#patient-lookup').trigger('click')
+  expect(wrapper.text()).toContain('Vul een BSN van 9 cijfers in.')
+  await wrapper.get('form').trigger('submit')
+  expect(wrapper.get('[role="alert"]').text()).toContain('Vul een BSN van 9 cijfers in.')
+  expect(post).not.toHaveBeenCalled()
+  expect(requests).not.toHaveBeenCalled()
+  wrapper.unmount()
+})
+
+it('annuleert een zoekopdracht bij een gewijzigd BSN en laat een oude respons weg', async () => {
+  const { wrapper } = await setup()
+  const requests = vi.mocked(fetch)
+  let complete: ((value: Response) => void) | undefined
+  requests.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        complete = resolve
+      }),
+  )
+
+  await wrapper.get('#patient-lookup').trigger('click')
+  await flushPromises()
+  expect(wrapper.text()).toContain('Patiëntgegevens ophalen')
+  const options = requests.mock.lastCall?.[1]
+  await wrapper.get('#patient-bsn').setValue('012345679')
+  expect(options?.signal?.aborted).toBe(true)
+  complete?.(
+    new Response(
+      JSON.stringify({
+        patientName: 'Verouderde patiënt',
+        patientPostalCode: '1234 AB',
+        patientHouseNumber: '12A',
+        patientPhoneNumber: '0000000000',
+        patientEmailAddress: 'patiënt@example.test',
+      }),
+    ),
+  )
+  await flushPromises()
+  expect(wrapper.get<HTMLInputElement>('#patient-name').element.value).toBe('Fictief')
+  expect(wrapper.text()).not.toContain('Patiënt gevonden')
+  wrapper.unmount()
+})
+
+it('meldt een mislukte BSN-zoekactie en biedt opnieuw zoeken aan', async () => {
+  const { wrapper } = await setup()
+  vi.mocked(fetch).mockRejectedValueOnce(new Error('interne netwerkdetails'))
+  await wrapper.get('#patient-lookup').trigger('click')
+  await flushPromises()
+  expect(wrapper.text()).toContain('De patiëntgegevens konden niet worden opgehaald.')
+  expect(wrapper.text()).not.toContain('interne netwerkdetails')
+  expect(wrapper.get<HTMLButtonElement>('#patient-lookup').element.disabled).toBe(false)
+  wrapper.unmount()
+})
+
+it('weigert een ongeldige bijlage en laat herstel met een PDF toe', async () => {
+  const { wrapper, post } = await setup()
+  const input = wrapper.get<HTMLInputElement>('#referral-attachments')
+  Object.defineProperty(input.element, 'files', {
+    configurable: true,
+    value: [new File(['test'], 'test.txt')],
+  })
+  await input.trigger('change')
+  expect(wrapper.get('#attachment-error').text()).toContain('PDF-, JPG- of PNG-bestanden')
+  await wrapper.get('form').trigger('submit')
+  expect(post).not.toHaveBeenCalled()
+
+  const pdf = new File(['%PDF-test\n%%EOF'], 'bewijs.pdf', { type: 'application/pdf' })
+  Object.defineProperty(input.element, 'files', { configurable: true, value: [pdf] })
+  await input.trigger('change')
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
+  const [url, options] = vi.mocked(fetch).mock.lastCall ?? []
+  expect(url).toBe('/api/referrals/with-attachments')
+  const body = options?.body
+  expect(body).toBeInstanceOf(FormData)
+  expect((body as FormData).getAll('attachments')).toEqual([pdf])
+  wrapper.unmount()
+})
+
+it('toont een fout bij behandelingen ophalen en herstelt na opnieuw proberen', async () => {
+  const { wrapper } = await setup()
+  vi.mocked(fetch).mockRejectedValueOnce(new Error('catalogus tijdelijk niet beschikbaar'))
+  await wrapper.get('#referral-specialty').setValue('Oogheelkunde')
+  await flushPromises()
+  expect(wrapper.get('#treatment-choice-hint').text()).toContain(
+    'De behandelingen konden niet worden geladen.',
+  )
+  await wrapper.get('#treatment-choice-hint button').trigger('click')
+  await flushPromises()
+  expect(wrapper.get<HTMLSelectElement>('#referral-treatment').element.disabled).toBe(false)
   wrapper.unmount()
 })

@@ -162,6 +162,10 @@ Both commands start their own preview server on <http://localhost:4173>, so that
 
 Both checks use your installed Google Chrome. The Lighthouse thresholds live in `lighthouserc.cjs`; the coverage settings live in `vitest.config.ts`. In CI the same checks run in the `client` and `client-quality` jobs, and the reports are uploaded as artifacts on the workflow run.
 
+#### Coverage reports
+
+The CI jobs require at least 90% line coverage for the AFS-01a referral feature on the client and server. Download `afs01a-client-coverage` and `afs01a-server-coverage` from the workflow run. The reports also show branch coverage. The regular test suites still run, and the referral migration tests verify the actual schema against SQL Server.
+
 ### 1.7 Optional: test the production setup locally
 
 You can run the full production stack on your machine before you deploy:
