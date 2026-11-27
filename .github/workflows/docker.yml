@@ -85,12 +85,8 @@ jobs:
               "$IMAGE_PREFIX-$app:sha-$GITHUB_SHA"
           done
 
-      - name: Deploy to Dokploy (staging)
-        run: |
-          curl --fail-with-body -sS -X POST "${{ vars.DOKPLOY_URL }}/api/compose.deploy" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"composeId":"${{ vars.DOKPLOY_COMPOSE_ID }}","title":"${{ github.sha }}"}'
+      - name: Deploy to Dokploy
+        run: curl --fail-with-body -sS -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
 
   deploy-production:
     needs: deploy-staging
@@ -116,9 +112,5 @@ jobs:
               "$IMAGE_PREFIX-$app:sha-$GITHUB_SHA"
           done
 
-      - name: Deploy to Dokploy (production)
-        run: |
-          curl --fail-with-body -sS -X POST "${{ vars.DOKPLOY_URL }}/api/compose.deploy" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"composeId":"${{ vars.DOKPLOY_COMPOSE_ID }}","title":"${{ github.sha }}"}'
+      - name: Deploy to Dokploy
+        run: curl --fail-with-body -sS -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}"
