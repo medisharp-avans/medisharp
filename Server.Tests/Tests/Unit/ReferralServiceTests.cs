@@ -1,3 +1,4 @@
+using Referral = Server.Models.Intake.Referral;
 using Server.Models.Enums;
 using Server.Models.DTO.Requests;
 using Server.Models.DTO.Responses;
@@ -12,13 +13,13 @@ namespace Server.Tests.Tests.Unit
 {
     [TestClass]
     [TestCategory("Unit")]
-    public class ReferralServiceTests
+    public class ReferralIntakeServiceTests
     {
         [TestMethod]
         public async Task ValidRequestIsSavedAsOpenWithServerGeneratedIdentityAndTime()
         {
-            var repository = new RecordingReferralRepository();
-            var service = new ReferralService(repository, new StubTreatmentCatalogRepository());
+            var repository = new RecordingReferralIntakeRepository();
+            var service = new ReferralIntakeService(repository, new StubTreatmentCatalogRepository());
             var request = new ReferralRequests().Valid();
             var before = DateTimeOffset.UtcNow;
             using var cancellation = new CancellationTokenSource();
@@ -48,13 +49,13 @@ namespace Server.Tests.Tests.Unit
         [DataRow(" \t\r\n")]
         public async Task MissingKeyFieldsReturnExactMessagesWithoutSaving(string? value)
         {
-            var repository = new RecordingReferralRepository();
+            var repository = new RecordingReferralIntakeRepository();
             var request = new ReferralRequests().Valid();
             request.Bsn = value;
             request.Specialty = value;
             request.TreatmentCode = value;
 
-            var result = await new ReferralService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
+            var result = await new ReferralIntakeService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
 
             Assert.HasCount(3, result.Errors);
             CollectionAssert.AreEqual(new[] { "Vul het BSN in" }, result.Errors["bsn"]);
@@ -75,11 +76,11 @@ namespace Server.Tests.Tests.Unit
         [DataRow(nameof(CreateReferralRequest.Allergies), "allergies")]
         public async Task OtherRequiredFieldsCannotBeBlank(string propertyName, string errorKey)
         {
-            var repository = new RecordingReferralRepository();
+            var repository = new RecordingReferralIntakeRepository();
             var request = new ReferralRequests().Valid();
             typeof(CreateReferralRequest).GetProperty(propertyName)!.SetValue(request, " \t ");
 
-            var result = await new ReferralService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
+            var result = await new ReferralIntakeService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
 
             Assert.IsTrue(result.Errors.ContainsKey(errorKey));
             Assert.IsEmpty(repository.Saved);
@@ -95,8 +96,8 @@ namespace Server.Tests.Tests.Unit
         public async Task ColumnLengthLimitIsAcceptedButLongerValuesAreRejected(
             string propertyName, string errorKey, int limit)
         {
-            var repository = new RecordingReferralRepository();
-            var service = new ReferralService(repository, new StubTreatmentCatalogRepository());
+            var repository = new RecordingReferralIntakeRepository();
+            var service = new ReferralIntakeService(repository, new StubTreatmentCatalogRepository());
             var request = new ReferralRequests().Valid();
             var property = typeof(CreateReferralRequest).GetProperty(propertyName)!;
             property.SetValue(request, new string('1', limit + 1));
@@ -119,11 +120,11 @@ namespace Server.Tests.Tests.Unit
         [DataRow(999)]
         public async Task MissingOrUnknownUrgencyIsRejected(int? urgency)
         {
-            var repository = new RecordingReferralRepository();
+            var repository = new RecordingReferralIntakeRepository();
             var request = new ReferralRequests().Valid();
             request.Urgency = urgency.HasValue ? (ReferralUrgency)urgency.Value : null;
 
-            var result = await new ReferralService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
+            var result = await new ReferralIntakeService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
 
             Assert.IsTrue(result.Errors.ContainsKey("urgency"));
             Assert.IsEmpty(repository.Saved);
@@ -134,11 +135,11 @@ namespace Server.Tests.Tests.Unit
         [DataRow(nameof(CreateReferralRequest.TreatmentCode), "treatmentCode", 50)]
         public async Task OverlongCatalogueFieldsAreRejected(string propertyName, string errorKey, int limit)
         {
-            var repository = new RecordingReferralRepository();
+            var repository = new RecordingReferralIntakeRepository();
             var request = new ReferralRequests().Valid();
             typeof(CreateReferralRequest).GetProperty(propertyName)!.SetValue(request, new string('x', limit + 1));
 
-            var result = await new ReferralService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
+            var result = await new ReferralIntakeService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
 
             Assert.IsTrue(result.Errors.ContainsKey(errorKey));
             Assert.IsEmpty(repository.Saved);
@@ -151,12 +152,12 @@ namespace Server.Tests.Tests.Unit
         public async Task UnknownOrMismatchedCatalogueChoicesAreRejectedWithoutSaving(
             string code, string specialty, string message)
         {
-            var repository = new RecordingReferralRepository();
+            var repository = new RecordingReferralIntakeRepository();
             var request = new ReferralRequests().Valid();
             request.TreatmentCode = code;
             request.Specialty = specialty;
 
-            var result = await new ReferralService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
+            var result = await new ReferralIntakeService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
 
             CollectionAssert.AreEqual(new[] { message }, result.Errors["treatmentCode"]);
             Assert.IsNull(result.Referral);
@@ -166,12 +167,12 @@ namespace Server.Tests.Tests.Unit
         [TestMethod]
         public async Task ValidChoicesAreStoredUsingTheCatalogueSpelling()
         {
-            var repository = new RecordingReferralRepository();
+            var repository = new RecordingReferralIntakeRepository();
             var request = new ReferralRequests().Valid();
             request.TreatmentCode = " z0005 ";
             request.Specialty = " kno ";
 
-            var result = await new ReferralService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
+            var result = await new ReferralIntakeService(repository, new StubTreatmentCatalogRepository()).CreateAsync(request);
 
             Assert.IsEmpty(result.Errors);
             Assert.AreEqual("Z0005", repository.Saved.Single().TreatmentCode);
@@ -181,18 +182,18 @@ namespace Server.Tests.Tests.Unit
         [TestMethod]
         public async Task CancelledRequestDoesNotSaveAReferral()
         {
-            var repository = new RecordingReferralRepository();
+            var repository = new RecordingReferralIntakeRepository();
             using var cancellation = new CancellationTokenSource();
             cancellation.Cancel();
 
             await Assert.ThrowsExactlyAsync<OperationCanceledException>(() =>
-                new ReferralService(repository, new StubTreatmentCatalogRepository())
+                new ReferralIntakeService(repository, new StubTreatmentCatalogRepository())
                     .CreateAsync(new ReferralRequests().Valid(), cancellation.Token));
 
             Assert.IsEmpty(repository.Saved);
         }
 
-        private class RecordingReferralRepository : IReferralRepository
+        private class RecordingReferralIntakeRepository : IReferralIntakeRepository
         {
             public List<Referral> Saved { get; } = [];
             public CancellationToken ReceivedCancellationToken { get; private set; }

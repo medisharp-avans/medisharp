@@ -1,17 +1,17 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Server.Models.DTO.Requests;
 using Server.Models.DTO.Responses;
-using Server.Filters;
+using Server.Models.Enums;
 using Server.Services;
-using Server.Services.InterFaces;
 using System.Text.Json;
 
 namespace Server.Controllers;
 
-/// <summary>Creates a referral and optional attachments as a single development-only operation.</summary>
+/// <summary>Accepts a referral and optional attachments from an authenticated general practitioner.</summary>
 [ApiController]
 [Route("api/referrals/with-attachments")]
-[ServiceFilter(typeof(DevelopmentOnlyFilter))]
+[Authorize(Roles = nameof(UserRole.Huisarts))]
 public class ReferralUploadsController(ReferralUploadService uploads) : ControllerBase
 {
     [HttpPost]

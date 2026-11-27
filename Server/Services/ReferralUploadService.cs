@@ -1,11 +1,12 @@
 using Server.Models.DTO.Requests;
 using Server.Models.DTO.Responses;
 using Server.Models;
+using Server.Services.InterFaces;
 
 namespace Server.Services;
 
 /// <summary>Validates bounded uploads and removes staged files unless the referral is committed.</summary>
-public class ReferralUploadService(ReferralService referrals, IConfiguration configuration)
+public class ReferralUploadService(IReferralIntakeService referrals, IConfiguration configuration)
 {
     public const long PerFileLimit = 10 * 1024 * 1024;
     public const long TotalLimit = 25 * 1024 * 1024;

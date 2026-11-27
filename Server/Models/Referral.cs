@@ -1,37 +1,53 @@
+﻿
 using Server.Models.Enums;
+using System.ComponentModel.DataAnnotations;
+
 namespace Server.Models
 {
-    /// <summary>
-    /// A referral containing only the patient and medical information selected by the GP.
-    /// Patient details are a snapshot of what was supplied at the time of referral.
-    /// </summary>
     public class Referral
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [Key]
+        public int Id { get; set; }
 
-        public int? PatientId { get; set; }
-        public Patient? Patient { get; set; }
+        [Required]
+        public int PatientId { get; set; }
 
-        public required string Bsn { get; set; }
-        public required string PatientName { get; set; }
-        // Null is possible only for referrals saved before postcode and house number were collected.
-        public string? PatientPostalCode { get; set; }
-        public string? PatientHouseNumber { get; set; }
-        public string? PatientPhoneNumber { get; set; }
-        public required string PatientEmailAddress { get; set; }
+        public Patient Patient { get; set; } = null!;
 
-        public required string Specialty { get; set; }
-        public required string TreatmentCode { get; set; }
-        public required string ReasonForReferral { get; set; }
-        public required string ClinicalQuestion { get; set; }
-        public required string Medication { get; set; }
-        public required string MedicalInformation { get; set; }
-        public required string Allergies { get; set; }
-        public required ReferralUrgency Urgency { get; set; }
+        [Required]
+        public int GeneralPractitionerId { get; set; }
 
-        public ReferralStatus Status { get; private set; } = ReferralStatus.Open;
-        public DateTimeOffset CreatedAtUtc { get; private set; } = DateTimeOffset.UtcNow;
+        public GeneralPractitioner GeneralPractitioner { get; set; } = null!;
 
-        public ICollection<ReferralAttachment> Attachments { get; } = new List<ReferralAttachment>();
+        [Required]
+        [EnumDataType(typeof(Specialism))]
+        public Specialism Specialism { get; set; }
+
+        public int? PreferredSpecialistId { get; set; }
+
+        public Specialist? PreferredSpecialist { get; set; }
+
+        [Required]
+        [StringLength(500)]
+        public string Reason { get; set; } = string.Empty;
+
+        [StringLength(1000)]
+        public string Questionnaire { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(20)]
+        public string Urgency { get; set; } = "Regulier";
+
+        public string TreatmentCode { get; set; } = string.Empty;
+
+        public TreatmentCode TreatmentCodeDetails { get; set; } = null!;
+
+        [Required]
+        [StringLength(20)]
+        public string Status { get; set; } = "Open";
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public Appointment? Appointment { get; set; }
     }
 }

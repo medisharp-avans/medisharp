@@ -1,3 +1,4 @@
+using Referral = Server.Models.Intake.Referral;
 using Server.Models.Enums;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -31,7 +32,7 @@ namespace Server.Tests.Tests.Integration
         public async Task PostPersistsSelectedDataAndReturnsOnlyAConfirmation()
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
             var request = new ReferralRequests().Valid();
 
             using var response = await client.PostAsJsonAsync("/api/referrals", request);
@@ -46,7 +47,7 @@ namespace Server.Tests.Tests.Integration
 
             // Use a fresh context so this proves persistence, not just EF tracking.
             using var scope = factory.Services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<ReferralDbContext>();
             var saved = await context.Referrals.AsNoTracking().SingleAsync();
             Assert.AreEqual(result.Id, saved.Id);
             Assert.AreEqual(ReferralStatus.Open, saved.Status);
@@ -76,7 +77,7 @@ namespace Server.Tests.Tests.Integration
             string field, string message)
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
 
             foreach (var variant in new[] { "missing", "null", "empty", "whitespace" })
             {
@@ -115,7 +116,7 @@ namespace Server.Tests.Tests.Integration
         public async Task ExtraFieldsAreRejectedWithoutSavingOrEchoingTheirContents(string field)
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
             const string excludedData = "NIET-MEESTUREN-AFS-01a";
             var json = ValidJson();
             json[field] = excludedData;
@@ -135,7 +136,7 @@ namespace Server.Tests.Tests.Integration
         public async Task InvalidRequestBodyIsRejectedWithoutSaving(string body)
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
             using var content = new StringContent(body, Encoding.UTF8, "application/json");
 
             using var response = await client.PostAsync("/api/referrals", content);
@@ -149,7 +150,7 @@ namespace Server.Tests.Tests.Integration
         public async Task OverlongValuesReturnValidationErrorsInsteadOfDatabaseErrors()
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
             var request = new ReferralRequests().Valid();
             request.Bsn = new string('1', 10);
             request.PatientName = new string('x', 201);
@@ -176,11 +177,11 @@ namespace Server.Tests.Tests.Integration
                 builder.ConfigureLogging(logging => logging.ClearProviders().AddProvider(logs));
                 builder.ConfigureTestServices(services =>
                 {
-                    services.RemoveAll<IReferralRepository>();
-                    services.AddScoped<IReferralRepository, FailingReferralRepository>();
+                    services.RemoveAll<IReferralIntakeRepository>();
+                    services.AddScoped<IReferralIntakeRepository, FailingReferralIntakeRepository>();
                 });
             });
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
             client.DefaultRequestHeaders.Accept.ParseAdd(acceptedContentType);
             var request = new ReferralRequests().Valid();
 
@@ -209,15 +210,18 @@ namespace Server.Tests.Tests.Integration
         [TestMethod]
         [DataRow("Production")]
         [DataRow("Staging")]
-        public async Task CreatingReferralsIsUnavailableOutsideDevelopmentUntilAccountsAreConnected(string environment)
+        public async Task CreatingReferralsRequiresAGpAccountInAnyEnvironment(string environment)
         {
             using var factory = new ReferralApiFactory(environment);
-            using var client = factory.CreateClient();
+            using var anonymous = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
 
+            using var denied = await anonymous.PostAsJsonAsync("/api/referrals", new ReferralRequests().Valid());
+            Assert.AreEqual(HttpStatusCode.Unauthorized, denied.StatusCode);
             using var response = await client.PostAsJsonAsync("/api/referrals", new ReferralRequests().Valid());
 
-            Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
-            Assert.AreEqual(0, await CountReferralsAsync(factory));
+            Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+            Assert.AreEqual(1, await CountReferralsAsync(factory));
         }
 
         [TestMethod]
@@ -226,7 +230,7 @@ namespace Server.Tests.Tests.Integration
         public async Task OptionalPhoneIsStoredAsNull(bool sendBlankPhone)
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
             var request = ValidJson();
             request.Remove("clinicalQuestion");
             if (sendBlankPhone) request["patientPhoneNumber"] = "   ";
@@ -235,7 +239,7 @@ namespace Server.Tests.Tests.Integration
             using var response = await client.PostAsJsonAsync("/api/referrals", request);
             Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
             using var scope = factory.Services.CreateScope();
-            var saved = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Referrals.SingleAsync();
+            var saved = await scope.ServiceProvider.GetRequiredService<ReferralDbContext>().Referrals.SingleAsync();
             Assert.IsNull(saved.PatientPhoneNumber);
             Assert.AreEqual(string.Empty, saved.ClinicalQuestion);
         }
@@ -246,11 +250,11 @@ namespace Server.Tests.Tests.Integration
         private async Task<int> CountReferralsAsync(WebApplicationFactory<Program> factory)
         {
             using var scope = factory.Services.CreateScope();
-            return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Referrals.CountAsync();
+            return await scope.ServiceProvider.GetRequiredService<ReferralDbContext>().Referrals.CountAsync();
         }
 
         // Deliberately include fictional patient values in an exception to exercise the privacy boundary.
-        private class FailingReferralRepository : IReferralRepository
+        private class FailingReferralIntakeRepository : IReferralIntakeRepository
         {
             public Task AddAsync(Referral referral, CancellationToken cancellationToken) =>
                 throw new DbUpdateException($"{referral.Bsn} {referral.PatientName} {referral.MedicalInformation}",

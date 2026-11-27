@@ -1,3 +1,5 @@
+import { referralRequest } from './referralRequest'
+
 export type ReferralDraft = Record<
   | 'specialty'
   | 'treatmentCode'
@@ -26,7 +28,7 @@ export async function createReferral(
     const form = new FormData()
     form.append('referral', JSON.stringify(draft))
     attachments.forEach((file) => form.append('attachments', file))
-    const response = await fetch(
+    const response = await referralRequest(
       attachments.length ? '/api/referrals/with-attachments' : '/api/referrals',
       {
         method: 'POST',
@@ -35,6 +37,10 @@ export async function createReferral(
       },
     )
     if (response.status === 201) return { saved: true }
+    if (response.status === 401)
+      return { saved: false, fields: [], message: 'Je sessie is verlopen. Log opnieuw in.' }
+    if (response.status === 403)
+      return { saved: false, fields: [], message: 'Alleen huisartsen mogen verwijzingen aanmaken.' }
     if (response.status === 413)
       return { saved: false, fields: ['attachments'], message: 'De bestanden zijn samen te groot.' }
     if (response.status === 400) {

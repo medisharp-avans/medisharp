@@ -1,3 +1,5 @@
+import { referralRequest } from './referralRequest'
+
 export interface OpenReferral {
   specialty: string
   treatmentCode: string
@@ -6,7 +8,7 @@ export interface OpenReferral {
 }
 
 export async function getOpenReferrals(page: number): Promise<OpenReferral[]> {
-  const response = await fetch(`/api/referrals/open?page=${page}`, { cache: 'no-store' })
+  const response = await referralRequest(`/api/referrals/open?page=${page}`)
   if (response.status === 401 || response.status === 403) {
     throw new Error('Dit overzicht is alleen beschikbaar voor bevoegd ziekenhuispersoneel.')
   }

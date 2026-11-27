@@ -1,7 +1,16 @@
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
 import { createReferral, type ReferralDraft } from '../referrals'
 
 afterEach(() => vi.unstubAllGlobals())
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+  const auth = useAuthStore()
+  auth.token = 'test-access-token'
+  auth.expiresAt = new Date(Date.now() + 120_000).toISOString()
+})
 
 it('verstuurt bijlagen als multipart zonder een eigen boundary-header', async () => {
   const fetchMock = vi.fn().mockResolvedValue({ status: 201 })
@@ -10,7 +19,8 @@ it('verstuurt bijlagen als multipart zonder een eigen boundary-header', async ()
   await createReferral(draft, [file])
   const [url, options] = fetchMock.mock.calls[0]!
   expect(url).toBe('/api/referrals/with-attachments')
-  expect(options.headers).toBeUndefined()
+  expect(options.headers.has('Content-Type')).toBe(false)
+  expect(options.headers.get('Authorization')).toBe('Bearer test-access-token')
   expect(options.body.get('referral')).toBe(JSON.stringify(draft))
   expect(options.body.getAll('attachments')).toHaveLength(1)
 })
@@ -22,9 +32,24 @@ it('verstuurt invoer in de body en accepteert uitsluitend 201 als bevestiging', 
   expect(await createReferral(draft)).toEqual({ saved: true })
   expect(fetchMock).toHaveBeenCalledWith('/api/referrals', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: new Headers({
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer test-access-token',
+    }),
     body: JSON.stringify(draft),
+    cache: 'no-store',
   })
+})
+
+it('verstuurt geen gegevens wanneer de sessie verlopen is', async () => {
+  useAuthStore().token = null
+  useAuthStore().refreshToken = null
+  const fetchMock = vi.fn()
+  vi.stubGlobal('fetch', fetchMock)
+
+  const result = await createReferral(draft)
+  expect(result.saved).toBe(false)
+  expect(fetchMock).not.toHaveBeenCalled()
 })
 
 it('geeft veldnamen door zonder aangeleverde servertekst te tonen', async () => {

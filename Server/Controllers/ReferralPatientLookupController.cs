@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Server.Models.DTO.Requests;
 using Server.Models.DTO.Responses;
+using Server.Models.Enums;
 using Server.Repositories;
 
 namespace Server.Controllers;
 
 [ApiController]
 [Route("api/referrals/patient-lookup")]
+[Authorize(Roles = nameof(UserRole.Huisarts))]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public class ReferralPatientLookupController(PatientLookupRepository patients) : ControllerBase
 {
@@ -19,9 +22,6 @@ public class ReferralPatientLookupController(PatientLookupRepository patients) :
     [ProducesResponseType(403)]
     public async Task<IActionResult> Find(PatientLookupRequest request, CancellationToken cancellationToken)
     {
-        // The shared login middleware supplies this principal after PRI-03/04 integration.
-        if (User.Identity?.IsAuthenticated != true) return Unauthorized();
-        if (!User.IsInRole("Huisarts")) return StatusCode(403);
         var patient = await patients.FindByBsnAsync(request.Bsn, cancellationToken);
         return patient is null ? NoContent() : Ok(patient);
     }

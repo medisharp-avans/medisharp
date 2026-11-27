@@ -1,3 +1,4 @@
+using Referral = Server.Models.Intake.Referral;
 using Server.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

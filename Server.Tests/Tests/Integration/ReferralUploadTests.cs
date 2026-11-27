@@ -22,7 +22,7 @@ public class ReferralUploadTests
             builder.UseSetting("Attachments:StoragePath", directory));
         try
         {
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
             using var form = new MultipartFormDataContent();
             form.Add(new StringContent(JsonSerializer.Serialize(new ReferralRequests().Valid(),
                 new JsonSerializerOptions(JsonSerializerDefaults.Web))), "referral");
@@ -32,7 +32,7 @@ public class ReferralUploadTests
             using var response = await client.PostAsync("/api/referrals/with-attachments", form);
             Assert.AreEqual(valid ? HttpStatusCode.Created : HttpStatusCode.BadRequest, response.StatusCode);
             using var scope = factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<ReferralDbContext>();
             Assert.AreEqual(valid ? 1 : 0, await db.Referrals.CountAsync());
             Assert.AreEqual(valid ? 1 : 0, await db.ReferralAttachments.CountAsync());
             if (valid)
@@ -52,7 +52,7 @@ public class ReferralUploadTests
     public async Task LimitsRejectWithoutSaving(int count, int megabytes)
     {
         using var factory = new ReferralApiFactory();
-        using var client = factory.CreateClient();
+        using var client = ReferralApiFactory.CreateClientAs(factory);
         using var form = new MultipartFormDataContent();
         form.Add(new StringContent(JsonSerializer.Serialize(new ReferralRequests().Valid(),
             new JsonSerializerOptions(JsonSerializerDefaults.Web))), "referral");
@@ -60,6 +60,6 @@ public class ReferralUploadTests
         using var response = await client.PostAsync("/api/referrals/with-attachments", form);
         Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
         using var scope = factory.Services.CreateScope();
-        Assert.AreEqual(0, await scope.ServiceProvider.GetRequiredService<AppDbContext>().Referrals.CountAsync());
+        Assert.AreEqual(0, await scope.ServiceProvider.GetRequiredService<ReferralDbContext>().Referrals.CountAsync());
     }
 }

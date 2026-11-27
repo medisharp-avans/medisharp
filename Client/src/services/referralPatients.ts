@@ -1,3 +1,5 @@
+import { referralRequest } from './referralRequest'
+
 export interface ReferralPatient {
   patientName: string
   patientPostalCode: string
@@ -12,11 +14,10 @@ export async function findReferralPatient(
   signal: AbortSignal,
 ): Promise<ReferralPatient | null> {
   const failureMessage = 'De patiëntgegevens konden niet worden opgehaald.'
-  const response = await fetch('/api/referrals/patient-lookup', {
+  const response = await referralRequest('/api/referrals/patient-lookup', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ bsn }),
-    cache: 'no-store',
     signal,
   }).catch(() => {
     throw new Error(failureMessage)

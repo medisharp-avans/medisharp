@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Zijnavigatie met de hoofdpagina's van de applicatie.
 import AppNavigationItem from '@/components/Layout/AppNavigationItem.vue'
+import { useAuthStore } from '@/stores/auth'
 import {
   Home01Icon,
   Calendar03Icon,
@@ -9,6 +10,8 @@ import {
   UserGroupIcon,
   ClipboardIcon,
 } from '@hugeicons/core-free-icons'
+
+const auth = useAuthStore()
 </script>
 
 <template>
@@ -21,7 +24,14 @@ import {
       <AppNavigationItem route-name="MedicalFile" :icon="MedicalFileIcon">
         Medisch Dossier
       </AppNavigationItem>
-      <AppNavigationItem route-name="Referrals" :icon="FileExportIcon">
+      <AppNavigationItem
+        v-if="
+          auth.isAuthenticated &&
+          (auth.user?.role === 'Huisarts' || auth.user?.role === 'Ziekenhuismedewerker')
+        "
+        route-name="Referrals"
+        :icon="FileExportIcon"
+      >
         Verwijsbrieven
       </AppNavigationItem>
       <AppNavigationItem route-name="Patients" :icon="UserGroupIcon">Patiënten</AppNavigationItem>

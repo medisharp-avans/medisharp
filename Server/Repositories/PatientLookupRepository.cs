@@ -4,7 +4,7 @@ using Server.Models.DTO.Responses;
 
 namespace Server.Repositories;
 
-public class PatientLookupRepository(AppDbContext context)
+public class PatientLookupRepository(ReferralDbContext context)
 {
     public Task<ReferralPatientResponse?> FindByBsnAsync(string bsn, CancellationToken cancellationToken) =>
         context.Patients.AsNoTracking()

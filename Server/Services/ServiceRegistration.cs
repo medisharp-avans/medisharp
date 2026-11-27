@@ -1,16 +1,35 @@
+﻿using Microsoft.AspNetCore.Identity;
+using Server.Models;
 using Server.Services.InterFaces;
 
-namespace Server.Services;
-
-/// <summary>Registers the scoped services used by the referral feature.</summary>
-public static class ServiceRegistration
+namespace Server.Services
 {
-    public static IServiceCollection AddRegisteredServices(this IServiceCollection services)
+    /// <summary>Dependency injection registrations for the RevaliNow services.</summary>
+    public static class ServiceRegistration
     {
-        services.AddScoped<IReferralService, ReferralService>();
-        services.AddScoped<ReferralService>();
-        services.AddScoped<ReferralUploadService>();
-        services.AddScoped<ITreatmentCatalogService, TreatmentCatalogService>();
-        return services;
+        /// <summary>
+        /// Registers all services and the system <see cref="TimeProvider"/>.
+        /// Call from <c>Program.cs</c>: <c>builder.Services.AddRegisteredServices();</c>
+        /// </summary>
+        /// <param name="services">The service collection to add the registrations to.</param>
+        /// <returns>The same service collection, to allow chaining.</returns>
+        public static IServiceCollection AddRegisteredServices(this IServiceCollection services)
+        {
+            services.AddSingleton(TimeProvider.System);
+            services.AddScoped<ICalculateService, CalculateService>();
+
+            services.AddScoped<IAppointmentService, AppointmentService>();
+            services.AddScoped<IReferralService, ReferralService>();
+            services.AddScoped<IPatientService, PatientService>();
+
+            services.AddMemoryCache();
+            services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IReferralIntakeService, ReferralIntakeService>();
+            services.AddScoped<ReferralUploadService>();
+            services.AddScoped<ITreatmentCatalogService, TreatmentCatalogService>();
+            return services;
+        }
     }
 }

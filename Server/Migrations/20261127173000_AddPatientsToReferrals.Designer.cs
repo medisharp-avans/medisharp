@@ -11,7 +11,7 @@ using Server.Data;
 
 namespace Server.Migrations
 {
-    [DbContext(typeof(AppDbContext))]
+    [DbContext(typeof(ReferralDbContext))]
     [Migration("20261127173000_AddPatientsToReferrals")]
     partial class AddPatientsToReferrals
     {

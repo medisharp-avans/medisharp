@@ -1,11 +1,10 @@
-using Server.Models;
+﻿using Server.Models;
+using Server.Models.DTO.Requests;
 
 namespace Server.Repositories.InterFaces
 {
-    /// <summary>Persists referral snapshots without exposing database operations to the service.</summary>
-    public interface IReferralRepository
+    public interface IReferralRepository : IRepository<Referral>
     {
-        /// <summary>Saves a new referral and completes only after the database operation succeeds.</summary>
-        Task AddAsync(Referral referral, CancellationToken cancellationToken);
+        Task<Referral> CreateAsync(CreateReferralRequestDTO dto);
     }
 }

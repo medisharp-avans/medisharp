@@ -1,13 +1,10 @@
 @Server_HostAddress = http://localhost:5174
+@HuisartsToken = {{$processEnv MEDISHARP_HUISARTS_TOKEN}}
+@MedewerkerToken = {{$processEnv MEDISHARP_MEDEWERKER_TOKEN}}
 
-GET {{Server_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
-
-# AFS-01a: local Development only; all data below is fictitious.
-# PRI-03 account authorization and attachment upload are separate follow-up work.
+# AFS-01a: use an access token from a completed PRI login. All sample data is fictitious.
 POST {{Server_HostAddress}}/api/referrals
+Authorization: Bearer {{HuisartsToken}}
 Content-Type: application/json
 Accept: application/json
 
@@ -27,6 +24,20 @@ Accept: application/json
   "allergies": "Geen bekend",
   "urgency": "Regular"
 }
+
+###
+
+POST {{Server_HostAddress}}/api/referrals/patient-lookup
+Authorization: Bearer {{HuisartsToken}}
+Content-Type: application/json
+
+{ "bsn": "000000000" }
+
+###
+
+GET {{Server_HostAddress}}/api/referrals/open
+Authorization: Bearer {{MedewerkerToken}}
+Accept: application/json
 
 ###
 

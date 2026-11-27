@@ -6,7 +6,7 @@ using Server.Models;
 namespace Server.Repositories
 {
     /// <summary>Queries the catalogue with typed, asynchronous EF Core queries.</summary>
-    public class TreatmentCatalogRepository(AppDbContext context) : ITreatmentCatalogRepository
+    public class TreatmentCatalogRepository(ReferralDbContext context) : ITreatmentCatalogRepository
     {
         /// <inheritdoc />
         public async Task<IReadOnlyList<string>> GetSpecialtiesAsync(CancellationToken cancellationToken) =>

@@ -4,9 +4,16 @@
 // - requiresRol(roltype): for routes that are only accessible for specific user roles
 // - hideLayout: for routes that do not or should not inquire the base layout of the application, see App.vue
 
-const routes = [
+import type { RouteRecordRaw } from 'vue-router'
+
+const routes: RouteRecordRaw[] = [
   //Auth routes
-  // { path: '/login', name: 'Login', component: () => import("@/Login.vue"), meta: { hideLayout: true }},
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/auth/LoginView.vue'),
+    meta: { hideLayout: true },
+  },
   {
     path: '/profiel',
     name: 'Profile',
@@ -37,17 +44,19 @@ const routes = [
     path: '/verwijsbrieven',
     name: 'Referrals',
     component: () => import('@/views/referrals/ReferralsView.vue'),
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, referralRoles: ['Huisarts', 'Ziekenhuismedewerker'] },
     children: [
       {
         path: 'open',
         name: 'OpenReferrals',
         component: () => import('@/views/referrals/OpenReferralsView.vue'),
+        meta: { referralRoles: ['Ziekenhuismedewerker'] },
       },
       {
         path: 'nieuw',
         name: 'ReferralCreate',
         component: () => import('@/views/referrals/ReferralCreateView.vue'),
+        meta: { referralRoles: ['Huisarts'] },
       },
     ],
   },

@@ -19,7 +19,7 @@ namespace Server.Tests.Tests.Integration
         public async Task EveryCatalogueTreatmentIsReachableThroughItsSpecialty()
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
 
             var specialties = await client.GetFromJsonAsync<string[]>("/api/treatments/specialties");
 
@@ -56,7 +56,7 @@ namespace Server.Tests.Tests.Integration
         public async Task EqualDescriptionsRetainDistinctCodesDurationsAndCosts()
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
 
             var choices = await client.GetFromJsonAsync<TreatmentResponse[]>("/api/treatments?specialty=KNO");
 
@@ -78,7 +78,7 @@ namespace Server.Tests.Tests.Integration
         public async Task MissingSpecialtyReturnsAFieldError(string query)
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
 
             using var response = await client.GetAsync("/api/treatments" + query);
 
@@ -92,7 +92,7 @@ namespace Server.Tests.Tests.Integration
         public async Task OverlongSpecialtyIsRejected()
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
 
             using var response = await client.GetAsync("/api/treatments?specialty=" + new string('x', 101));
 
@@ -103,7 +103,7 @@ namespace Server.Tests.Tests.Integration
         public async Task UnknownSpecialtyDoesNotReturnOtherTreatments()
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
 
             var choices = await client.GetFromJsonAsync<TreatmentResponse[]>("/api/treatments?specialty=Onbekend");
 
@@ -119,7 +119,7 @@ namespace Server.Tests.Tests.Integration
             string code, string specialty, string message)
         {
             using var factory = new ReferralApiFactory();
-            using var client = factory.CreateClient();
+            using var client = ReferralApiFactory.CreateClientAs(factory);
             var request = new ReferralRequests().Valid();
             request.TreatmentCode = code;
             request.Specialty = specialty;
@@ -131,7 +131,7 @@ namespace Server.Tests.Tests.Integration
             Assert.IsNotNull(problem);
             CollectionAssert.AreEqual(new[] { message }, problem.Errors["treatmentCode"]);
             using var scope = factory.Services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<ReferralDbContext>();
             Assert.AreEqual(0, await context.Referrals.CountAsync());
 
             using var accepted = await client.PostAsJsonAsync("/api/referrals", new ReferralRequests().Valid());
@@ -147,7 +147,7 @@ namespace Server.Tests.Tests.Integration
         [TestMethod]
         [DataRow("Staging")]
         [DataRow("Production")]
-        public async Task ReferenceDataRemainsReadableWhenReferralCreationIsDisabled(string environment)
+        public async Task ReferenceDataRemainsReadableWithoutSigningIn(string environment)
         {
             using var factory = new ReferralApiFactory(environment);
             using var client = factory.CreateClient();
@@ -155,7 +155,7 @@ namespace Server.Tests.Tests.Integration
             using var response = await client.GetAsync("/api/treatments/specialties");
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
             using var referralResponse = await client.PostAsJsonAsync("/api/referrals", new ReferralRequests().Valid());
-            Assert.AreEqual(HttpStatusCode.NotFound, referralResponse.StatusCode);
+            Assert.AreEqual(HttpStatusCode.Unauthorized, referralResponse.StatusCode);
         }
     }
 }

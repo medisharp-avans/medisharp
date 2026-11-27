@@ -1,3 +1,4 @@
+using Referral = Server.Models.Intake.Referral;
 using Server.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -49,6 +50,21 @@ namespace Server.Tests
         }
 
         [TestMethod]
+        public void PriAndReferralMigrationHistoriesDoNotOverlap()
+        {
+            using var intake = CreateContext();
+            using var accounts = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlServer("Server=localhost;Database=PriMigrationTests;Integrated Security=True;TrustServerCertificate=True")
+                .Options);
+
+            Assert.IsFalse(accounts.Database.HasPendingModelChanges());
+            Assert.IsFalse(accounts.Database.GetMigrations().Intersect(intake.Database.GetMigrations()).Any());
+            var script = accounts.GetService<IMigrator>().GenerateScript();
+            StringAssert.Contains(script, "CREATE TABLE [Users]");
+            StringAssert.Contains(script, "CREATE TABLE [RefreshTokens]");
+        }
+
+        [TestMethod]
         public void TwoReferralsForSamePatientKeepSeparateSnapshotsAndAttachmentOwnership()
         {
             using var context = CreateContext();
@@ -79,13 +95,13 @@ namespace Server.Tests
             Assert.HasCount(1, context.ChangeTracker.Entries<ReferralAttachment>().ToArray());
         }
 
-        private static AppDbContext CreateContext()
+        private static ReferralDbContext CreateContext()
         {
-            var options = new DbContextOptionsBuilder<AppDbContext>()
+            var options = new DbContextOptionsBuilder<ReferralDbContext>()
                 .UseSqlServer("Server=localhost;Database=ReferralModelTests;Integrated Security=True;TrustServerCertificate=True")
                 .Options;
 
-            return new AppDbContext(options);
+            return new ReferralDbContext(options);
         }
 
         private static Referral CreateReferral(string postalCode) => new()

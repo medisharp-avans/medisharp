@@ -100,7 +100,7 @@ Nog af te stemmen:
 ## Verwijzingen aanmaken (fase 2)
 
 `POST /api/referrals` op de backend valideert een `CreateReferralRequest` en slaat
-de verwijzing op via `IReferralService` en een EF Core-repository, beide scoped.
+de verwijzing op via `IReferralIntakeService` en een EF Core-repository, beide scoped.
 Bij succes volgt
 HTTP 201 met uitsluitend `id`, `status` (`Open`) en `createdAtUtc`. Er is nog geen
 GET-endpoint; daarom wordt geen Location-header naar een niet-bestaand detail
@@ -131,21 +131,14 @@ de standaard exceptiondiagnostiek van die afhandeling is uitgeschakeld om
 exceptiontekst niet alsnog naar de logs te schrijven.
 
 Niet-afgesproken JSON-velden worden geweigerd, waaronder een volledig dossier,
-status, ID, aanmaaktijd, afspraak/tijdslot en interne opslagsleutels. Bijlagen
-hebben nog geen uploadcontract en kunnen dus nog niet worden meegestuurd; een
-verwijzing zonder bijlagen werkt wel. Het antwoord bevat geen patiëntgegevens.
+status, ID, aanmaaktijd, afspraak/tijdslot en interne opslagsleutels. Het antwoord
+bevat geen patiëntgegevens. Voor een verwijzing met bijlagen gebruikt het formulier
+`POST /api/referrals/with-attachments`.
 
-Authenticatie is afhankelijk van de aparte user story PRI-03. Totdat die en de
-toegangsregels zijn aangesloten, is deze aanmaakfunctie uitsluitend beschikbaar
-bij `ASPNETCORE_ENVIRONMENT=Development`. In Staging en Production geeft het
-endpoint HTTP 404, ook bij geldige invoer. Dit is een tijdelijke beperking en
-geen vervanging voor authenticatie of autorisatie. Gebruik lokaal fictieve data.
-
-De aansluiting van het formulier, het overzicht voor bevoegde ziekenhuisplanners, koppeling met
-huisartsaccounts, autorisatie, auditlogging en bijlagenopslag volgen in de volgende
-stappen. De zes acceptatiecriteria van AFS-01a zijn daarmee nog niet alle voltooid.
-Bij de frontendkoppeling moet ook de proxyroute worden afgestemd: het endpoint
-heeft zelf het `/api`-prefix, terwijl de bestaande nginx-configuratie dat verwijdert.
+Na PRI-03/04 bevestigt een huisarts de login met een e-mailcode. De API vereist
+een geldig PRI-toegangstoken met de rol `Huisarts` voor aanmaken, uploaden en
+zoeken op BSN. Het overzicht `GET /api/referrals/open` vereist de rol
+`Ziekenhuismedewerker`. Deze toegangsregels gelden in alle omgevingen.
 
 ## Behandelcatalogus
 
@@ -204,8 +197,8 @@ exact opzoeken via `POST /api/referrals/patient-lookup`. Het BSN staat in de bod
 Het antwoord bevat alleen contactgegevens en wordt niet gecachet. Bij een
 onbekend BSN vult de huisarts de gegevens zelf in en worden bij opslaan de patiënt
 en de verwijzing samen opgeslagen. De API weigert anonieme aanvragen en andere
-rollen. Voor gebruik met echte logins moeten de PRI-03/04-authenticatiemiddleware
-en het doorgeven van het geldige toegangstoken in de frontend worden aangesloten.
+rollen. De frontend gebruikt het geldige toegangstoken uit de PRI-sessie en
+vernieuwt dit via de PRI-store als het bijna verloopt.
 
 Het formulier verstuurt de invoer met POST naar /api/referrals. Tijdens het opslaan
 zijn de invoervelden en verzendknop uitgeschakeld. Alleen HTTP 201 geldt als
@@ -216,9 +209,21 @@ wel heeft opgeslagen; de melding vraagt daarom eerst de opslag te controleren.
 Er is nog geen idempotentiesleutel of overzicht om deze onzekerheid op te lossen.
 
 Patiëntgegevens worden niet in URL's, logs of browseropslag gezet. Gebruik fictieve
-gegevens; de backend staat aanmaken uitsluitend in Development toe totdat PRI-03
-is aangesloten. Lokale Vite-aanvragen naar /api gaan naar localhost:5174.
-Bijlagen, accounts en het overzicht voor planners volgen afzonderlijk.
+gegevens voor lokale tests. Vite stuurt `/api` door naar `http://localhost:5174`.
+Nginx stuurt het volledige pad door naar de API-container.
+
+## Databases voor PRI en AFS-01a
+
+`DefaultConnection` is de database met PRI-accounts en de AFS-03-planning.
+`ReferralConnection` bevat de AFS-01a-verwijzingen, bijlagenmetadata, catalogus en
+het patiëntregister voor de BSN-zoekactie. Zonder expliciete `ReferralConnection`
+gebruikt de server dezelfde SQL Server met het achtervoegsel `_AFS01a` in de
+databasenaam. De server werkt beide migratiereeksen bij bij het opstarten.
+
+Wie al een AFS-01a-database heeft, stelt `ConnectionStrings:ReferralConnection`
+in op die bestaande database en kiest voor `DefaultConnection` een aparte
+database voor PRI en planning. De AFS-01a-migratie-ID's blijven gelijk. De
+planning en de verwijzingen gebruiken voorlopig hun eigen patiënt- en verwijzings-ID's.
 
 ## Privacy en oplevering
 
@@ -235,8 +240,7 @@ en nog geen automatische opschoonfunctie toegevoegd. Leg deze beslissing vast
 en vermeld gegevens, doel en termijn in de AVG-sectie van de uiteindelijke PR.
 
 Dit is een tussenstap en geen afgeronde user story volgens de DoD. Voor oplevering
-blijven onder meer PRI-03 met rolgebonden toegang, de resterende acceptatiecriteria,
-de hoofdflow als end-to-end test, een guerrilla-test en de vereiste reviews en
+blijven onder meer de hoofdflow als browsertest, een guerrilla-test en de vereiste reviews en
 acceptatie nodig. De DoD vraagt minimaal 90% test coverage; dekking van alleen de
 verwijzingsservice bewijst niet dat het hele project aan die norm voldoet.
 Stem ontbrekende keuzes en afhankelijkheden af voordat de vervolgtaak volgens
@@ -244,11 +248,10 @@ de DoR als Ready wordt ingepland.
 
 ## Controle
 
-`Server.Tests/ReferralModelTests.cs` controleert de SQL Server-schemaopbouw zonder
-databaseverbinding en de EF Core-koppeling van bijlagen bij twee verwijzingen met
-hetzelfde BSN.
+`Server.Tests/ReferralModelTests.cs` controleert beide SQL Server-migratiereeksen,
+de schemaopbouw en de EF Core-koppeling van bijlagen zonder databaseverbinding.
 
-`ReferralServiceTests` controleert validatie, serverwaarden en het voorkomen van
+`ReferralIntakeServiceTests` controleert validatie, serverwaarden en het voorkomen van
 opslag bij fouten met een lokale testimplementatie van de repository.
 `CreateReferralApiTests` gebruikt de echte HTTP-pipeline, service en repository
 met een afzonderlijke SQLite-database in het geheugen per test. Opslag wordt met
@@ -260,6 +263,11 @@ exception en controleren dat de HTTP-respons en de centrale foutlog deze niet
 overnemen, ook wanneer een browser een HTML-foutpagina vraagt.
 De testhost schrijft uitsluitend naar de testuitvoer en vereist geen toegang
 tot het Windows-systeemlogboek.
+
+`ReferralPatientApiTests` doorloopt de e-maillogin, verificatie en sessievernieuwing
+via de PRI-API en gebruikt het ontvangen toegangstoken voor een verwijzing en
+BSN-zoekactie. `OpenReferralAccessTests` controleert het overzicht met dezelfde
+rolcontrole als de applicatie.
 
 `TreatmentCatalogApiTests` controleert alle 100 codes via de 12 specialismen,
 behoud van omschrijvingen, tijdsduur en bedragen, filters en ontbrekende invoer.
@@ -280,7 +288,7 @@ De API-testhost schakelt startup-migrations uit met
 Voor normaal starten blijft de standaardwaarde `true`.
 
 ```powershell
-dotnet test Server/Server.slnx --configuration Release --filter "TestCategory!=EndToEnd"
+dotnet test Server/Server.slnx --configuration Release --filter "FullyQualifiedName!~EndToEnd&FullyQualifiedName!~AppointmentRepositoryPlanningTests&FullyQualifiedName!~.ReferralRepositoryTests"
 ```
 
 Stop een zelf gestarte Debug-backend met Ctrl+C voordat je die opnieuw bouwt of
@@ -296,8 +304,8 @@ Zonder bestanden blijft het bestaande JSON-endpoint werken.
 
 De server valideert aantallen, lengtes, bestandsnaam, extensie en bestandskenmerken
 (signature en eindmarkering). Dit is geen volledige documentparser of virusscanner.
-Uploads blijven Development-only. Bestanden zijn niet openbaar te downloaden;
-rolgebonden toegang en de definitieve opslagvoorziening hangen af van PRI-03.
+Alleen ingelogde huisartsen kunnen uploaden. Bestanden zijn niet openbaar te
+downloaden.
 
 Standaard staan bestanden onder LocalApplicationData/MediSharp/attachments, buiten
 Git en wwwroot. Attachments:StoragePath kan een afgeschermde absolute opslagmap

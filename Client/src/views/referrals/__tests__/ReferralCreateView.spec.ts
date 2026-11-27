@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia } from 'pinia'
+import { useAuthStore } from '@/stores/auth'
 import ReferralCreateView from '../ReferralCreateView.vue'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -34,8 +36,12 @@ async function setup(status = 201, delayed = false) {
       )
     }),
   )
+  const pinia = createPinia()
+  const auth = useAuthStore(pinia)
+  auth.token = 'test-access-token'
+  auth.expiresAt = new Date(Date.now() + 120_000).toISOString()
   const wrapper = mount(ReferralCreateView, {
-    global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
+    global: { plugins: [pinia], stubs: { RouterLink: { template: '<a><slot /></a>' } } },
   })
   await flushPromises()
   await wrapper.get('#referral-specialty').setValue('KNO')

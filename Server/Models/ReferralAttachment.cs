@@ -7,7 +7,7 @@ namespace Server.Models
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public Guid ReferralId { get; set; }
-        public Referral Referral { get; set; } = null!;
+        public Intake.Referral Referral { get; set; } = null!;
 
         public required string FileName { get; set; }
         public required string ContentType { get; set; }
