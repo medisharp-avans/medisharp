@@ -1,0 +1,21 @@
+# Only for running the production stack on your own machine.
+# Builds the images from source instead of pulling them, and opens the client on a local port.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.build.yml --env-file .env.prod up -d --build
+
+services:
+  server:
+    pull_policy: build
+    build:
+      context: ./Server
+      dockerfile: Dockerfile
+      target: final
+
+  client:
+    pull_policy: build
+    build:
+      context: ./Client
+      dockerfile: Dockerfile
+      target: final
+    ports:
+      - "${CLIENT_PORT:-8080}:80"

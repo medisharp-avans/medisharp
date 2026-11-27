@@ -13,7 +13,7 @@ There are two compose files:
 | File                      | Used for                                                                                    |
 | ------------------------- | ------------------------------------------------------------------------------------------- |
 | `docker-compose.yml`      | **Development.** Starts only SQL Server. You run the client and server on your own machine. |
-| `docker-compose.prod.yml` | **Production (Dokploy).** Builds and runs the database, server and client together.         |
+| `docker-compose.prod.yml` | **Staging and production (Dokploy).** Runs the database, server and client together.       |
 
 ---
 
@@ -37,7 +37,7 @@ cd medisharp
 git checkout development
 ```
 
-Work on a branch from `development` and open pull requests into `development`. `production` is what gets deployed.
+Work on a branch from `development` and open pull requests into `development`. A merge from `development` into `main` is deployed to staging, and after approval to production (see section 2).
 
 ### 1.3 Create the `.env` file
 
@@ -141,20 +141,45 @@ Both checks use your installed Google Chrome. The Lighthouse thresholds live in 
 
 ### 1.7 Optional: test the production setup locally
 
-You can run the full production stack on your machine before you deploy:
+You can run the full production stack on your machine before you deploy. `docker-compose.build.yml` adds the `build:` settings and a local port, so the images are built from your code instead of pulled from GHCR:
 
 ```sh
 # create .env.prod first, see section 3.2
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+docker compose -f docker-compose.prod.yml -f docker-compose.build.yml --env-file .env.prod up -d --build
 ```
 
-The site is served at `http://localhost:${CLIENT_PORT}` (default port 80).
+The site is served at `http://localhost:${CLIENT_PORT}` (default port 8080).
 
 ---
 
-## 2. Production on Dokploy
+## 2. Staging and production (GitHub Actions + Dokploy)
 
-Production uses `docker-compose.prod.yml`. It starts three services:
+### 2.1 How a change reaches production
+
+GitHub Actions builds the images once. Dokploy only runs them. Production never gets its own build: it gets the exact images that were tested on staging.
+
+```text
+PR into development or main ──► CI (.github/workflows/ci.yml): lint, unit tests, end-to-end tests
+
+merge into main ──► .github/workflows/docker.yml
+                    1. build-and-push     build server + client, push to GHCR as :main and :sha-<commit>
+                    2. deploy-staging     tag sha-<commit> as :staging, ask Dokploy (staging) to deploy
+                    3. deploy-production  waits for a reviewer, then tags the same sha-<commit> as :production
+                                          and asks Dokploy (production) to deploy
+```
+
+The reviewer checks the change on staging before approving the production job. That approval is the acceptance step.
+
+| OTAP        | Where                                              | Branch / trigger                     |
+| ----------- | -------------------------------------------------- | ------------------------------------ |
+| Development | your own machine (section 1)                       | feature branches                     |
+| Test        | GitHub Actions CI                                  | every pull request                   |
+| Acceptance  | Dokploy environment `staging`                      | every merge into `main`              |
+| Production  | Dokploy environment `production`                   | same build, after a reviewer approves |
+
+### 2.2 What runs on Dokploy
+
+Both environments use `docker-compose.prod.yml`. It starts three services:
 
 ```text
 Internet ──► Dokploy (Traefik) ──► client (nginx :80) ──/api/──► server (:8080) ──► db (SQL Server :1433)
@@ -162,86 +187,68 @@ Internet ──► Dokploy (Traefik) ──► client (nginx :80) ──/api/─
 ```
 
 - **db** runs SQL Server 2022 (Express edition by default). Data is stored in the `mssql_data` volume. It has a health check.
-- **server** is built from `Server/Dockerfile` (target `final`) and listens on port 8080 inside Docker. It is not exposed to the internet.
-- **client** is built from `Client/Dockerfile`. nginx serves the Vue app and proxies `/api/*` to the server.
+- **server** is the image `ghcr.io/medisharp-avans/medisharp-server:${IMAGE_TAG}`. It listens on port 8080 inside Docker and is not exposed to the internet.
+- **client** is the image `ghcr.io/medisharp-avans/medisharp-client:${IMAGE_TAG}`. nginx serves the Vue app and proxies `/api/*` to the server.
 
-Only the client needs a public domain.
+The compose file has no `build:` settings, so Dokploy never builds on the server. `pull_policy: always` makes every deploy fetch the newest image for the tag. Only the client needs a public domain.
 
-### 2.1 Requirements
+### 2.3 Requirements
 
-- A server (VPS) with Dokploy installed: `curl -sSL https://dokploy.com/install.sh | sh`
-- At least **2 GB RAM** free for SQL Server
-- A domain name with an `A` record pointing to the server's IP
-- Dokploy connected to GitHub (Settings → Git → GitHub) so it can read this repository
+- A server (VPS) with Dokploy installed. Two SQL Servers (staging and production) need about **4 GB RAM** together.
+- A domain name with `A` records for the staging and production hosts pointing to the server's IP.
+- The GHCR packages `medisharp-server` and `medisharp-client` must be public, or ghcr.io must be added as a registry in Dokploy.
+- A Dokploy API key (Settings → Profile → API/CLI) for GitHub Actions.
 
-### 2.2 Create the Compose service
+### 2.4 Dokploy: one Compose service per environment
 
-1. In Dokploy, open (or create) a **Project**, then click **Create Service → Compose**.
-2. Give it a name, for example `medisharp`. Choose **Compose type: Docker Compose**.
-3. Open the **General** tab and set the source:
-   - **Provider:** GitHub
-   - **Repository:** `medisharp-avans/medisharp`
-   - **Branch:** `production`
+The Dokploy project `Medisharp` has two environments, `staging` and `production`, each with one Compose service. Set both the same way, with the values from the table:
+
+1. **General** tab:
+   - **Provider:** GitHub, **Repository:** `medisharp-avans/medisharp`, **Branch:** `main`
    - **Compose Path:** `./docker-compose.prod.yml`
-4. Click **Save**.
+   - **Autodeploy:** off. GitHub Actions starts every deploy, after the images are built.
+2. **Environment** tab (see [section 3.2](#32-production-docker-composeprodyml)):
 
-### 2.3 Set the environment variables
+   ```env
+   IMAGE_TAG=staging            # production: IMAGE_TAG=production
+   ASPNETCORE_ENVIRONMENT=Staging   # production: Production
+   MSSQL_SA_PASSWORD=<a long, strong password, different per environment>
+   MSSQL_DB_NAME=Medisharp
+   ```
 
-Open the **Environment** tab and paste the production variables (see [section 3](#3-environment-variables-env)):
+3. **Domains** tab → **Add Domain**: **Service Name** `client`, **Host** your staging or production host, **Path** `/`, **Container Port** `80`, **HTTPS** on with Let's Encrypt. Dokploy adds the Traefik labels and the `dokploy-network` for you.
+4. **Advanced** tab: leave **Run Command** empty.
 
-```env
-MSSQL_SA_PASSWORD=<a long, strong password>
-MSSQL_DB_NAME=Medisharp
-CLIENT_PORT=8085
-```
+### 2.5 GitHub: environments, secrets and variables
 
-Click **Save**. Dokploy writes these into a `.env` file next to the compose file, and Docker Compose reads it when it deploys.
+Settings → Environments. The jobs in `docker.yml` read their values from these environments:
 
-> **Important:** Dokploy's Traefik proxy already uses ports 80 and 443 on the host. If `CLIENT_PORT` stays at its default of `80`, the deploy fails with _"port is already allocated"_. Set `CLIENT_PORT` to a free port (for example `8085`) and use a Dokploy domain for public traffic (next step).
+| GitHub environment | Dokploy environment | Deployment branches | Protection          | Secret             | Variables                                                        |
+| ------------------ | ------------------- | ------------------- | ------------------- | ------------------ | ---------------------------------------------------------------- |
+| `acceptance`       | `staging`           | `main`              | none                | `DOKPLOY_API_KEY`  | `DOKPLOY_URL`, `DOKPLOY_COMPOSE_ID` (ID of the staging service)  |
+| `production`       | `production`        | `main`              | required reviewers  | `DOKPLOY_API_KEY`  | `DOKPLOY_URL`, `DOKPLOY_COMPOSE_ID` (ID of the production service) |
 
-### 2.4 Add a domain
+- `DOKPLOY_URL` is the address of the Dokploy dashboard, without a trailing `/`.
+- `DOKPLOY_COMPOSE_ID` is the last part of the URL of the Compose service in Dokploy, after `/services/compose/`.
 
-1. Open the **Domains** tab and click **Add Domain**.
-2. Fill in:
-   - **Service Name:** `client`
-   - **Host:** `medisharp.yourdomain.com`
-   - **Path:** `/`
-   - **Container Port:** `80`
-   - **HTTPS:** on, **Certificate:** Let's Encrypt
-3. Save.
+The database password and other runtime settings live only in Dokploy, not in GitHub.
 
-Dokploy adds the Traefik labels and the `dokploy-network` to the `client` service for you. You do not have to change the compose file.
+### 2.6 Rolling back
 
-### 2.5 Deploy
-
-Click **Deploy**. Follow the progress in the **Deployments** tab. The order is:
-
-1. `db` starts and waits until its health check passes.
-2. `server` starts.
-3. `client` starts.
-
-When it is done, open `https://medisharp.yourdomain.com`. The API is at `https://medisharp.yourdomain.com/api/...`.
-
-To deploy on every push to `production`, turn on **Autodeploy** in the General tab (or copy the webhook URL from the Deployments tab into GitHub).
-
-### 2.6 Things to check before the first deploy
-
-- **`db-init` service is missing.** In `docker-compose.prod.yml`, `server` has `depends_on: db-init` with `condition: service_completed_successfully`, but there is no `db-init` service in the file. Compose refuses to start until you either add a `db-init` service (for example a container based on the same SQL Server image that runs `Database/*.sql` against `db` with `/opt/mssql-tools18/bin/sqlcmd` and then exits) or change the dependency to `db: condition: service_healthy`.
-- **`container_name` is set** on every service. Dokploy recommends removing `container_name` because it can break logs, metrics and running more than one copy of the app on the same server. It works for a single deployment.
-- **HTTPS redirect.** `Program.cs` calls `UseHttpsRedirection()`, but the server container only listens on HTTP 8080 behind nginx and Traefik. That is fine, but ASP.NET logs a warning that it cannot find the HTTPS port.
+Every build stays in GHCR as `sha-<commit>`. To go back, run the **Build and deploy** workflow again for an older commit (Actions → Build and deploy → the old run → **Re-run all jobs**). It moves `:staging` and `:production` back to that build.
 
 ### 2.7 Maintenance
 
 - **Logs:** the **Logs** tab, pick `db`, `server` or `client`.
-- **Backups:** the database lives in the `mssql_data` volume. Make a backup on the server with:
+- **Backups:** the database lives in the `mssql_data` volume. Use the **Backups** or **Volume Backups** tab in Dokploy, or make a backup by hand: open the `db` container in the **Containers** tab (or `docker exec` into it on the server) and run
 
   ```sh
-  docker exec medisharp_db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C \
+  /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C \
     -Q "BACKUP DATABASE [Medisharp] TO DISK = N'/var/opt/mssql/data/medisharp.bak'"
-  docker cp medisharp_db:/var/opt/mssql/data/medisharp.bak ./medisharp.bak
   ```
 
 - **Changing the SA password:** the password is saved inside the database the first time the volume is created. Changing `MSSQL_SA_PASSWORD` later does **not** change the real password. Change it in SQL Server first (`ALTER LOGIN sa WITH PASSWORD = '...'`), then update the variable in Dokploy and redeploy.
+- **HTTPS redirect.** `Program.cs` calls `UseHttpsRedirection()`, but the server container only listens on HTTP 8080 behind nginx and Traefik. That is fine, but ASP.NET logs a warning that it cannot find the HTTPS port.
 
 ---
 
@@ -270,28 +277,25 @@ MSSQL_PORT=1433
 
 ### 3.2 Production (`docker-compose.prod.yml`)
 
-| Variable            | Required | Default                                      | Description                                                                                                 |
-| ------------------- | -------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `MSSQL_SA_PASSWORD` | **Yes**  | none, the deploy stops if it is missing      | Password of the `sa` user. Also used in the server's connection string.                                     |
-| `MSSQL_DB_NAME`     | No       | `Medisharp`                                  | Name of the database the server connects to.                                                                |
-| `CLIENT_PORT`       | No       | `80`                                         | Host port for the website. **On Dokploy, set this to a free port such as `8085`**, because Traefik uses 80. |
-| `MSSQL_IMAGE`       | No       | `mcr.microsoft.com/mssql/server:2022-latest` | SQL Server Docker image.                                                                                    |
-| `MSSQL_PRODUCT_ID`  | No       | `Express`                                    | SQL Server edition. Express is free for production. Other editions need a license.                          |
+Used for staging and production on Dokploy, and locally with `docker-compose.build.yml`.
 
-Example:
+| Variable                 | Required | Default                                      | Description                                                                               |
+| ------------------------ | -------- | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `MSSQL_SA_PASSWORD`      | **Yes**  | none, the deploy stops if it is missing      | Password of the `sa` user. Also used in the server's connection string.                   |
+| `IMAGE_TAG`              | No       | `production`                                 | Which images to run: `staging` or `production` on Dokploy.                                |
+| `ASPNETCORE_ENVIRONMENT` | No       | `Production`                                 | `Staging` on staging, `Production` on production.                                         |
+| `MSSQL_DB_NAME`          | No       | `Medisharp`                                  | Name of the database the server connects to.                                              |
+| `MSSQL_IMAGE`            | No       | `mcr.microsoft.com/mssql/server:2022-latest` | SQL Server Docker image.                                                                  |
+| `MSSQL_PRODUCT_ID`       | No       | `Express`                                    | SQL Server edition. Express is free for production. Other editions need a license.        |
+| `CLIENT_PORT`            | No       | `8080`                                       | Only locally (`docker-compose.build.yml`): port on your machine for the website.          |
+
+Example `.env.prod` for running locally:
 
 ```env
-# =========================================
-# DATABASE
-# =========================================
 MSSQL_SA_PASSWORD=ChangeMe-Use-A-Long-Random-Password-123!
 MSSQL_DB_NAME=Medisharp
-
-# =========================================
-# CLIENT
-# =========================================
-# Host port the website is served on. Use a free port on Dokploy (Traefik owns 80/443).
-CLIENT_PORT=8085
+ASPNETCORE_ENVIRONMENT=Production
+CLIENT_PORT=8080
 ```
 
 ### 3.3 Password rules
@@ -305,11 +309,11 @@ Avoid `;` in the password, because it breaks the connection string. Avoid `$`, b
 
 ### 3.4 Variables the server receives
 
-You do not set these in `.env`. `docker-compose.prod.yml` builds them for the server container:
+Apart from `ASPNETCORE_ENVIRONMENT`, you do not set these in `.env`. `docker-compose.prod.yml` builds them for the server container:
 
 | Variable                               | Value                                                                                                            |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `ASPNETCORE_ENVIRONMENT`               | `Production`                                                                                                     |
+| `ASPNETCORE_ENVIRONMENT`               | `${ASPNETCORE_ENVIRONMENT}` (default `Production`)                                                               |
 | `ASPNETCORE_HTTP_PORTS`                | `8080`                                                                                                           |
 | `ConnectionStrings__DefaultConnection` | `Server=db,1433;Database=${MSSQL_DB_NAME};User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;` |
 
