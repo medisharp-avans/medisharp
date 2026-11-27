@@ -89,7 +89,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /** Stap 1: controleert e-mailadres en wachtwoord; de server mailt een verificatiecode. */
   async function login(email: string, password: string): Promise<LoginChallenge> {
     // skipErrorRedirect: een 401 betekent hier "verkeerde gegevens", geen redirect naar /401.
     const { data } = await api.post<LoginChallenge>(
@@ -110,13 +109,10 @@ export const useAuthStore = defineStore('auth', () => {
     applySession(data)
   }
 
-  // Lopende refresh: gelijktijdige requests wachten op dezelfde refresh. Een refresh token
-  // werkt maar één keer; twee refreshes tegelijk zou de server als diefstal zien.
   let pendingRefresh: Promise<boolean> | null = null
 
   /**
    * Vraagt een nieuw JWT aan met de refresh token. Elke refresh verlengt de sessie met 30 minuten.
-   * Geeft `false` (en logt uit) als de sessie verlopen of ingetrokken is.
    */
   function refresh(): Promise<boolean> {
     if (pendingRefresh) return pendingRefresh

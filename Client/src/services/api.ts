@@ -18,8 +18,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Stuur een geldig JWT mee met elke request. Is het (bijna) verlopen, dan vraagt de
-// auth store eerst een nieuw JWT aan met de refresh token; zo blijf je ingelogd zolang je actief bent.
+// Stuur een geldig JWT mee met elke request.
 api.interceptors.request.use(async (config) => {
   if (config.skipAuthRefresh) return config
   const token = await useAuthStore().getValidToken()
