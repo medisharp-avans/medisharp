@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted } from 'vue'
 
-/** 
+/**
  * A lookup record mapping shortcut keys to functions that resolve the target HTMLElement.
  */
 const shortcutTargets: Record<string, () => HTMLElement | null | undefined> = {
@@ -11,10 +11,10 @@ const shortcutTargets: Record<string, () => HTMLElement | null | undefined> = {
 
 /**
  * Handles a keydown event for keyboard shortcuts.
- * 
- * Listens for the `Alt` key combined with `N`, `P`, or `M` to shift focus to 
+ *
+ * Listens for the `Alt` key combined with `N`, `P`, or `M` to shift focus to
  * the navigation, profile button, or main content respectively. Other keys are ignored.
- * 
+ *
  * @param event - The KeyboardEvent triggered by the user input.
  */
 export function handleKeyboardShortcut(event: KeyboardEvent): void {
@@ -28,9 +28,9 @@ export function handleKeyboardShortcut(event: KeyboardEvent): void {
 }
 
 /**
- * Automatically registers and cleans up global keyboard shortcuts while the 
+ * Automatically registers and cleans up global keyboard shortcuts while the
  * calling component is mounted.
- * 
+ *
  * Designed to be called inside a `<script setup>` block.
  */
 export function useKeyboardShortcuts(): void {

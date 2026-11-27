@@ -77,13 +77,13 @@ async function handleDisconnect(): Promise<void> {
 <template>
   <div class="max-w-xl" data-testid="ical-section">
     <p class="mt-1 text-sm text-slate-700">
-      Plak de geheime iCal/ICS-link van je Google-, Outlook- of Apple-agenda om je bezette
-      momenten automatisch te synchroniseren.
+      Plak de geheime iCal/ICS-link van je Google-, Outlook- of Apple-agenda om je bezette momenten
+      automatisch te synchroniseren.
     </p>
     <p class="mt-1 text-sm text-red-700" data-testid="ical-privacy-warning">
-      Let op! Met het delen van deze iCal/ICS-link, geef je ons systeem toegang om in je persoonlijke agenda te kijken
-      inclusief mogelijke persoonlijke gegevens. Het is altijd mogelijk om uw agenda weer te ontkoppelen en
-      de verkregen data te verwijderen!
+      Let op! Met het delen van deze iCal/ICS-link, geef je ons systeem toegang om in je
+      persoonlijke agenda te kijken inclusief mogelijke persoonlijke gegevens. Het is altijd
+      mogelijk om uw agenda weer te ontkoppelen en de verkregen data te verwijderen!
     </p>
 
     <p v-if="isLoadingStatus" class="mt-4 text-sm text-slate-700">Status ophalen...</p>
@@ -108,9 +108,7 @@ async function handleDisconnect(): Promise<void> {
 
     <!-- Niet gekoppeld -->
     <form v-else class="mt-4" @submit.prevent="handleConnect">
-      <label for="ical-url" class="block text-sm font-medium text-slate-900">
-        iCal-link
-      </label>
+      <label for="ical-url" class="block text-sm font-medium text-slate-900"> iCal-link </label>
 
       <div class="mt-1.5 flex flex-col gap-2 sm:flex-row">
         <input

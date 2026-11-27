@@ -174,7 +174,7 @@ async function submit() {
     <ContentCard>
       <template #title>Afspraak aanmaken</template>
       <template #description>Velden zonder "optioneel" zijn verplicht.</template>
-  
+
       <FormMessage :message="message" class="mb-6" />
 
       <StepForm

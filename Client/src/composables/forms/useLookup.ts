@@ -2,12 +2,12 @@ import { computed, ref, toValue, type MaybeRefOrGetter } from 'vue'
 
 /**
  * Encapsulates the logic for a `DatalistInput` component.
- * 
- * Manages the typed text, filters and formats the available options, 
+ *
+ * Manages the typed text, filters and formats the available options,
  * and tracks the exact matching item (e.g., to resolve and submit an ID instead of a name).
- * 
+ *
  * Items missing a valid key or label are automatically filtered out.
- * 
+ *
  * @template T - The type of the source items.
  * @param items - A reactive reference, getter, or array of raw data items.
  * @param getKey - Function to extract a unique key or ID from an item.

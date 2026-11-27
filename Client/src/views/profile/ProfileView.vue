@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import ContentCard from '@/components/Layout/ContentCard.vue';
+import ContentCard from '@/components/Layout/ContentCard.vue'
 import CalendarSyncView from './CalendarSyncView.vue'
 </script>
 
@@ -7,7 +7,9 @@ import CalendarSyncView from './CalendarSyncView.vue'
   <div class="mx-auto w-full max-w-2xl px-6 py-8">
     <ContentCard>
       <template #title>Profiel</template>
-      <template #description>Beheer hier je persoonlijke instellingen en profiel informatie</template>
+      <template #description
+        >Beheer hier je persoonlijke instellingen en profiel informatie</template
+      >
     </ContentCard>
 
     <div class="mt-6">

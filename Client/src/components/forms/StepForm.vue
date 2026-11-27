@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import StepProgress from './StepProgress.vue'
-import PrimaryButton from '../elements/PrimaryButton.vue';
+import PrimaryButton from '../elements/PrimaryButton.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -87,10 +87,7 @@ watch(
         </button>
         <span v-else />
 
-         <PrimaryButton
-          :data-testid="isLast ? 'submit' : 'step-next'"
-          :loading="isLast && loading"
-        >
+        <PrimaryButton :data-testid="isLast ? 'submit' : 'step-next'" :loading="isLast && loading">
           {{ isLast ? submitLabel : 'Volgende' }}
         </PrimaryButton>
       </div>

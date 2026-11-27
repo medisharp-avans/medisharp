@@ -7,10 +7,10 @@ export interface FormMessageData {
 }
 
 /**
- * Manages form feedback messages (such as success or error states) for display 
+ * Manages form feedback messages (such as success or error states) for display
  * in components like `FormMessage.vue`.
- * 
- * Provides helper methods to clear, set success/error text directly, or handle 
+ *
+ * Provides helper methods to clear, set success/error text directly, or handle
  * Axios errors with a custom fallback option.
  */
 export function useFormMessage() {
@@ -32,9 +32,9 @@ export function useFormMessage() {
   }
 
   /**
-   * Handles an error (typically from an API call), extracting server-provided 
+   * Handles an error (typically from an API call), extracting server-provided
    * error text (e.g., from a 409 Conflict) or falling back to a default string.
-   * 
+   *
    * @param err - The caught error object, which may be an AxiosError.
    * @param fallback - The default message to display if no server message is available.
    */
