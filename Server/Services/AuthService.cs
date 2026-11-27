@@ -65,7 +65,7 @@ namespace Server.Services
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key));
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Token));
             var token = new JwtSecurityToken(
                 issuer: _jwt.Issuer,
                 audience: _jwt.Audience,

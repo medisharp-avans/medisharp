@@ -27,7 +27,7 @@ namespace Server.Controllers
                 return Ok(referral);
                 //return CreatedAtAction(nameof(Create), new { id = referral.Id }, referral);
             }
-            catch (Exception ex)
+            catch
             {
                 throw;
             }
