@@ -22,6 +22,8 @@ namespace Server.Services
             services.AddScoped<IReferralService, ReferralService>();
             services.AddScoped<IPatientService, PatientService>();
 
+            services.AddMemoryCache();
+            services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
             services.AddScoped<IAuthService, AuthService>();
             return services;

@@ -88,6 +88,27 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost,
 
 You can also open `Server/Server.slnx` in Visual Studio and press F5.
 
+#### Logging in during development (verification code)
+
+Logging in takes two steps: the password, then a 6-digit code that is emailed to the user. The seeded test users (`dev-huisarts@example.test`, `dev-specialist-1@example.test`, `dev-patient-1@example.test`, …, all with password `DevWachtwoord123!`, see `Server/Data/DevelepmontDataSeeder.cs`) cannot receive real email. To read the code locally, have the server save every email as a file instead of sending it. Set `SMTP:PickupDirectory` once in `Server/`:
+
+```sh
+dotnet user-secrets set "SMTP:PickupDirectory" "bin/test-mails"
+```
+
+Or set it for a single run only:
+
+```sh
+# PowerShell
+$env:SMTP__PickupDirectory = "bin/test-mails"; dotnet run --launch-profile https
+# bash
+SMTP__PickupDirectory=bin/test-mails dotnet run --launch-profile https
+```
+
+After a login, open the newest `.eml` file in `Server/bin/test-mails/` (any text editor works) and look for `Uw verificatiecode is: ######`. The code is valid for 10 minutes. The path is relative to `Server/`, and the folder is created automatically. The `Tests` launch profile already sets it.
+
+When `PickupDirectory` is set, it takes priority over the real SMTP settings. Without it and without SMTP credentials, Development writes the code to the server console log instead (look for `SMTP not configured`).
+
 ### 1.6 Run the client (frontend)
 
 ```sh
@@ -313,6 +334,10 @@ You do not set these in `.env`. `docker-compose.prod.yml` builds them for the se
 | `ASPNETCORE_ENVIRONMENT`               | `Production`                                                                                                     |
 | `ASPNETCORE_HTTP_PORTS`                | `8080`                                                                                                           |
 | `ConnectionStrings__DefaultConnection` | `Server=db,1433;Database=${MSSQL_DB_NAME};User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;` |
-| `Jwt__Key`                             | `${JWT_KEY}`                                                                                                     |
+| `JWT__Token`                           | `${JWT_KEY}`                                                                                                     |
+| `SMTP__Username`                       | `${SMTP_USERNAME}` (the Purelymail address that sends the login codes)                                           |
+| `SMTP__Password`                       | `${SMTP_PASSWORD}`                                                                                               |
+
+Locally: `dotnet user-secrets set "SMTP:Username" "..."` and `dotnet user-secrets set "SMTP:Password" "..."` in `Server/`. Without them, Development logs the login code to the console instead of mailing it.
 
 In code you read the connection string with `builder.Configuration.GetConnectionString("DefaultConnection")`.

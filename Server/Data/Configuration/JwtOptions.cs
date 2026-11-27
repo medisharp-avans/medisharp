@@ -4,11 +4,10 @@ namespace Server.Configuration
 {
     /// <summary>
     /// JWT settings from the "Jwt" configuration section.
-    /// In production set the key via the <c>Jwt__Key</c> environment variable, never in appsettings.json.
     /// </summary>
     public class JwtOptions
     {
-        public const string SectionName = "Jwt";
+        public const string SectionName = "JWT";
 
         [Required]
         public string Issuer { get; set; } = string.Empty;
@@ -18,9 +17,14 @@ namespace Server.Configuration
 
         [Required]
         [MinLength(32)]
-        public string Key { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
 
+        /// <summary>Lifetime of the access token (JWT). Keep it short; the refresh token keeps the user logged in.</summary>
         [Range(1, 1440)]
-        public int ExpiresMinutes { get; set; } = 60;
+        public int ExpiresMinutes { get; set; } = 5;
+
+        
+        [Range(1, 1440)]
+        public int RefreshTokenMinutes { get; set; } = 30;
     }
 }

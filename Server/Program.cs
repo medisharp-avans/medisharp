@@ -36,12 +36,14 @@ namespace Server
                 builder.Services.AddHostedService<DevelopmentDataSeeder>();
             }
 
-            // JWT login. The key comes from Jwt:Key (appsettings.Development.json locally,
-            // Jwt__Key environment variable in production). Startup fails when it is missing or too short.
+            // JWT login. The key comes from JWT:Token (appsettings.Development.json locally,
+            // JWT__Token environment variable in production). Startup fails when it is missing or too short.
             builder.Services.AddOptions<JwtOptions>()
                 .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
+
+            builder.Services.Configure<SMTPOptions>(builder.Configuration.GetSection(SMTPOptions.SectionName));
 
             var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -55,7 +57,7 @@ namespace Server
                         ValidateAudience = true,
                         ValidAudience = jwt.Audience,
                         ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Token)),
                         ValidateLifetime = true,
                         ClockSkew = TimeSpan.FromMinutes(1),
                         NameClaimType = ClaimTypes.Name,

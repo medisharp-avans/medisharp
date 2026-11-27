@@ -1,9 +1,14 @@
 import axios from 'axios'
 import router from '../router'
+import { useAuthStore } from '@/stores/auth'
 
 declare module 'axios' {
   interface AxiosRequestConfig {
     skipErrorRedirect?: boolean
+    /** Geen JWT meesturen en niet verversen (voor de login-, refresh- en logout-endpoints zelf). */
+    skipAuthRefresh?: boolean
+    /** Intern: deze request is al een keer opnieuw geprobeerd na een refresh. */
+    _authRetried?: boolean
   }
 }
 
@@ -13,19 +18,17 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Stuur het JWT (gezet door de auth store na inloggen) mee met elke request.
-api.interceptors.request.use((config) => {
-  let token: string | null = null
-  try {
-    token = sessionStorage.getItem('jwt_token')
-  } catch {}
+// Stuur een geldig JWT mee met elke request.
+api.interceptors.request.use(async (config) => {
+  if (config.skipAuthRefresh) return config
+  const token = await useAuthStore().getValidToken()
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
 api.interceptors.response.use(
   (response) => response,
-  (error: unknown) => {
+  async (error: unknown) => {
     if (!axios.isAxiosError(error)) return Promise.reject(error)
 
     // Geen response: netwerkfout of server is down
@@ -34,7 +37,20 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    if (error.config?.skipErrorRedirect) return Promise.reject(error)
+    // JWT geweigerd (bv. verlopen op de server): één keer verversen en de request opnieuw proberen.
+    const config = error.config
+    if (
+      error.response.status === 401 &&
+      config &&
+      !config.skipAuthRefresh &&
+      !config._authRetried &&
+      config.headers?.Authorization
+    ) {
+      config._authRetried = true
+      if (await useAuthStore().refresh()) return api(config)
+    }
+
+    if (config?.skipErrorRedirect) return Promise.reject(error)
 
     const status = error.response.status
 

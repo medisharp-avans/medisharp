@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Server.Models;
 
 namespace Server.Tests.TestDb
 {
@@ -8,6 +10,12 @@ namespace Server.Tests.TestDb
     /// </summary>
     public static class TestDbInitializer
     {
+        /// <summary>The password of every test user.</summary>
+        public const string Password = "Test123!";
+
+        // Hashing is slow on purpose, so the hash is made once for the whole test run.
+        private static readonly Lazy<string> _passwordHash = new(() => new PasswordHasher<User>().HashPassword(new User(), Password));
+
         /// <summary>
         /// Inserts the seed data. Only use fictitious data here (DoD 19).
         ///
@@ -20,21 +28,21 @@ namespace Server.Tests.TestDb
         /// </summary>
         public static async Task SeedAsync(DbContext context)
         {
-            // Fixed ids keep the test cases readable ("patient 1"). The password hash is not a real hash,
-            // so this data cannot be used to log in. Use ExecuteSqlAsync (not Raw) for real hashes.
+            // Fixed ids keep the test cases readable ("patient 1"). Every user logs in with Password.
+            // {0} is the password hash; ExecuteSqlRawAsync passes it as a SQL parameter.
             await context.Database.ExecuteSqlRawAsync(@"
                 SET IDENTITY_INSERT Users ON;
                 INSERT INTO Users (Id, SurName, LastName, FullName, PasswordHash, Email, Role, IsActive, IsLockedOut) VALUES
-                    (1,  'Jan',        'Jansen',    'Jan Jansen',      'fake-hash-niet-echt', 'jan.jansen@test.nl',      0, 1, 0),
-                    (2,  'Dr.',        'Visser',    'Dr. Visser',      'fake-hash-niet-echt', 'visser@test.nl',          1, 1, 0),
-                    (3,  'Dr.',        'De Vries',  'Dr. De Vries',    'fake-hash-niet-echt', 'devries@test.nl',         2, 1, 0),
-                    (4,  'Piet',       'Pietersen', 'Piet Pietersen',  'fake-hash-niet-echt', 'piet.pietersen@test.nl',  0, 1, 0),
-                    (5,  'Anna',       'de Boer',   'Anna de Boer',    'fake-hash-niet-echt', 'anna.deboer@test.nl',     0, 1, 0),
-                    (6,  'Dr.',        'Bakker',    'Dr. Bakker',      'fake-hash-niet-echt', 'bakker@test.nl',          2, 1, 0),
-                    (7,  'Dr.',        'Smit',      'Dr. Smit',        'fake-hash-niet-echt', 'smit@test.nl',            2, 1, 0),
-                    (8,  'Medewerker', 'A',         'Medewerker A',    'fake-hash-niet-echt', 'medewerker.a@test.nl',    3, 1, 0),
-                    (9,  'Medewerker', 'B',         'Medewerker B',    'fake-hash-niet-echt', 'medewerker.b@test.nl',    3, 1, 0),
-                    (10, 'Beheerder',  'Een',       'Beheerder Een',   'fake-hash-niet-echt', 'beheerder1@test.nl',      4, 1, 0);
+                    (1,  'Jan',        'Jansen',    'Jan Jansen',      {0}, 'jan.jansen@test.nl',      0, 1, 0),
+                    (2,  'Dr.',        'Visser',    'Dr. Visser',      {0}, 'visser@test.nl',          1, 1, 0),
+                    (3,  'Dr.',        'De Vries',  'Dr. De Vries',    {0}, 'devries@test.nl',         2, 1, 0),
+                    (4,  'Piet',       'Pietersen', 'Piet Pietersen',  {0}, 'piet.pietersen@test.nl',  0, 1, 0),
+                    (5,  'Anna',       'de Boer',   'Anna de Boer',    {0}, 'anna.deboer@test.nl',     0, 1, 0),
+                    (6,  'Dr.',        'Bakker',    'Dr. Bakker',      {0}, 'bakker@test.nl',          2, 1, 0),
+                    (7,  'Dr.',        'Smit',      'Dr. Smit',        {0}, 'smit@test.nl',            2, 1, 0),
+                    (8,  'Medewerker', 'A',         'Medewerker A',    {0}, 'medewerker.a@test.nl',    3, 1, 0),
+                    (9,  'Medewerker', 'B',         'Medewerker B',    {0}, 'medewerker.b@test.nl',    3, 1, 0),
+                    (10, 'Beheerder',  'Een',       'Beheerder Een',   {0}, 'beheerder1@test.nl',      4, 1, 0);
                 SET IDENTITY_INSERT Users OFF;
 
                 SET IDENTITY_INSERT GeneralPractitioners ON;
@@ -78,7 +86,7 @@ namespace Server.Tests.TestDb
                 SELECT s.Id,
                        DATEADD(HOUR, 8,  CAST(D.Dag AS datetime2)),
                        DATEADD(HOUR, 17, CAST(D.Dag AS datetime2))
-                FROM D CROSS JOIN Specialists s;");
+                FROM D CROSS JOIN Specialists s;", _passwordHash.Value);
 
             context.ChangeTracker.Clear();
         }
