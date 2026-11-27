@@ -17,7 +17,7 @@ namespace Server.Configuration
 
         [Required]
         [MinLength(32)]
-        public string Key { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
 
         /// <summary>Lifetime of the access token (JWT). Keep it short; the refresh token keeps the user logged in.</summary>
         [Range(1, 1440)]
