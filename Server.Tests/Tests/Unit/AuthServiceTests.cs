@@ -76,7 +76,7 @@ namespace Server.Tests.Unit
             {
                 Issuer = "medisharp-test",
                 Audience = "medisharp-client",
-                Key = "test-signing-key-that-is-at-least-32-chars",
+                Token = "test-signing-key-that-is-at-least-32-chars",
                 ExpiresMinutes = 5,
                 RefreshTokenMinutes = 30
             };
@@ -133,7 +133,7 @@ namespace Server.Tests.Unit
             {
                 ValidIssuer = _jwt.Issuer,
                 ValidAudience = _jwt.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Token)),
                 // The token was issued at a fixed time in the future; only check signature/issuer/audience here
                 ValidateLifetime = false
             };
@@ -278,7 +278,7 @@ namespace Server.Tests.Unit
             var result = await FullLoginAsync();
             Assert.IsNotNull(result);
 
-            _jwt.Key = "a-completely-different-key-of-32-chars!";
+            _jwt.Token = "a-completely-different-key-of-32-chars!";
 
             Assert.ThrowsExactly<SecurityTokenSignatureKeyNotFoundException>(() => ValidateToken(result.Token));
         }
