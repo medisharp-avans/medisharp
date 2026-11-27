@@ -45,7 +45,7 @@ namespace Server.Tests.Utils
             // without a shell on Windows. Run 'npm install' in Client once before the first test run.
             var port = new Uri(TestSettings.ClientUrl).Port.ToString();
             await StartAsync("Client", TestSettings.ClientUrl, Path.Combine(root, "Client"),
-                "node", [Path.Combine("node_modules", "vite", "bin", "vite.js"), "--port", port, "--strictPort"]);
+                "node", [Path.Combine("node_modules", "vite", "bin", "vite.js"), "--mode", "test", "--port", port, "--strictPort"]);
 
             _isStarted = true;
         }
