@@ -57,7 +57,7 @@ namespace Server.Tests.Unit
             PreferredSpecialistId = 2,
             Reason = "Oorpijn",
             Questionnaire = "Vragenlijst",
-            Urgency = "Regulier",
+            Urgency = ReferralUrgency.Regulier,
             TreatmentCode = "KNO002"
         };
 
@@ -117,7 +117,7 @@ namespace Server.Tests.Unit
                     && d.PreferredSpecialistId == 2
                     && d.Reason == "Oorpijn"
                     && d.Questionnaire == "Vragenlijst"
-                    && d.Urgency == "Regulier"
+                    && d.Urgency == ReferralUrgency.Regulier
                     && d.TreatmentCode == "KNO002")), Times.Once);
         }
 

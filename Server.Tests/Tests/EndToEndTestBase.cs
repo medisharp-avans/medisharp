@@ -40,7 +40,7 @@ namespace Server.Tests
         [TestCleanup]
         public void StopBrowser()
         {
-            if (TestContext.CurrentTestOutcome != UnitTestOutcome.Passed)
+            if (Driver != null && TestContext.CurrentTestOutcome != UnitTestOutcome.Passed)
                 _failureScreenshot = TestLog.FailureScreenshot(Driver, TestContext.TestName!);
 
             Driver?.Quit();

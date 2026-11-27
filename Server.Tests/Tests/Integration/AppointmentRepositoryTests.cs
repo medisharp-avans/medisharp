@@ -48,7 +48,7 @@ namespace Server.Tests.Integration
             GeneralPractitionerId = 1,
             Specialism = Specialism.KNO,
             Reason = "Oorpijn",
-            Urgency = "Regulier",
+            Urgency = ReferralUrgency.Regulier,
             TreatmentCode = "KNO002"
         };
 

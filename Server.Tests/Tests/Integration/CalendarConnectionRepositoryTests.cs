@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using Server.Models;
 using Server.Repositories;
 using Server.Tests.TestDb;
@@ -28,11 +29,10 @@ namespace Server.Tests.Integration
 
         private async Task SeedAsync(int specialistId, string encryptedUrl, int eventCount)
         {
-            DbContext.Set<UserCalendarConnection>().Add(new UserCalendarConnection
-            {
-                SpecialistId = specialistId,
-                EncryptedIcalUrl = encryptedUrl
-            });
+            var specialist = await DbContext.Set<Specialist>()
+                .SingleAsync(s => s.Id == specialistId);
+
+            specialist.EncryptedIcalUrl = encryptedUrl;
 
             for (var i = 0; i < eventCount; i++)
             {
@@ -54,7 +54,8 @@ namespace Server.Tests.Integration
         {
             await using var verify = TestDatabase.CreateDbContext();
             return (
-                await verify.Set<UserCalendarConnection>().CountAsync(c => c.SpecialistId == specialistId),
+                await verify.Set<Specialist>().CountAsync(s =>
+                    s.Id == specialistId && s.EncryptedIcalUrl != null),
                 await verify.Set<ExternalCalendarEvent>().CountAsync(e => e.SpecialistId == specialistId));
         }
 
@@ -69,13 +70,15 @@ namespace Server.Tests.Integration
             var id = await SpecialistIdAsync(DeVries);
             await using var context = TestDatabase.CreateDbContext();
             var repository = new CalendarConnectionRepository(context);
+            var specialist = await repository.GetConnectionUser(id);
+
+            Assert.IsNotNull(specialist);
 
             // Act
-            var result = await repository.UpdateUserCalendarConnection(null!, id, "versleuteld-1");
+            var result = await repository.UpdateUserCalendarConnection(specialist, "versleuteld-1");
 
             // Assert
-            Assert.IsTrue(result.Id > 0, "De koppeling moet zijn opgeslagen.");
-            Assert.AreEqual(id, result.SpecialistId);
+            Assert.AreEqual(id, result.Id);
             Assert.AreEqual("versleuteld-1", result.EncryptedIcalUrl);
             Assert.AreEqual(1, (await CountsAsync(id)).Connections);
         }
@@ -93,14 +96,17 @@ namespace Server.Tests.Integration
             Assert.IsNotNull(existing);
 
             // Act
-            var result = await repository.UpdateUserCalendarConnection(existing, id, "nieuw");
+            var result = await repository.UpdateUserCalendarConnection(existing, "nieuw");
 
             // Assert
             Assert.AreEqual(existing.Id, result.Id);
             await using var verify = TestDatabase.CreateDbContext();
-            var rows = await verify.Set<UserCalendarConnection>().AsNoTracking().Where(c => c.SpecialistId == id).ToListAsync();
-            Assert.AreEqual(1, rows.Count);
-            Assert.AreEqual("nieuw", rows[0].EncryptedIcalUrl);
+            var specialist = await verify.Set<Specialist>()
+                .AsNoTracking()
+                .SingleAsync(s => s.Id == id);
+
+            Assert.AreEqual("nieuw", specialist.EncryptedIcalUrl);
+            Assert.AreEqual(1, (await CountsAsync(id)).Connections);
         }
 
         // =========================================================
@@ -123,6 +129,13 @@ namespace Server.Tests.Integration
 
             // Assert
             Assert.AreEqual((0, 0), await CountsAsync(id));
+
+            await using var verify = TestDatabase.CreateDbContext();
+            var specialist = await verify.Set<Specialist>()
+                .SingleAsync(s => s.Id == id);
+
+            Assert.IsNull(specialist.EncryptedIcalUrl);
+            Assert.IsNull(specialist.LastSyncedUtc);
         }
 
         [TestMethod]
@@ -165,7 +178,7 @@ namespace Server.Tests.Integration
         }
 
         [TestMethod]
-        public async Task GetConnectionUser_ZonderKoppeling_GeeftNullTerug()
+        public async Task GetConnectionUser_ZonderKoppeling_GeeftSpecialistZonderAgendaTerug()
         {
             // Arrange
             var id = await SpecialistIdAsync(DeVries);
@@ -176,7 +189,9 @@ namespace Server.Tests.Integration
             var result = await repository.GetConnectionUser(id);
 
             // Assert
-            Assert.IsNull(result);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(id, result.Id);
+            Assert.IsNull(result.EncryptedIcalUrl);
         }
     }
 }

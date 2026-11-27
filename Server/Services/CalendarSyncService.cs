@@ -1,4 +1,5 @@
-﻿using Ical.Net;
+﻿
+using Ical.Net;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
 using Ical.Net.Evaluation;
@@ -6,7 +7,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Server.Models;
 using Server.Repositories.InterFaces;
 using Server.Services.InterFaces;
-
 
 namespace Server.Services
 {
@@ -47,7 +47,7 @@ namespace Server.Services
                 if (!icsContent.Contains("BEGIN:VCALENDAR"))
                     throw new ArgumentException("Ongeldige iCal-link.");
 
-                _ = Calendar.Load(icsContent); 
+                _ = Calendar.Load(icsContent);
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
             {
@@ -62,13 +62,20 @@ namespace Server.Services
 
             var encryptedUrl = _protector.Protect(cleanUrl);
             var connection = await _connectionRepository.GetConnectionUser(specialistId);
-            connection = await _connectionRepository.UpdateUserCalendarConnection(connection, specialistId, encryptedUrl);
+
+            if (connection == null)
+                throw new InvalidOperationException("Specialist niet gevonden.");
+
+            connection = await _connectionRepository.UpdateUserCalendarConnection(connection, encryptedUrl);
 
             await SyncUserEventsAsync(connection, icsContent);
         }
 
-        public async Task SyncUserEventsAsync(UserCalendarConnection connection, string? preloadedIcs = null)
+        public async Task SyncUserEventsAsync(Specialist connection, string? preloadedIcs = null)
         {
+            if (string.IsNullOrWhiteSpace(connection.EncryptedIcalUrl))
+                throw new InvalidOperationException("De specialist heeft geen gekoppelde externe agenda.");
+
             var url = _protector.Unprotect(connection.EncryptedIcalUrl);
             var icsContent = preloadedIcs ?? await _httpClientFactory.CreateClient().GetStringAsync(url);
 
@@ -81,13 +88,14 @@ namespace Server.Services
 
             var options = new EvaluationOptions
             {
-                MaxUnmatchedIncrementsLimit = 1000 
+                MaxUnmatchedIncrementsLimit = 1000
             };
 
             var occurrences = calendar.GetOccurrences(startCal, options)
                 .TakeWhile(occ => occ.Period.StartTime <= endCal)
-                .Take(2000) 
+                .Take(2000)
                 .ToList();
+
             var fetchedEvents = new Dictionary<string, ExternalCalendarEvent>();
 
             foreach (var occ in occurrences)
@@ -100,7 +108,7 @@ namespace Server.Services
                 var uid = $"{ev.Uid}_{startUtc:yyyyMMddTHHmmssZ}";
                 fetchedEvents[uid] = new ExternalCalendarEvent
                 {
-                    SpecialistId = connection.SpecialistId,
+                    SpecialistId = connection.Id,
                     ExternalUid = uid,
                     Title = ev.Summary ?? "Bezet",
                     StartUtc = startUtc,
@@ -111,7 +119,7 @@ namespace Server.Services
 
             // Database-afhandeling uitbesteed aan de repository
             await _eventRepository.SyncEventsAsync(
-                connection.SpecialistId,
+                connection.Id,
                 fromUtc,
                 toUtc,
                 fetchedEvents,
@@ -120,7 +128,9 @@ namespace Server.Services
 
         public async Task<bool> IsConnectedAsync(int specialistId)
         {
-            return await _connectionRepository.GetConnectionUser(specialistId) != null;
+            var specialist = await _connectionRepository.GetConnectionUser(specialistId);
+
+            return specialist?.EncryptedIcalUrl != null;
         }
 
         public Task DisconnectAsync(int specialistId)

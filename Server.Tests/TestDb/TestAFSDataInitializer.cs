@@ -16,7 +16,6 @@ namespace Server.Tests.TestDb
             // Users
             var patientUser1 = new User
             {
-                Username = "jan.jansen",
                 SurName = "Jan",
                 LastName = "Jansen",
                 FullName = "Jan Jansen",
@@ -27,7 +26,6 @@ namespace Server.Tests.TestDb
 
             var gpUser = new User
             {
-                Username = "huisarts.visser",
                 SurName = "Dr.",
                 LastName = "Visser",
                 FullName = "Dr. Visser",
@@ -38,7 +36,6 @@ namespace Server.Tests.TestDb
 
             var specialistUser1 = new User
             {
-                Username = "dr.devries",
                 SurName = "Dr.",
                 LastName = "De Vries",
                 FullName = "Dr. De Vries",
@@ -49,7 +46,6 @@ namespace Server.Tests.TestDb
 
             var patientUser2 = new User
             {
-                Username = "piet.pietersen",
                 SurName = "Piet",
                 LastName = "Pietersen",
                 FullName = "Piet Pietersen",
@@ -60,7 +56,6 @@ namespace Server.Tests.TestDb
 
             var patientUser3 = new User
             {
-                Username = "anna.deboer",
                 SurName = "Anna",
                 LastName = "de Boer",
                 FullName = "Anna de Boer",
@@ -71,7 +66,6 @@ namespace Server.Tests.TestDb
 
             var specialistUser2 = new User
             {
-                Username = "dr.bakker",
                 SurName = "Dr.",
                 LastName = "Bakker",
                 FullName = "Dr. Bakker",
@@ -82,7 +76,6 @@ namespace Server.Tests.TestDb
 
             var specialistUser3 = new User
             {
-                Username = "dr.smit",
                 SurName = "Dr.",
                 LastName = "Smit",
                 FullName = "Dr. Smit",
@@ -93,7 +86,6 @@ namespace Server.Tests.TestDb
 
             var employeeUser1 = new User
             {
-                Username = "medewerker.a",
                 SurName = "Medewerker",
                 LastName = "A",
                 FullName = "Medewerker A",
@@ -104,7 +96,6 @@ namespace Server.Tests.TestDb
 
             var employeeUser2 = new User
             {
-                Username = "medewerker.b",
                 SurName = "Medewerker",
                 LastName = "B",
                 FullName = "Medewerker B",
@@ -115,7 +106,6 @@ namespace Server.Tests.TestDb
 
             var adminUser = new User
             {
-                Username = "beheerder1",
                 SurName = "Beheerder",
                 LastName = "Een",
                 FullName = "Beheerder Een",
@@ -217,7 +207,8 @@ namespace Server.Tests.TestDb
                 Description = "Consult cardiologie",
                 Specialism = Specialism.Cardiologie,
                 DurationInQuarters = 2,
-                Cost = 100.00m
+                Cost = 100.00m,
+                IsActive = true
             };
 
             var dermatologyCode = new TreatmentCode
@@ -226,7 +217,8 @@ namespace Server.Tests.TestDb
                 Description = "Consult dermatologie",
                 Specialism = Specialism.Dermatologie,
                 DurationInQuarters = 1,
-                Cost = 60.00m
+                Cost = 60.00m,
+                IsActive = true
             };
 
             var knoCode = new TreatmentCode
@@ -235,7 +227,8 @@ namespace Server.Tests.TestDb
                 Description = "Uitgebreid consult KNO",
                 Specialism = Specialism.KNO,
                 DurationInQuarters = 4,
-                Cost = 180.00m
+                Cost = 180.00m,
+                IsActive = true
             };
 
             context.Set<TreatmentCode>().AddRange(
@@ -254,7 +247,7 @@ namespace Server.Tests.TestDb
                 Specialism = Specialism.Cardiologie,
                 Reason = "Pijn op de borst",
                 Questionnaire = string.Empty,
-                Urgency = "Regulier",
+                Urgency = ReferralUrgency.Regulier,
                 TreatmentCode = cardiologyCode.Code,
                 TreatmentCodeDetails = cardiologyCode,
                 Status = "Open",
@@ -268,7 +261,7 @@ namespace Server.Tests.TestDb
                 Specialism = Specialism.Dermatologie,
                 Reason = "Huiduitslag",
                 Questionnaire = string.Empty,
-                Urgency = "Regulier",
+                Urgency = ReferralUrgency.Regulier,
                 TreatmentCode = dermatologyCode.Code,
                 TreatmentCodeDetails = dermatologyCode,
                 Status = "Open",

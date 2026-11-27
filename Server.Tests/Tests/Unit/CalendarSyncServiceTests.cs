@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.DataProtection;
+﻿
+using Microsoft.AspNetCore.DataProtection;
 using Moq;
 using Server.Models;
 using Server.Repositories.InterFaces;
@@ -64,23 +65,29 @@ namespace Server.Tests.Unit
                 .Setup(f => f.CreateClient(It.IsAny<string>()))
                 .Returns(() => new HttpClient(_http, disposeHandler: false));
 
-            _connections
-                .Setup(c => c.GetConnectionUser(It.IsAny<int>()))
-                .ReturnsAsync((UserCalendarConnection?)null);
+            var specialist = new Specialist
+            {
+                Id = SpecialistId
+            };
 
             _connections
-                .Setup(c => c.UpdateUserCalendarConnection(It.IsAny<UserCalendarConnection?>(), It.IsAny<int>(), It.IsAny<string>()))
-                .ReturnsAsync((UserCalendarConnection? existing, int id, string url) =>
+                .Setup(c => c.GetConnectionUser(It.IsAny<int>()))
+                .ReturnsAsync(specialist);
+
+            _connections
+                .Setup(c => c.UpdateUserCalendarConnection(It.IsAny<Specialist>(), It.IsAny<string>()))
+                .ReturnsAsync((Specialist existing, string url) =>
                 {
                     _savedEncryptedUrl = url;
-                    return existing ?? new UserCalendarConnection { SpecialistId = id, EncryptedIcalUrl = url };
+                    existing.EncryptedIcalUrl = url;
+                    return existing;
                 });
 
             _events
                 .Setup(e => e.SyncEventsAsync(
                     It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(),
-                    It.IsAny<Dictionary<string, ExternalCalendarEvent>>(), It.IsAny<UserCalendarConnection>()))
-                .Callback<int, DateTime, DateTime, Dictionary<string, ExternalCalendarEvent>, UserCalendarConnection>(
+                    It.IsAny<Dictionary<string, ExternalCalendarEvent>>(), It.IsAny<Specialist>()))
+                .Callback<int, DateTime, DateTime, Dictionary<string, ExternalCalendarEvent>, Specialist>(
                     (_, from, to, events, _) =>
                     {
                         _syncedFrom = from;
@@ -117,9 +124,9 @@ namespace Server.Tests.Unit
         private void ServeIcs(string ics) =>
             _http.Responder = _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(ics) };
 
-        private UserCalendarConnection ConnectionTo(string url) => new()
+        private Specialist ConnectionTo(string url) => new()
         {
-            SpecialistId = SpecialistId,
+            Id = SpecialistId,
             EncryptedIcalUrl = _protector.Protect(url)
         };
 
@@ -141,8 +148,8 @@ namespace Server.Tests.Unit
 
             // Assert
             Assert.AreEqual(0, _http.Requests.Count, "Er mag niets opgehaald worden bij een ongeldige URL.");
-            _connections.Verify(c => c.UpdateUserCalendarConnection(It.IsAny<UserCalendarConnection?>(), It.IsAny<int>(), It.IsAny<string>()), Times.Never);
-            _events.Verify(e => e.SyncEventsAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, ExternalCalendarEvent>>(), It.IsAny<UserCalendarConnection>()), Times.Never);
+            _connections.Verify(c => c.UpdateUserCalendarConnection(It.IsAny<Specialist>(), It.IsAny<string>()), Times.Never);
+            _events.Verify(e => e.SyncEventsAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, ExternalCalendarEvent>>(), It.IsAny<Specialist>()), Times.Never);
         }
 
         [TestMethod]
@@ -157,7 +164,7 @@ namespace Server.Tests.Unit
 
             // Assert
             Assert.IsInstanceOfType<HttpRequestException>(exception.InnerException);
-            _connections.Verify(c => c.UpdateUserCalendarConnection(It.IsAny<UserCalendarConnection?>(), It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+            _connections.Verify(c => c.UpdateUserCalendarConnection(It.IsAny<Specialist>(), It.IsAny<string>()), Times.Never);
         }
 
         [TestMethod]
@@ -170,8 +177,8 @@ namespace Server.Tests.Unit
             await Assert.ThrowsExactlyAsync<ArgumentException>(() => _service.SaveAndSyncUrlAsync(SpecialistId, FeedUrl));
 
             // Assert
-            _connections.Verify(c => c.UpdateUserCalendarConnection(It.IsAny<UserCalendarConnection?>(), It.IsAny<int>(), It.IsAny<string>()), Times.Never);
-            _events.Verify(e => e.SyncEventsAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, ExternalCalendarEvent>>(), It.IsAny<UserCalendarConnection>()), Times.Never);
+            _connections.Verify(c => c.UpdateUserCalendarConnection(It.IsAny<Specialist>(), It.IsAny<string>()), Times.Never);
+            _events.Verify(e => e.SyncEventsAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, ExternalCalendarEvent>>(), It.IsAny<Specialist>()), Times.Never);
         }
 
         // =========================================================
@@ -207,7 +214,7 @@ namespace Server.Tests.Unit
             await _service.SaveAndSyncUrlAsync(SpecialistId, FeedUrl);
 
             // Assert
-            _connections.Verify(c => c.UpdateUserCalendarConnection(existing, SpecialistId, It.IsAny<string>()), Times.Once);
+            _connections.Verify(c => c.UpdateUserCalendarConnection(existing, It.IsAny<string>()), Times.Once);
         }
 
         [TestMethod]
@@ -380,7 +387,7 @@ namespace Server.Tests.Unit
                 () => _service.SyncUserEventsAsync(ConnectionTo(FeedUrl)));
 
             // Assert
-            _events.Verify(e => e.SyncEventsAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, ExternalCalendarEvent>>(), It.IsAny<UserCalendarConnection>()), Times.Never);
+            _events.Verify(e => e.SyncEventsAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<Dictionary<string, ExternalCalendarEvent>>(), It.IsAny<Specialist>()), Times.Never);
         }
     }
 }

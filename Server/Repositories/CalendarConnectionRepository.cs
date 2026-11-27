@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.DataProtection;
+﻿
 using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Models;
@@ -6,7 +6,7 @@ using Server.Repositories.InterFaces;
 
 namespace Server.Repositories
 {
-    public class CalendarConnectionRepository : Repository<UserCalendarConnection>, ICalendarConnectionRepository
+    public class CalendarConnectionRepository : Repository<Specialist>, ICalendarConnectionRepository
     {
         public CalendarConnectionRepository(AppDbContext context)
             : base(context)
@@ -14,23 +14,18 @@ namespace Server.Repositories
         }
 
         /// <inheritdoc />
-        public async Task<UserCalendarConnection?> GetConnectionUser(int specialistId)
+        public async Task<Specialist?> GetConnectionUser(int specialistId)
         {
-            return await _context.UserCalendarConnections.FirstOrDefaultAsync(x => x.SpecialistId == specialistId);
+            return await _context.Specialists.FirstOrDefaultAsync(x => x.Id == specialistId);
         }
 
         /// <inheritdoc />
-        public async Task<UserCalendarConnection> UpdateUserCalendarConnection(UserCalendarConnection? connection, int specialistId, string encryptedUrl)
+        public async Task<Specialist> UpdateUserCalendarConnection(Specialist specialist, string encryptedUrl)
         {
-            if (connection == null)
-            {
-                connection = new UserCalendarConnection { SpecialistId = specialistId };
-                _context.UserCalendarConnections.Add(connection);
-            }
-            connection.EncryptedIcalUrl = encryptedUrl;
+            specialist.EncryptedIcalUrl = encryptedUrl;
             await _context.SaveChangesAsync();
 
-            return connection;
+            return specialist;
         }
 
         /// <inheritdoc />
@@ -45,9 +40,16 @@ namespace Server.Repositories
                     .Where(e => e.SpecialistId == specialistId)
                     .ExecuteDeleteAsync();
 
-                await _context.UserCalendarConnections
-                    .Where(c => c.SpecialistId == specialistId)
-                    .ExecuteDeleteAsync();
+                var specialist = await _context.Specialists
+                    .FirstOrDefaultAsync(s => s.Id == specialistId);
+
+                if (specialist != null)
+                {
+                    specialist.EncryptedIcalUrl = null;
+                    specialist.LastSyncedUtc = null;
+
+                    await _context.SaveChangesAsync();
+                }
 
                 await tx.CommitAsync();
             });

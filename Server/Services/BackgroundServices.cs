@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Services.InterFaces;
 
@@ -37,7 +38,9 @@ namespace Server.Services
                     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                     var syncService = scope.ServiceProvider.GetRequiredService<IAgendaService>();
 
-                    var connections = await db.UserCalendarConnections.ToListAsync(stoppingToken);
+                    var connections = await db.Specialists
+                        .Where(s => s.EncryptedIcalUrl != null)
+                        .ToListAsync(stoppingToken);
 
                     foreach (var conn in connections)
                     {
@@ -48,7 +51,7 @@ namespace Server.Services
                         catch (Exception ex)
                         {
                             // Log per-specialist failures (e.g., revoked or unreachable iCal URL) without interrupting other specialists.
-                            logger.LogWarning(ex, "Agenda-sync mislukt voor specialist {SpecialistId}", conn.SpecialistId);
+                            logger.LogWarning(ex, "Agenda-sync mislukt voor specialist {SpecialistId}", conn.Id);
                         }
                     }
                 }

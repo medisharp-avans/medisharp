@@ -5,16 +5,16 @@ namespace Server.Models.DTO.Requests
 {
     public class CreateReferralRequestDTO
     {
-        [Required]
+        [Range(1, int.MaxValue)]
         public int PatientId { get; set; }
 
-        [Required]
+        [Range(1, int.MaxValue)]
         public int GeneralPractitionerId { get; set; }
 
-        [Required]
         [EnumDataType(typeof(Specialism))]
-        public Specialism Specialism { get; set; } 
+        public Specialism Specialism { get; set; }
 
+        [Range(1, int.MaxValue)]
         public int? PreferredSpecialistId { get; set; }
 
         [Required]
@@ -24,9 +24,8 @@ namespace Server.Models.DTO.Requests
         [StringLength(1000)]
         public string? Questionnaire { get; set; }
 
-        [Required]
-        [StringLength(20)]
-        public string Urgency { get; set; } = "Regulier";
+        [EnumDataType(typeof(ReferralUrgency))]
+        public ReferralUrgency Urgency { get; set; } = ReferralUrgency.Regulier;
 
         [Required]
         [StringLength(20)]

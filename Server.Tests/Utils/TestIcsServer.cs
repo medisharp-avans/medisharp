@@ -96,7 +96,14 @@ namespace Server.Tests.Utils
 
     public static class IcsBuilder
     {
-        private static string Utc(DateTime local) => local.ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'");
+        private static readonly TimeZoneInfo DutchTimeZone =
+            TimeZoneInfo.FindSystemTimeZoneById("Europe/Amsterdam");
+
+        private static string Utc(DateTime local) =>
+            TimeZoneInfo.ConvertTimeToUtc(
+                DateTime.SpecifyKind(local, DateTimeKind.Unspecified),
+                DutchTimeZone
+            ).ToString("yyyyMMdd'T'HHmmss'Z'");
 
         public static string Build(string prodId, string summary, DateTime start, DateTime end) =>
             string.Join("\r\n",

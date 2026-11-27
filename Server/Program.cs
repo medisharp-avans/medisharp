@@ -5,6 +5,7 @@ using Server.Data;
 using Server.Repositories;
 using Server.Services;
 using System.Reflection;
+using System.Text.Json.Serialization;
 
 namespace Server
 {
@@ -56,6 +57,10 @@ namespace Server
                 {
                     options.JsonSerializerOptions.ReferenceHandler =
                         System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+
+                    options.JsonSerializerOptions.Converters.Add(
+                        new JsonStringEnumConverter()
+                    );
                 });
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddSwaggerGen(options =>

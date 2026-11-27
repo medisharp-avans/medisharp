@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Models;
 using Server.Repositories.InterFaces;
@@ -26,7 +27,7 @@ namespace Server.Repositories
             DateTime fromUtc,
             DateTime toUtc,
             Dictionary<string, ExternalCalendarEvent> fetchedEvents,
-            UserCalendarConnection connection)
+            Specialist connection)
         {
             var existingEvents = await GetBySpecialistAndRangeAsync(specialistId, fromUtc, toUtc);
 
@@ -56,7 +57,8 @@ namespace Server.Repositories
 
             // 3. Resync and save within one transaction
             if (_context.Entry(connection).State == EntityState.Detached)
-                _context.UserCalendarConnections.Update(connection);
+                _context.Specialists.Update(connection);
+
             connection.LastSyncedUtc = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

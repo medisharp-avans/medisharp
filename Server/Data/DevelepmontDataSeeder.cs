@@ -18,7 +18,7 @@ namespace Server.Services;
 /// </summary>
 public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : IHostedService
 {
-    private const string UserPrefix = "dev-seed-";
+    private const string UserEmailPrefix = "dev-";
     private const string TreatmentCodePrefix = "DEV-";
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -86,14 +86,15 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
 
         db.Patients.AddRange(patient1, patient2);
 
-        // ----- Treatment codes (Specialism is a string here) -----
+        // ----- Treatment codes -----
         var consult = new TreatmentCode
         {
             Code = $"{TreatmentCodePrefix}CONSULT",
             Description = "Standaard eerste consult (ontwikkeldata)",
             Specialism = Specialism.Cardiologie,
             DurationInQuarters = 4,
-            Cost = 75.00m
+            Cost = 75.00m,
+            IsActive = true
         };
 
         var followUp = new TreatmentCode
@@ -102,7 +103,8 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
             Description = "Vervolgconsult (ontwikkeldata)",
             Specialism = Specialism.Cardiologie,
             DurationInQuarters = 2,
-            Cost = 45.00m
+            Cost = 45.00m,
+            IsActive = true
         };
 
         var check = new TreatmentCode
@@ -111,7 +113,8 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
             Description = "Controleafspraak (ontwikkeldata)",
             Specialism = Specialism.KNO,
             DurationInQuarters = 2,
-            Cost = 35.00m
+            Cost = 35.00m,
+            IsActive = true
         };
 
         db.TreatmentCodes.AddRange(consult, followUp, check);
@@ -126,7 +129,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
             PreferredSpecialistId = specialist1.Id,
             Reason = "Testverwijzing wegens aanhoudende klachten.",
             Questionnaire = "Ontwikkeldata: klachten bestaan enkele weken.",
-            Urgency = "Regulier",
+            Urgency = ReferralUrgency.Regulier,
             TreatmentCode = consult.Code,
             Status = "Ingepland",
             CreatedAt = DateTime.UtcNow.AddDays(-2)
@@ -140,7 +143,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
             PreferredSpecialistId = specialist2.Id,
             Reason = "Testverwijzing voor een controle.",
             Questionnaire = "Ontwikkeldata: periodieke controle.",
-            Urgency = "Regulier",
+            Urgency = ReferralUrgency.Regulier,
             TreatmentCode = check.Code,
             Status = "Open",
             CreatedAt = DateTime.UtcNow.AddDays(-1)
@@ -169,7 +172,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         CancellationToken cancellationToken)
     {
         var seededUserIds = await db.Users
-            .Where(u => u.Username.StartsWith(UserPrefix))
+            .Where(u => u.Email.StartsWith("dev-"))
             .Select(u => u.Id)
             .ToListAsync(cancellationToken);
 
@@ -272,7 +275,6 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
 
     private static User CreateUser(string name, UserRole role, int number, string surName, string lastName) => new()
     {
-        Username = $"{UserPrefix}{name}",
         SurName = surName,
         LastName = lastName,
         FullName = $"{surName} {lastName}",

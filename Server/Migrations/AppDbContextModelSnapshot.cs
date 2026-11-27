@@ -60,7 +60,10 @@ namespace Server.Migrations
                     b.HasIndex("SpecialistId", "StartTime")
                         .IsUnique();
 
-                    b.ToTable("Appointments");
+                    b.ToTable("Appointments", t =>
+                        {
+                            t.HasCheckConstraint("CK_Appointments_EndTime", "[EndTime] > [StartTime]");
+                        });
                 });
 
             modelBuilder.Entity("Server.Models.ExternalCalendarEvent", b =>
@@ -76,7 +79,8 @@ namespace Server.Migrations
 
                     b.Property<string>("ExternalUid")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsAllDay")
                         .HasColumnType("bit");
@@ -89,14 +93,18 @@ namespace Server.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("SpecialistId", "ExternalUid")
                         .IsUnique();
 
-                    b.ToTable("ExternalCalendarEvents");
+                    b.ToTable("ExternalCalendarEvents", t =>
+                        {
+                            t.HasCheckConstraint("CK_ExternalCalendarEvents_EndUtc", "[EndUtc] > [StartUtc]");
+                        });
                 });
 
             modelBuilder.Entity("Server.Models.GeneralPractitioner", b =>
@@ -145,7 +153,9 @@ namespace Server.Migrations
                         .HasColumnType("int");
 
                     b.Property<bool>("HasInsurance")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
@@ -157,12 +167,18 @@ namespace Server.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Bsn")
+                        .IsUnique();
+
                     b.HasIndex("GeneralPractitionerId");
 
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Patients");
+                    b.ToTable("Patients", t =>
+                        {
+                            t.HasCheckConstraint("CK_Patients_Bsn", "LEN([Bsn]) = 9 AND [Bsn] NOT LIKE '%[^0-9]%'");
+                        });
                 });
 
             modelBuilder.Entity("Server.Models.Referral", b =>
@@ -174,7 +190,9 @@ namespace Server.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.Property<int>("GeneralPractitionerId")
                         .HasColumnType("int");
@@ -201,17 +219,22 @@ namespace Server.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Open");
 
                     b.Property<string>("TreatmentCode")
                         .IsRequired()
+                        .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Urgency")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Regulier");
 
                     b.HasKey("Id");
 
@@ -233,6 +256,12 @@ namespace Server.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("EncryptedIcalUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastSyncedUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Specialism")
                         .IsRequired()
@@ -267,13 +296,23 @@ namespace Server.Migrations
                     b.Property<int>("DurationInQuarters")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Specialism")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Code");
 
-                    b.ToTable("TreatmentCodes");
+                    b.ToTable("TreatmentCodes", t =>
+                        {
+                            t.HasCheckConstraint("CK_TreatmentCodes_Cost", "[Cost] >= 0");
+
+                            t.HasCheckConstraint("CK_TreatmentCodes_DurationInQuarters", "[DurationInQuarters] > 0");
+                        });
                 });
 
             modelBuilder.Entity("Server.Models.User", b =>
@@ -295,10 +334,14 @@ namespace Server.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsLockedOut")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -318,40 +361,12 @@ namespace Server.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("Server.Models.UserCalendarConnection", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("EncryptedIcalUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("LastSyncedUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("SpecialistId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SpecialistId")
+                    b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("UserCalendarConnections");
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Server.Models.Appointment", b =>
@@ -463,17 +478,6 @@ namespace Server.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Server.Models.UserCalendarConnection", b =>
-                {
-                    b.HasOne("Server.Models.Specialist", "Specialist")
-                        .WithOne()
-                        .HasForeignKey("Server.Models.UserCalendarConnection", "SpecialistId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Specialist");
                 });
 
             modelBuilder.Entity("Server.Models.GeneralPractitioner", b =>

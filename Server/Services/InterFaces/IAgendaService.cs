@@ -1,4 +1,5 @@
-﻿using Server.Models;
+﻿
+using Server.Models;
 
 namespace Server.Services.InterFaces
 {
@@ -22,10 +23,10 @@ namespace Server.Services.InterFaces
         /// Fetches, parses, and synchronizes external calendar occurrences (including recurring <c>RRULE</c> events)
         /// for an existing calendar connection into the database.
         /// </summary>
-        /// <param name="connection">The specialist's stored calendar connection containing the encrypted iCal URL.</param>
+        /// <param name="connection">The specialist containing the stored encrypted iCal URL.</param>
         /// <param name="preloadedIcs">Optional pre-fetched iCalendar content to avoid a duplicate HTTP request during initial connection.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous synchronization operation.</returns>
-        Task SyncUserEventsAsync(UserCalendarConnection connection, string? preloadedIcs = null);
+        Task SyncUserEventsAsync(Specialist connection, string? preloadedIcs = null);
 
         /// <summary>
         /// Checks whether the specified specialist currently has an active external calendar connection.

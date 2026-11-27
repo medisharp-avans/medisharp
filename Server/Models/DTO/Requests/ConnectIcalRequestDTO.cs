@@ -3,7 +3,9 @@
 namespace Server.Models.DTO.Requests
 {
     public record ConnectIcalRequestDTO(
-        [Required] int SpecialistId,
-        [Required] string IcalUrl
+        [Range(1, int.MaxValue)] int SpecialistId,
+        [Required]
+        [StringLength(2048)]
+        string IcalUrl
     );
 }

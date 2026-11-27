@@ -36,7 +36,7 @@ namespace Server.Repositories
                 return new List<TreatmentCode>();
 
             return await _context.TreatmentCodes
-                .Where(t => t.Specialism == parsed)
+                .Where(t => t.Specialism == parsed && t.IsActive)
                 .ToListAsync();
         }
 

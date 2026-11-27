@@ -62,7 +62,7 @@ namespace Server.Tests.Unit
             Specialism = Specialism.KNO,
             PreferredSpecialistId = preferredSpecialistId,
             Reason = "Oorpijn",
-            Urgency = "Regulier",
+            Urgency = ReferralUrgency.Regulier,
             TreatmentCode = "KNO002"
         };
 

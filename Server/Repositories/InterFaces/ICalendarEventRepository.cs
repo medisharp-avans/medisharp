@@ -1,4 +1,5 @@
-﻿using Server.Models;
+﻿
+using Server.Models;
 
 namespace Server.Repositories.InterFaces
 {
@@ -25,13 +26,13 @@ namespace Server.Repositories.InterFaces
         /// <param name="fromUtc">The start of the synchronized UTC window.</param>
         /// <param name="toUtc">The end of the synchronized UTC window.</param>
         /// <param name="fetchedEvents">A dictionary of parsed events keyed by their unique external occurrence identifier.</param>
-        /// <param name="connection">The specialist's <see cref="UserCalendarConnection"/> whose <c>LastSyncedUtc</c> timestamp will be updated.</param>
+        /// <param name="connection">The specialist's <see cref="Specialist"/> whose <c>LastSyncedUtc</c> timestamp will be updated.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous synchronization operation.</returns>
         Task SyncEventsAsync(
             int specialistId,
             DateTime fromUtc,
             DateTime toUtc,
             Dictionary<string, ExternalCalendarEvent> fetchedEvents,
-            UserCalendarConnection connection);
+            Specialist connection);
     }
 }

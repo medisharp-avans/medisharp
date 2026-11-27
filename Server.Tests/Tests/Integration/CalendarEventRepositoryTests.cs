@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using Server.Models;
 using Server.Repositories;
 using Server.Tests.TestDb;
@@ -54,11 +55,11 @@ namespace Server.Tests.Integration
 
         private async Task SeedConnectionAsync(int specialistId)
         {
-            DbContext.Set<UserCalendarConnection>().Add(new UserCalendarConnection
-            {
-                SpecialistId = specialistId,
-                EncryptedIcalUrl = "versleuteld"
-            });
+            var specialist = await DbContext.Set<Specialist>()
+                .SingleAsync(s => s.Id == specialistId);
+
+            specialist.EncryptedIcalUrl = "versleuteld";
+
             await DbContext.SaveChangesAsync();
             DbContext.ChangeTracker.Clear();
         }
@@ -68,10 +69,10 @@ namespace Server.Tests.Integration
         {
             await using var context = TestDatabase.CreateDbContext();
             var repository = new CalendarEventRepository(context);
-            var connection = await context.Set<UserCalendarConnection>()
-                .SingleAsync(c => c.SpecialistId == specialistId);
+            var specialist = await context.Set<Specialist>()
+                .SingleAsync(s => s.Id == specialistId);
 
-            await repository.SyncEventsAsync(specialistId, From, To, feed, connection);
+            await repository.SyncEventsAsync(specialistId, From, To, feed, specialist);
         }
 
         private static async Task<List<ExternalCalendarEvent>> EventsOfAsync(int specialistId)
@@ -236,9 +237,12 @@ namespace Server.Tests.Integration
 
             // Assert
             await using var verify = TestDatabase.CreateDbContext();
-            var connection = await verify.Set<UserCalendarConnection>().AsNoTracking().SingleAsync(c => c.SpecialistId == id);
-            Assert.IsNotNull(connection.LastSyncedUtc);
-            Assert.IsTrue(connection.LastSyncedUtc >= before, "LastSyncedUtc moet de tijd van deze sync zijn.");
+            var specialist = await verify.Set<Specialist>()
+                .AsNoTracking()
+                .SingleAsync(s => s.Id == id);
+
+            Assert.IsNotNull(specialist.LastSyncedUtc);
+            Assert.IsTrue(specialist.LastSyncedUtc >= before, "LastSyncedUtc moet de tijd van deze sync zijn.");
         }
 
         [TestMethod]
