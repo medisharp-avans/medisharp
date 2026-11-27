@@ -1,15 +1,24 @@
-name: Docker images
+name: Build and deploy
 
-# Builds the server and client images and pushes them to GitHub Container Registry (GHCR)
-# after every merge into development or main.
+# After every merge into main:
+#   1. build the server and client images once and push them to GitHub Container Registry (GHCR),
+#   2. deploy that build to staging (Dokploy),
+#   3. after a reviewer approves, deploy the same build to production (Dokploy).
+#
+# Production never gets a new build: it gets the image that was tested on staging.
+# Each environment pulls its own tag (:staging / :production); the jobs below move that tag
+# to the build of this run just before they deploy.
 on:
   push:
-    branches: [development, main]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
   packages: write
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/medisharp
 
 jobs:
   build-and-push:
@@ -34,11 +43,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Tags: the branch name (development / main) and the commit SHA.
+      # Tags: the branch name (main) and the commit SHA (sha-<full sha>).
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/medisharp-${{ matrix.name }}
+          images: ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}
           tags: |
             type=ref,event=branch
             type=sha,format=long
@@ -52,3 +61,64 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  deploy-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    # Secrets and variables come from the GitHub Environment "acceptance" (Dokploy: staging).
+    environment: acceptance
+    # One staging deploy at a time; a newer waiting run replaces an older one.
+    concurrency: deploy-staging
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Does not rebuild anything: it adds the tag "staging" to the images of this run.
+      - name: Tag this build as staging
+        run: |
+          for app in server client; do
+            docker buildx imagetools create \
+              --tag "$IMAGE_PREFIX-$app:staging" \
+              "$IMAGE_PREFIX-$app:sha-$GITHUB_SHA"
+          done
+
+      - name: Deploy to Dokploy (staging)
+        run: |
+          curl --fail-with-body -sS -X POST "${{ vars.DOKPLOY_URL }}/api/compose.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"composeId":"${{ vars.DOKPLOY_COMPOSE_ID }}","title":"${{ github.sha }}"}'
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    # The GitHub Environment "production" has required reviewers: this job waits until one of
+    # them approves, after checking the build on staging.
+    environment: production
+    # If a newer run is waiting for approval, the older waiting one is cancelled.
+    concurrency: deploy-production
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same images as staging: this run's SHA, now also tagged "production".
+      - name: Tag this build as production
+        run: |
+          for app in server client; do
+            docker buildx imagetools create \
+              --tag "$IMAGE_PREFIX-$app:production" \
+              "$IMAGE_PREFIX-$app:sha-$GITHUB_SHA"
+          done
+
+      - name: Deploy to Dokploy (production)
+        run: |
+          curl --fail-with-body -sS -X POST "${{ vars.DOKPLOY_URL }}/api/compose.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"composeId":"${{ vars.DOKPLOY_COMPOSE_ID }}","title":"${{ github.sha }}"}'
