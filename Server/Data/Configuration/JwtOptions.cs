@@ -18,7 +18,7 @@ namespace Server.Configuration
 
         [Required]
         [MinLength(32)]
-        public string Token { get; set; } = string.Empty;
+        public string Key { get; set; } = string.Empty;
 
         [Range(1, 1440)]
         public int ExpiresMinutes { get; set; } = 60;

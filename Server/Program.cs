@@ -55,7 +55,7 @@ namespace Server
                         ValidateAudience = true,
                         ValidAudience = jwt.Audience,
                         ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Token)),
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
                         ValidateLifetime = true,
                         ClockSkew = TimeSpan.FromMinutes(1),
                         NameClaimType = ClaimTypes.Name,
