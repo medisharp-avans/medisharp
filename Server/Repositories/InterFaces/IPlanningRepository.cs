@@ -3,6 +3,9 @@ using Server.Models.DTO.Responses;
 
 namespace Server.Repositories.InterFaces
 {
+    /// <summary>
+    /// Defines data access operations for appointment scheduling, specialist lookups, and availability checks.
+    /// </summary>
     public interface IPlanningRepository : IRepository<Patient>
     {
         /// <summary>
@@ -35,12 +38,13 @@ namespace Server.Repositories.InterFaces
         Task<bool> HasOverlapAsync(int specialistId, DateTime start, DateTime end);
 
         /// <summary>
-        /// Checks whether the given time range from <paramref name="start"/> to <paramref name="end"/> falls entirely within a single availability block of the specified specialist.
+        /// Retrieves all combined busy time intervals for a specialist within the specified local search window,
+        /// merging active internal appointments and synced external calendar events (converted to Dutch local time).
         /// </summary>
         /// <param name="specialistId">The unique identifier of the specialist.</param>
-        /// <param name="start">The start time of the time range.</param>
-        /// <param name="end">The end time of the time range.</param>
-        /// <returns><c>true</c> if the range is completely contained within an availability block; otherwise, <c>false</c>.</returns>
-        Task<bool> IsWithinAvailabilityAsync(int specialistId, DateTime start, DateTime end);
+        /// <param name="windowStart">The start of the search window in Dutch local time.</param>
+        /// <param name="windowEnd">The end of the search window in Dutch local time.</param>
+        /// <returns>A list of <c>(Start, End)</c> tuples in Dutch local time representing unavailable intervals.</returns>
+        Task<List<(DateTime Start, DateTime End)>> GetBusyIntervalsAsync(int specialistId, DateTime windowStart, DateTime windowEnd);
     }
 }

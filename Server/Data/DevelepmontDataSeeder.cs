@@ -147,25 +147,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         };
 
         db.Referrals.AddRange(referral1, referral2);
-        await db.SaveChangesAsync(cancellationToken);
-
-        // ----- Availability: 08:00-17:00 on the next 10 workdays for both specialists -----
-        var availabilities = new List<Availability>();
-        foreach (var specialist in new[] { specialist1, specialist2 })
-        {
-            for (var workday = 1; workday <= 10; workday++)
-            {
-                var day = NextWorkday(workday);
-                availabilities.Add(new Availability
-                {
-                    SpecialistId = specialist.Id,
-                    StartTime = day.AddHours(8),
-                    EndTime = day.AddHours(17)
-                });
-            }
-        }
-
-        db.Availabilities.AddRange(availabilities);
+        await db.SaveChangesAsync(cancellationToken);        
 
         // ----- Appointment for referral #1 (DEV-CONSULT = 4 quarters = 1 hour) -----
         var appointmentDay = NextWorkday(1);
@@ -232,10 +214,6 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
             .Where(r => seededReferralIds.Contains(r.Id))
             .ToListAsync(cancellationToken);
 
-        var availabilities = await db.Availabilities
-            .Where(a => seededSpecialistIds.Contains(a.SpecialistId))
-            .ToListAsync(cancellationToken);
-
         var patients = await db.Patients
             .Where(p => seededPatientIds.Contains(p.Id))
             .ToListAsync(cancellationToken);
@@ -259,7 +237,6 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         // Delete dependents first because the relationships use NoAction.
         db.Appointments.RemoveRange(appointments);
         db.Referrals.RemoveRange(referrals);
-        db.Availabilities.RemoveRange(availabilities);
         db.Patients.RemoveRange(patients);
         db.Specialists.RemoveRange(specialists);
         db.GeneralPractitioners.RemoveRange(generalPractitioners);
@@ -271,7 +248,7 @@ public sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory) : I
         // Reset identity counters only for tables that are now completely empty,
         // so the seed gets the same ids every run and non-seed records are never affected.
         foreach (var table in new[]
-                 { "Users", "Patients", "Specialists", "GeneralPractitioners", "Referrals", "Availabilities", "Appointments" })
+                 { "Users", "Patients", "Specialists", "GeneralPractitioners", "Referrals", "Appointments" })
         {
             await ResetIdentityIfUnusedAsync(db, table, cancellationToken);
         }

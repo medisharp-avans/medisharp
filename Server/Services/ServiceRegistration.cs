@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+using Server.Data;
 using Server.Services.InterFaces;
 
 namespace Server.Services
@@ -17,7 +19,7 @@ namespace Server.Services
         public static IServiceCollection AddRegisteredServices(this IServiceCollection services)
         {
             services.AddHttpClient();
-            services.AddSingleton<IcalUrlProtector>();
+            services.AddDataProtection();
             services.AddSingleton(TimeProvider.System);
             services.AddHostedService<CalendarBackgroundWorker>();
             services.AddScoped<ICalculateService, CalculateService>();

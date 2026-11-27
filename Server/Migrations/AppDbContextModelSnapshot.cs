@@ -63,30 +63,6 @@ namespace Server.Migrations
                     b.ToTable("Appointments");
                 });
 
-            modelBuilder.Entity("Server.Models.Availability", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("EndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("SpecialistId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SpecialistId");
-
-                    b.ToTable("Availabilities");
-                });
-
             modelBuilder.Entity("Server.Models.ExternalCalendarEvent", b =>
                 {
                     b.Property<int>("Id")
@@ -404,17 +380,6 @@ namespace Server.Migrations
                     b.Navigation("Specialist");
                 });
 
-            modelBuilder.Entity("Server.Models.Availability", b =>
-                {
-                    b.HasOne("Server.Models.Specialist", "Specialist")
-                        .WithMany("Availabilities")
-                        .HasForeignKey("SpecialistId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Specialist");
-                });
-
             modelBuilder.Entity("Server.Models.ExternalCalendarEvent", b =>
                 {
                     b.HasOne("Server.Models.Specialist", "Specialist")
@@ -533,8 +498,6 @@ namespace Server.Migrations
             modelBuilder.Entity("Server.Models.Specialist", b =>
                 {
                     b.Navigation("Appointments");
-
-                    b.Navigation("Availabilities");
                 });
 
             modelBuilder.Entity("Server.Models.User", b =>

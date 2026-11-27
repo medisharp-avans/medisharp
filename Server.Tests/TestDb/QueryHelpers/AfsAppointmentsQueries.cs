@@ -4,33 +4,37 @@ using OpenQA.Selenium.Chrome;
 using Server.Models.Enums;
 using Server.Tests.TestDb;
 using Server.Tests.Utils;
-using System.Data;
 
 namespace Server.Tests.TestDb.QueryHelpers
 {
-    /// <summary>
-    /// Arrange/Assert via de database. Namen uit de tests zijn de FullName van de User van de patiënt of specialist,
-    /// omdat Patient en Specialist zelf geen naam hebben (die staat via UserId op User).
-    /// Een afspraak maakt zelf een verwijzing aan; de helpers hier doen dat ook voor bestaande afspraken.
-    /// </summary>
     public static class AfsAppointmentsQueries
     {
+        private static readonly TimeZoneInfo DutchTimeZone =
+            TimeZoneInfo.FindSystemTimeZoneById("Europe/Amsterdam");
+
         private static SqlParameter NameParam(string name) => new("@u", name);
 
-        public static async Task<int> PatientIdAsync(string name) =>
-            Convert.ToInt32((await TestDatabase.QueryAsync(
-                "SELECT p.Id FROM Patients p JOIN Users u ON u.Id = p.UserId WHERE u.FullName = @u",
-                NameParam(name))).Rows[0][0]);
+        /// <summary>De verwijzing die bij de afspraak van deze specialist op dit tijdstip hoort.</summary>
+        public static async Task<(string Status, string TreatmentCode, int Specialism)> AppointmentReferralAsync(
+            string specialist, DateTime start)
+        {
+            var t = await TestDatabase.QueryAsync(@"
+                SELECT r.Status, r.TreatmentCode, r.Specialism
+                FROM Appointments a JOIN Referrals r ON r.Id = a.ReferralId
+                WHERE a.SpecialistId = @s AND a.StartTime = @st",
+                new SqlParameter("@s", await SpecialistIdAsync(specialist)),
+                new SqlParameter("@st", start));
 
-        public static async Task<int> SpecialistIdAsync(string name) =>
-            Convert.ToInt32((await TestDatabase.QueryAsync(
-                "SELECT s.Id FROM Specialists s JOIN Users u ON u.Id = s.UserId WHERE u.FullName = @u",
-                NameParam(name))).Rows[0][0]);
+            var row = t.Rows[0];
 
-        /// <summary>
-        /// Maakt een bestaande afspraak (KNO, behandelcode KNO002 = 60 minuten) met een bijbehorende
-        /// verwijzing met status "Ingepland", zoals de applicatie dat zelf zou doen.
-        /// </summary>
+            return (
+                row["Status"].ToString()!,
+                row["TreatmentCode"].ToString()!,
+                (int)Enum.Parse<Specialism>(row["Specialism"].ToString()!)
+            );
+        }
+
+
         public static async Task<int> CreateAppointmentAsync(string patient, string specialist, DateTime start)
         {
             var t = await TestDatabase.QueryAsync(@"
@@ -54,26 +58,85 @@ namespace Server.Tests.TestDb.QueryHelpers
             return Convert.ToInt32(t.Rows[0][0]);
         }
 
-        public static async Task SetUnavailableAsync(string specialist, DateTime date) =>
-            await TestDatabase.ExecuteAsync(
-                "DELETE FROM Availabilities WHERE SpecialistId = @s AND CAST(StartTime AS date) = @d",
-                new SqlParameter("@s", await SpecialistIdAsync(specialist)),
-                new SqlParameter("@d", date.Date));
+        public static async Task BlockSpecialistExternalAsync(string specialist, DateTime startLocal, DateTime endLocal)
+        {
+            var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(startLocal, DateTimeKind.Unspecified), DutchTimeZone);
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endLocal, DateTimeKind.Unspecified), DutchTimeZone);
 
-        /// <summary>
-        /// Verwijdert alle afspraken en de verwijzingen die door een afspraak zijn aangemaakt (status "Ingepland").
-        /// De open verwijzingen uit de seed blijven bestaan.
-        /// </summary>
+            await TestDatabase.ExecuteAsync(@"
+                INSERT INTO ExternalCalendarEvents (SpecialistId, ExternalUid, Title, StartUtc, EndUtc, IsAllDay)
+                VALUES (@s, @uid, 'Privé blokkade', @st, @end, 0);",
+                new SqlParameter("@s", await SpecialistIdAsync(specialist)),
+                new SqlParameter("@uid", $"test-block-{Guid.NewGuid()}"),
+                new SqlParameter("@st", startUtc),
+                new SqlParameter("@end", endUtc));
+        }
+
+        public static async Task MakeOnlyAvailableAsync(string specialist, Specialism specialism, DateTime windowStartLocal, DateTime windowEndLocal)
+        {
+            var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(windowStartLocal, DateTimeKind.Unspecified), DutchTimeZone);
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(windowEndLocal, DateTimeKind.Unspecified), DutchTimeZone);
+
+            await TestDatabase.ExecuteAsync(@"
+                DELETE e FROM ExternalCalendarEvents e
+                JOIN Specialists s ON s.Id = e.SpecialistId
+                WHERE s.Specialism = @spec;
+
+                INSERT INTO ExternalCalendarEvents (SpecialistId, ExternalUid, Title, StartUtc, EndUtc, IsAllDay)
+                SELECT s.Id, CONCAT('block-other-', s.Id, '-', NEWID()), 'Volgeboekt iCal', @st, @end, 0
+                FROM Specialists s
+                WHERE s.Specialism = @spec AND s.Id <> @s;",
+                new SqlParameter("@spec", specialism.ToString()),
+                new SqlParameter("@s", await SpecialistIdAsync(specialist)),
+                new SqlParameter("@st", startUtc),
+                new SqlParameter("@end", endUtc));
+        }
+
+
+        public static async Task BlockAllSpecialistsForWindowAsync(Specialism specialism, DateTime windowStartLocal, DateTime windowEndLocal)
+        {
+            var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(windowStartLocal, DateTimeKind.Unspecified), DutchTimeZone);
+            var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(windowEndLocal, DateTimeKind.Unspecified), DutchTimeZone);
+
+            await TestDatabase.ExecuteAsync(@"
+                INSERT INTO ExternalCalendarEvents (SpecialistId, ExternalUid, Title, StartUtc, EndUtc, IsAllDay)
+                SELECT s.Id, CONCAT('block-all-', s.Id, '-', NEWID()), 'Volgeboekt iCal', @st, @end, 0
+                FROM Specialists s
+                WHERE s.Specialism = @spec;",
+                new SqlParameter("@spec", specialism.ToString()),
+                new SqlParameter("@st", startUtc),
+                new SqlParameter("@end", endUtc));
+        }
+
+        public static async Task ResetExternalEventsAsync() =>
+            await TestDatabase.ExecuteAsync("DELETE FROM ExternalCalendarEvents;");
+
         public static async Task ResetAppointmentsAsync() =>
             await TestDatabase.ExecuteAsync(@"
                 DELETE FROM Appointments;
                 DELETE FROM Referrals WHERE Status = 'Ingepland';");
 
+        public static async Task<int> PatientIdAsync(string name) =>
+            Convert.ToInt32((await TestDatabase.QueryAsync(
+                "SELECT p.Id FROM Patients p JOIN Users u ON u.Id = p.UserId WHERE u.FullName = @u",
+                NameParam(name))).Rows[0][0]);
+
+        public static async Task<int> SpecialistIdAsync(string name) =>
+            Convert.ToInt32((await TestDatabase.QueryAsync(
+                "SELECT s.Id FROM Specialists s JOIN Users u ON u.Id = s.UserId WHERE u.FullName = @u",
+                NameParam(name))).Rows[0][0]);
+
+        // ... in alle Count-methodes:
         public static async Task<int> CountAppointmentsAsync(string specialist, DateTime start) =>
             Convert.ToInt32((await TestDatabase.QueryAsync(
                 "SELECT COUNT(*) FROM Appointments WHERE SpecialistId = @s AND StartTime = @st",
                 new SqlParameter("@s", await SpecialistIdAsync(specialist)),
                 new SqlParameter("@st", start))).Rows[0][0]);
+
+        public static async Task<int> CountTotalAppointmentsOfSpecialistAsync(string specialist) =>
+            Convert.ToInt32((await TestDatabase.QueryAsync(
+                "SELECT COUNT(*) FROM Appointments WHERE SpecialistId = @s",
+                new SqlParameter("@s", await SpecialistIdAsync(specialist)))).Rows[0][0]);
 
         public static async Task<int> CountAppointmentsOfPatientAsync(string patient) =>
             Convert.ToInt32((await TestDatabase.QueryAsync(
@@ -85,69 +148,19 @@ namespace Server.Tests.TestDb.QueryHelpers
                 "SELECT COUNT(*) FROM Referrals WHERE PatientId = @p",
                 new SqlParameter("@p", await PatientIdAsync(patient)))).Rows[0][0]);
 
-        /// <summary>Alle verwijzingen, om te controleren dat er geen wees-verwijzing is achtergebleven.</summary>
         public static async Task<int> CountReferralsAsync() =>
             Convert.ToInt32((await TestDatabase.QueryAsync("SELECT COUNT(*) FROM Referrals")).Rows[0][0]);
-
-        /// <summary>De verwijzing die bij de afspraak van deze specialist op dit tijdstip hoort.</summary>
-        public static async Task<(string Status, string TreatmentCode, int Specialism)> AppointmentReferralAsync(
-            string specialist, DateTime start)
-        {
-            var t = await TestDatabase.QueryAsync(@"
-                SELECT r.Status, r.TreatmentCode, r.Specialism
-                FROM Appointments a JOIN Referrals r ON r.Id = a.ReferralId
-                WHERE a.SpecialistId = @s AND a.StartTime = @st",
-                new SqlParameter("@s", await SpecialistIdAsync(specialist)),
-                new SqlParameter("@st", start));
-
-            var row = t.Rows[0];
-
-            return (
-                row["Status"].ToString()!,
-                row["TreatmentCode"].ToString()!,
-                (int)Enum.Parse<Specialism>(row["Specialism"].ToString()!)
-            );
-        }
-
-        /// <summary>
-        /// Maakt deze specialist de enige beschikbare specialist van het specialisme op die dag (08:00-18:00).
-        /// De server kiest zelf een specialist (voorkeur eerst, daarna de eerste beschikbare), dus zonder
-        /// deze beperking zouden de tests afhangen van welke andere specialisten er in de seed zitten.
-        /// </summary>
-        public static async Task MakeOnlyAvailableAsync(string specialist, Specialism specialism, DateTime day)
-        {
-            var date = day.Date;
-
-            await TestDatabase.ExecuteAsync(@"
-                DELETE a FROM Availabilities a
-                JOIN Specialists s ON s.Id = a.SpecialistId
-                WHERE s.Specialism = @spec AND CAST(a.StartTime AS date) = @d;
-
-                INSERT INTO Availabilities (SpecialistId, StartTime, EndTime)
-                VALUES (@s, @from, @to);",
-                new SqlParameter("@spec", specialism.ToString()),
-                new SqlParameter("@d", date),
-                new SqlParameter("@s", await SpecialistIdAsync(specialist)),
-                new SqlParameter("@from", date.AddHours(8)),
-                new SqlParameter("@to", date.AddHours(18)));
-        }
     }
 
-    /// <summary>
-    /// Stuurt een request met de sessie van de ingelogde browser (fetch in de pagina), dus zonder de interface te gebruiken.
-    /// Aanname: de API is bereikbaar op hetzelfde domein onder /api en authenticatie gaat via een cookie.
-    /// Is het een Bearer-token in localStorage, pas dan de fetch aan.
-    /// </summary>
-    public static class BrowserApi
-    {
-        /// <summary>Plant een afspraak (de API maakt zelf een verwijzing aan). Geeft de HTTP-statuscode (-1 bij een netwerkfout).</summary>
 
+        public static class BrowserApi
+    {
         public static (long Status, string Body) PostAppointmentWithResponse(
-    IWebDriver driver,
-    int patientId,
-    int specialistId,
-    string treatmentCode = "KNO002",
-    Specialism specialism = Specialism.KNO)
+            IWebDriver driver,
+            int patientId,
+            int specialistId,
+            string treatmentCode = "KNO002",
+            Specialism specialism = Specialism.KNO)
         {
             var js = (IJavaScriptExecutor)driver;
 
@@ -163,29 +176,29 @@ namespace Server.Tests.TestDb.QueryHelpers
             });
 
             var result = js.ExecuteAsyncScript(@"
-        const done = arguments[arguments.length - 1];
+                const done = arguments[arguments.length - 1];
 
-        fetch(arguments[1] + '/api/appointments', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: arguments[0]
-        })
-        .then(async response => {
-            const responseBody = await response.text();
+                fetch(arguments[1] + '/api/appointments', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: arguments[0]
+                })
+                .then(async response => {
+                    const responseBody = await response.text();
 
-            done(JSON.stringify({
-                status: response.status,
-                body: responseBody
-            }));
-        })
-        .catch(error => {
-            done(JSON.stringify({
-                status: -1,
-                body: error.toString()
-            }));
-        });
-    ", body, TestSettings.ApiUrl);
+                    done(JSON.stringify({
+                        status: response.status,
+                        body: responseBody
+                    }));
+                })
+                .catch(error => {
+                    done(JSON.stringify({
+                        status: -1,
+                        body: error.toString()
+                    }));
+                });
+            ", body, TestSettings.ApiUrl);
 
             using var json = System.Text.Json.JsonDocument.Parse(
                 Convert.ToString(result)!);
@@ -195,10 +208,8 @@ namespace Server.Tests.TestDb.QueryHelpers
                 json.RootElement.GetProperty("body").GetString() ?? ""
             );
         }
-
     }
 
-    /// <summary>Tweede (of derde) Chrome-browser voor tests met meerdere gelijktijdige sessies.</summary>
     public static class ExtraBrowser
     {
         public static IWebDriver Start()

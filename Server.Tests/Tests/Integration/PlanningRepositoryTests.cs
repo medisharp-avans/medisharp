@@ -18,10 +18,10 @@ namespace Server.Tests.Integration
         }
 
         [TestInitialize]
-        public async Task CreateSut()
+        public Task CreateSut()
         {
             _sut = new PlanningRepository(DbContext);
-            await TestDatabase.ResetAsync(TestAFSDataInitializer.SeedAsync);
+            return Task.CompletedTask;
         }
 
         public async Task CreateAppointmentAsync(Specialist specialist)
@@ -123,58 +123,54 @@ namespace Server.Tests.Integration
         }
 
         [TestMethod]
-        public async Task IsWithinAvailabilityAsync_WithinAvailability_ReturnsTrue()
+        public async Task GetBusyIntervalsAsync_WithAppointmentAndExternalEvent_ReturnsBothIntervals()
         {
             // Arrange
             var specialist = await DbContext.Specialists.FirstAsync();
+            await CreateAppointmentAsync(specialist);
 
-            var availability = new Availability
+            DbContext.ExternalCalendarEvents.Add(new ExternalCalendarEvent
             {
                 SpecialistId = specialist.Id,
-                StartTime = new DateTime(2027, 1, 5, 9, 0, 0),
-                EndTime = new DateTime(2027, 1, 5, 17, 0, 0)
-            };
-
-            DbContext.Availabilities.Add(availability);
+                ExternalUid = "ext-123",
+                Title = "Privé afspraak",
+                StartUtc = new DateTime(2027, 1, 5, 13, 0, 0, DateTimeKind.Utc), // 14:00 CET
+                EndUtc = new DateTime(2027, 1, 5, 14, 0, 0, DateTimeKind.Utc),   // 15:00 CET
+                IsAllDay = false
+            });
             await DbContext.SaveChangesAsync();
 
+            var windowStart = new DateTime(2027, 1, 5, 0, 0, 0);
+            var windowEnd = new DateTime(2027, 1, 26, 0, 0, 0);
+
             // Act
-            var result = await _sut.IsWithinAvailabilityAsync(
-                availability.SpecialistId,
-                availability.StartTime,
-                availability.EndTime);
+            var result = await _sut.GetBusyIntervalsAsync(specialist.Id, windowStart, windowEnd);
 
             // Assert
-            Assert.IsTrue(result);
+            Assert.AreEqual(2, result.Count);
+            Assert.IsTrue(result.Any(r =>
+                r.Start == new DateTime(2027, 1, 5, 10, 0, 0) &&
+                r.End == new DateTime(2027, 1, 5, 11, 0, 0)));
+            Assert.IsTrue(result.Any(r =>
+                r.Start == new DateTime(2027, 1, 5, 14, 0, 0) &&
+                r.End == new DateTime(2027, 1, 5, 15, 0, 0)));
         }
 
         [TestMethod]
-        public async Task IsWithinAvailabilityAsync_StartsBeforeAvailability_ReturnsFalse()
+        public async Task GetBusyIntervalsAsync_OutsideSearchWindow_ReturnsEmptyList()
         {
             // Arrange
             var specialist = await DbContext.Specialists.FirstAsync();
+            await CreateAppointmentAsync(specialist); // Gepland op 5 jan 2027
 
-            var availability = new Availability
-            {
-                SpecialistId = specialist.Id,
-                StartTime = new DateTime(2027, 1, 5, 9, 0, 0),
-                EndTime = new DateTime(2027, 1, 5, 17, 0, 0)
-            };
-
-            DbContext.Availabilities.Add(availability);
-            await DbContext.SaveChangesAsync();
-
-            var start = availability.StartTime.AddMinutes(-15);
-            var end = availability.EndTime;
+            var windowStart = new DateTime(2027, 2, 1, 0, 0, 0);
+            var windowEnd = new DateTime(2027, 2, 22, 0, 0, 0);
 
             // Act
-            var result = await _sut.IsWithinAvailabilityAsync(
-                specialist.Id,
-                start,
-                end);
+            var result = await _sut.GetBusyIntervalsAsync(specialist.Id, windowStart, windowEnd);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.AreEqual(0, result.Count);
         }
     }
 }

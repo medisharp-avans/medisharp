@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 using Server.Models;
 
@@ -19,7 +18,6 @@ namespace Server.Data
         public DbSet<TreatmentCode> TreatmentCodes { get; set; }
         public DbSet<UserCalendarConnection> UserCalendarConnections { get; set; }
         public DbSet<ExternalCalendarEvent> ExternalCalendarEvents { get; set; }
-        public DbSet<Availability> Availabilities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -64,11 +62,6 @@ namespace Server.Data
                 e.HasOne(s => s.User)
                     .WithOne(u => u.SpecialistDetails)
                     .HasForeignKey<Specialist>(s => s.UserId)
-                    .OnDelete(DeleteBehavior.NoAction);
-
-                e.HasMany(s => s.Availabilities)
-                    .WithOne(a => a.Specialist)
-                    .HasForeignKey(a => a.SpecialistId)
                     .OnDelete(DeleteBehavior.NoAction);
 
                 e.Property(s => s.Specialism)

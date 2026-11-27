@@ -277,26 +277,6 @@ namespace Server.Tests.TestDb
 
             context.Set<Referral>().AddRange(referral1, referral2);
 
-            // Availability: every specialist, every day in January 2027, 08:00-17:00
-            var availabilities = new List<Availability>();
-
-            for (int day = 1; day <= 31; day++)
-            {
-                var date = new DateTime(2027, 1, day);
-
-                foreach (var specialist in new[] { specialist1, specialist2, specialist3 })
-                {
-                    availabilities.Add(new Availability
-                    {
-                        Specialist = specialist,
-                        StartTime = date.AddHours(8),
-                        EndTime = date.AddHours(17)
-                    });
-                }
-            }
-
-            context.Set<Availability>().AddRange(availabilities);
-
             await context.SaveChangesAsync();
 
             context.ChangeTracker.Clear();

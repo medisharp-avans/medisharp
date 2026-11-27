@@ -2,6 +2,7 @@
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
 using Ical.Net.Evaluation;
+using Microsoft.AspNetCore.DataProtection;
 using Server.Models;
 using Server.Repositories.InterFaces;
 using Server.Services.InterFaces;
@@ -14,18 +15,18 @@ namespace Server.Services
         private readonly ICalendarConnectionRepository _connectionRepository;
         private readonly ICalendarEventRepository _eventRepository;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IcalUrlProtector _protector;
+        private readonly IDataProtector _protector;
 
         public CalendarSyncService(
             IHttpClientFactory httpClientFactory,
-            IcalUrlProtector protector,
+            IDataProtectionProvider protector,
             ICalendarConnectionRepository connectionRepository,
             ICalendarEventRepository eventRepository)
         {
             _connectionRepository = connectionRepository;
             _eventRepository = eventRepository;
             _httpClientFactory = httpClientFactory;
-            _protector = protector;
+            _protector = protector.CreateProtector("UserIcalUrls");
         }
 
         public async Task SaveAndSyncUrlAsync(int specialistId, string rawUrl)
@@ -47,6 +48,12 @@ namespace Server.Services
                     throw new ArgumentException("Ongeldige iCal-link.");
 
                 _ = Calendar.Load(icsContent); 
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                throw new ArgumentException(
+                    "De agendaprovider blokkeert tijdelijk te veel verzoeken (429). Probeer het over enkele minuten opnieuw.",
+                    ex);
             }
             catch (Exception ex) when (ex is not ArgumentException)
             {
@@ -79,7 +86,7 @@ namespace Server.Services
 
             var occurrences = calendar.GetOccurrences(startCal, options)
                 .TakeWhile(occ => occ.Period.StartTime <= endCal)
-                .Take(2000) // Extra veiligheidslimiet op totaal aantal events
+                .Take(2000) 
                 .ToList();
             var fetchedEvents = new Dictionary<string, ExternalCalendarEvent>();
 
@@ -87,14 +94,17 @@ namespace Server.Services
             {
                 if (occ.Source is not CalendarEvent ev) continue;
 
-                var uid = $"{ev.Uid}_{occ.Period.StartTime.AsUtc:yyyyMMddTHHmmssZ}";
+                var startUtc = occ.Period.StartTime.AsUtc;
+                var endUtc = ResolveEndUtc(ev, startUtc, occ.Period.EndTime?.AsUtc);
+
+                var uid = $"{ev.Uid}_{startUtc:yyyyMMddTHHmmssZ}";
                 fetchedEvents[uid] = new ExternalCalendarEvent
                 {
                     SpecialistId = connection.SpecialistId,
                     ExternalUid = uid,
                     Title = ev.Summary ?? "Bezet",
-                    StartUtc = occ.Period.StartTime.AsUtc,
-                    EndUtc = occ.Period.EndTime?.AsUtc ?? occ.Period.StartTime.AsUtc,
+                    StartUtc = startUtc,
+                    EndUtc = endUtc,
                     IsAllDay = ev.IsAllDay
                 };
             }
@@ -116,6 +126,24 @@ namespace Server.Services
         public Task DisconnectAsync(int specialistId)
         {
             return _connectionRepository.DisconnectAsync(specialistId);
+        }
+
+        private static DateTime ResolveEndUtc(CalendarEvent ev, DateTime startUtc, DateTime? periodEndUtc)
+        {
+            // 1. Het einde dat Ical.Net voor dit voorkomen heeft uitgerekend (nu leeg)
+            if (periodEndUtc is { } fromPeriod && fromPeriod > startUtc)
+                return fromPeriod;
+
+            // 2. De lengte van het evenement zelf (DTEND - DTSTART) toegepast op dit voorkomen.
+            //    Dit werkt ook voor herhalende afspraken.
+            if (ev.DtEnd is { } dtEnd && ev.DtStart is { } dtStart)
+            {
+                var length = dtEnd.AsUtc - dtStart.AsUtc;
+                if (length > TimeSpan.Zero) return startUtc + length;
+            }
+
+            // 3. Geen einde opgegeven: een hele dag duurt één dag, anders geen duur
+            return ev.IsAllDay ? startUtc.AddDays(1) : startUtc;
         }
     }
 }

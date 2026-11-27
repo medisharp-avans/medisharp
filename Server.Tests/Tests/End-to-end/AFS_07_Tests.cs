@@ -16,16 +16,37 @@ namespace Server.Tests.EndToEnd
         private const string Bakker = "Dr. Bakker";
         private const string Jan = "Jan Jansen";
 
-        private const string MsgNoSpecialist = "Geen beschikbare specialist gevonden.";
+        private const string MsgNoSpecialist =
+            "Geen beschikbare specialist gevonden binnen de termijn van 3 weken.";
 
         // Aanname: stem de exacte tekst af met het team (AC-AFS-07_4 noemt geen tekst).
         private const string MsgLinkNotFound = "De iCal/ICS-link kon niet worden gevonden";
 
+        private static readonly TimeZoneInfo DutchTimeZone =
+            TimeZoneInfo.FindSystemTimeZoneById("Europe/Amsterdam");
+
+        private static DateTime WindowStart =>
+            TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, DutchTimeZone).Date.AddDays(1);
+
+        private static DateTime WindowEnd =>
+            WindowStart.AddDays(21);
+
         /// <summary>
-        /// De server plant op dit moment altijd op morgen 10:00 (hardcoded in
-        /// PlanningService.SetSpecialistForAppointment). Vervang zodra het tijdstip niet meer vast ligt.
+        /// Het eerste tijdslot dat het nieuwe algoritme kiest:
+        /// de eerstvolgende werkdag (ma-vr) binnen het 3-weken venster om 09:00.
         /// </summary>
-        private static DateTime Slot => DateTime.Today.AddDays(1).AddHours(10);
+        private static DateTime FirstSlot
+        {
+            get
+            {
+                var day = WindowStart;
+                while (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                {
+                    day = day.AddDays(1);
+                }
+                return day.AddHours(9);
+            }
+        }
 
         private TestIcsServer _ics = null!;
 
@@ -39,9 +60,14 @@ namespace Server.Tests.EndToEnd
         {
             _ics = new TestIcsServer();
 
-            // Zorg dat alleen Dr. De Vries beschikbaar is.
-            await AfsAppointmentsQueries.MakeOnlyAvailableAsync(DeVries, Specialism.KNO, Slot);
+            // Zorg dat alleen Dr. De Vries binnen het specialisme KNO vrij is in de 3-wekentermijn.
+            await AfsAppointmentsQueries.MakeOnlyAvailableAsync(
+                DeVries,
+                Specialism.KNO,
+                WindowStart,
+                WindowEnd);
         }
+
 
         [TestCleanup]
         public void StopIcsServer() => _ics?.Dispose();
@@ -86,7 +112,7 @@ namespace Server.Tests.EndToEnd
         public async Task TC_AFS_07_1_1_Specialist_KoppeltGeldigeAgenda_AgendaIsGekoppeld()
         {
             // Arrange
-            var url = _ics.AddCalendar(Slot.Date.AddHours(14), TimeSpan.FromHours(1));
+            var url = _ics.AddCalendar(FirstSlot.Date.AddHours(14), TimeSpan.FromHours(1));
             var profile = OpenProfileAs("dr.devries");
 
             Assert.IsFalse(profile.IsConnectButtonEnabled, "Zonder link moet 'Koppelen' uitgeschakeld zijn.");
@@ -117,7 +143,7 @@ namespace Server.Tests.EndToEnd
         public async Task TC_AFS_07_1_2_Specialist_KoppeltAgendaVanElkeAanbieder_AgendaIsGekoppeld(string prodId)
         {
             // Arrange
-            var url = _ics.AddCalendar(Slot.Date.AddHours(14), TimeSpan.FromHours(1), prodId);
+            var url = _ics.AddCalendar(FirstSlot.Date.AddHours(14), TimeSpan.FromHours(1), prodId);
             var profile = OpenProfileAs("dr.devries");
 
             // Act
@@ -134,31 +160,10 @@ namespace Server.Tests.EndToEnd
         // =========================================================
 
         [TestMethod, TestCategory("TC-AFS-07_2_1")]
-        public async Task TC_AFS_07_2_1_Medewerker_PlantOpDagMetPriveafspraak_WordtGeweigerd()
+        public async Task TC_AFS_07_2_1_Medewerker_PlantOpTijdstipMetPriveafspraak_SchuiftDoorNaarVolgendVrijSlot()
         {
-            // Arrange: privéafspraak om 14:00, de boeking is om 10:00. De hele dag moet dus geblokkeerd zijn.
-            var url = _ics.AddCalendar(Slot.Date.AddHours(14), TimeSpan.FromHours(1));
-            ConnectCalendarAs("dr.devries", url);
-
-            var referralsBefore = await AfsAppointmentsQueries.CountReferralsAsync();
-
-            // Act
-            var plan = BookAsEmployee(Jan);
-
-            // Assert
-            Assert.IsTrue(plan.HasErrorMessage, plan.Message);
-            StringAssert.Contains(plan.Message, MsgNoSpecialist);
-
-            Assert.AreEqual(0, await AfsAppointmentsQueries.CountAppointmentsAsync(DeVries, Slot));
-            Assert.AreEqual(referralsBefore, await AfsAppointmentsQueries.CountReferralsAsync(),
-                "Er is een wees-verwijzing achtergebleven.");
-        }
-
-        [TestMethod, TestCategory("TC-AFS-07_2_2")]
-        public async Task TC_AFS_07_2_2_Medewerker_PlantOpDagZonderPriveafspraak_WordtOpgeslagen()
-        {
-            // Arrange: de privéafspraak staat een dag later, op de dag zelf is niets geblokkeerd.
-            var url = _ics.AddCalendar(Slot.Date.AddDays(1).AddHours(14), TimeSpan.FromHours(1));
+            // Arrange: privéafspraak blokkeert FirstSlot (09:00-10:00); het algoritme moet dus uitwijken naar 10:00.
+            var url = _ics.AddCalendar(FirstSlot, TimeSpan.FromHours(1));
             ConnectCalendarAs("dr.devries", url);
 
             // Act
@@ -166,7 +171,25 @@ namespace Server.Tests.EndToEnd
 
             // Assert
             Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
-            Assert.AreEqual(1, await AfsAppointmentsQueries.CountAppointmentsAsync(DeVries, Slot));
+            Assert.AreEqual(0, await AfsAppointmentsQueries.CountAppointmentsAsync(DeVries, FirstSlot),
+                "Er mag niet tijdens de privéafspraak (09:00) gepland worden.");
+            Assert.AreEqual(1, await AfsAppointmentsQueries.CountAppointmentsAsync(DeVries, FirstSlot.AddHours(1)),
+                "De afspraak moet aansluitend om 10:00 zijn ingepland.");
+        }
+
+        [TestMethod, TestCategory("TC-AFS-07_2_2")]
+        public async Task TC_AFS_07_2_2_Medewerker_PlantOpDagZonderPriveafspraakOpEersteSlot_WordtOpFirstSlotOpgeslagen()
+        {
+            // Arrange: de privéafspraak staat pas om 14:00, dus FirstSlot (09:00) is vrij.
+            var url = _ics.AddCalendar(FirstSlot.Date.AddHours(14), TimeSpan.FromHours(1));
+            ConnectCalendarAs("dr.devries", url);
+
+            // Act
+            var plan = BookAsEmployee(Jan);
+
+            // Assert
+            Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
+            Assert.AreEqual(1, await AfsAppointmentsQueries.CountAppointmentsAsync(DeVries, FirstSlot));
         }
 
         // =========================================================
@@ -174,10 +197,10 @@ namespace Server.Tests.EndToEnd
         // =========================================================
 
         [TestMethod, TestCategory("TC-AFS-07_3_1")]
-        public async Task TC_AFS_07_3_1_Specialist_OntkoppeltAgenda_DataIsVerwijderdEnDagIsWeerVrij()
+        public async Task TC_AFS_07_3_1_Specialist_OntkoppeltAgenda_DataIsVerwijderdEnTijdslotIsWeerVrij()
         {
-            // Arrange
-            var url = _ics.AddCalendar(Slot.Date.AddHours(14), TimeSpan.FromHours(1));
+            // Arrange: privéafspraak blokkeert FirstSlot (09:00-10:00)
+            var url = _ics.AddCalendar(FirstSlot, TimeSpan.FromHours(1));
             var profile = ConnectCalendarAs("dr.devries", url);
 
             Assert.AreEqual(1, await AfsCalendarQueries.CountLinksAsync(DeVries));
@@ -194,18 +217,18 @@ namespace Server.Tests.EndToEnd
             Assert.AreEqual(0, await AfsCalendarQueries.CountLinksAsync(DeVries));
             Assert.AreEqual(0, await AfsCalendarQueries.CountEventsAsync(DeVries));
 
-            // De dag is niet langer geblokkeerd
+            // Na ontkoppelen is FirstSlot (09:00) niet langer geblokkeerd en wordt daar weer direct gepland
             var plan = BookAsEmployee(Jan);
             Assert.IsTrue(plan.HasSuccessMessage, plan.Message);
-            Assert.AreEqual(1, await AfsAppointmentsQueries.CountAppointmentsAsync(DeVries, Slot));
+            Assert.AreEqual(1, await AfsAppointmentsQueries.CountAppointmentsAsync(DeVries, FirstSlot));
         }
 
         [TestMethod, TestCategory("TC-AFS-07_3_2")]
         public async Task TC_AFS_07_3_2_Specialist_OntkoppeltAgenda_AgendaVanAndereSpecialistBlijftBestaan()
         {
             // Arrange
-            ConnectCalendarAs("dr.bakker", _ics.AddCalendar(Slot.Date.AddHours(14), TimeSpan.FromHours(1)));
-            var profile = ConnectCalendarAs("dr.devries", _ics.AddCalendar(Slot.Date.AddHours(15), TimeSpan.FromHours(1)));
+            ConnectCalendarAs("dr.bakker", _ics.AddCalendar(FirstSlot.Date.AddHours(14), TimeSpan.FromHours(1)));
+            var profile = ConnectCalendarAs("dr.devries", _ics.AddCalendar(FirstSlot.Date.AddHours(15), TimeSpan.FromHours(1)));
 
             var bakkerEventsBefore = await AfsCalendarQueries.CountEventsAsync(Bakker);
 

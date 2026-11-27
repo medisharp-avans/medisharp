@@ -20,8 +20,5 @@ namespace Server.Models
 
         public ICollection<Appointment> Appointments { get; set; }
             = new List<Appointment>();
-
-        public ICollection<Availability> Availabilities { get; set; }
-            = new List<Availability>();
     }
 }

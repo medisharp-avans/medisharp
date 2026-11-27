@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Server.Models;
 using Server.Models.DTO.Requests;
 using Server.Models.Enums;
 using Server.Repositories;
@@ -8,9 +9,8 @@ using Server.Tests.TestDb;
 namespace Server.Tests.Integration
 {
     /// <summary>
-    /// Integratietests voor HasOverlapAsync en IsWithinAvailabilityAsync van PlanningRepository
-    /// (verhuisd uit AppointmentRepositoryPlanningTests).
-    /// Gebruikt de seed: specialist 1 (KNO) is op elke dag van januari 2027 beschikbaar van 08:00 tot 17:00.
+    /// Integratietests voor HasOverlapAsync en GetBusyIntervalsAsync van PlanningRepository.
+    /// Gebruikt de seed: specialist 1 (KNO), specialist 2 (KNO), patiënt 2 en huisarts 1.
     /// </summary>
     [TestClass]
     public class PlanningRepositoryAvailabilityTests : DatabaseTestBase
@@ -31,10 +31,11 @@ namespace Server.Tests.Integration
         {
             _appointments = new AppointmentRepository(DbContext);
             _sut = new PlanningRepository(DbContext);
+            await Task.CompletedTask;
         }
 
         /// <summary>Specialist 1 heeft een afspraak van 10:00 tot 11:00.</summary>
-        private async Task ArrangeAppointmentAsync() =>
+        private async Task<Appointment> ArrangeAppointmentAsync() =>
             await _appointments.CreateWithReferralAsync(
                 new CreateAppointmentDTO
                 {
@@ -52,6 +53,7 @@ namespace Server.Tests.Integration
                     Urgency = "Regulier",
                     TreatmentCode = "KNO002"
                 });
+
 
         // ---------- HasOverlapAsync ----------
 
@@ -73,36 +75,67 @@ namespace Server.Tests.Integration
             Assert.IsFalse(await _sut.HasOverlapAsync(1, Start, End));
         }
 
-        // ---------- IsWithinAvailabilityAsync ----------
+        // ---------- GetBusyIntervalsAsync ----------
 
         [TestMethod]
-        public async Task IsWithinAvailabilityAsync_InsideBlock_ReturnsTrue()
+        public async Task GetBusyIntervalsAsync_CombinesAppointmentsAndExternalEventsInLocalTime()
         {
-            Assert.IsTrue(await _sut.IsWithinAvailabilityAsync(1, Start, End));
-            Assert.IsTrue(await _sut.IsWithinAvailabilityAsync(
-                1, new DateTime(2027, 1, 12, 8, 0, 0), new DateTime(2027, 1, 12, 9, 0, 0)), "Begin van het blok");
-            Assert.IsTrue(await _sut.IsWithinAvailabilityAsync(
-                1, new DateTime(2027, 1, 12, 16, 0, 0), new DateTime(2027, 1, 12, 17, 0, 0)), "Einde van het blok");
+            // Arrange: Interne afspraak 10:00 - 11:00 (lokale tijd)
+            await ArrangeAppointmentAsync();
+
+            // Extern iCal event op 12 jan 2027 (wintertijd CET = UTC+1):
+            // 13:00 - 14:30 UTC moet 14:00 - 15:30 lokale tijd worden
+            DbContext.ExternalCalendarEvents.Add(new ExternalCalendarEvent
+            {
+                SpecialistId = 1,
+                ExternalUid = "ical-event-1",
+                Title = "Privé afspraak",
+                StartUtc = new DateTime(2027, 1, 12, 13, 0, 0, DateTimeKind.Utc),
+                EndUtc = new DateTime(2027, 1, 12, 14, 30, 0, DateTimeKind.Utc),
+                IsAllDay = false
+            });
+            await DbContext.SaveChangesAsync();
+
+            var windowStart = new DateTime(2027, 1, 12, 0, 0, 0);
+            var windowEnd = new DateTime(2027, 1, 19, 0, 0, 0);
+
+            // Act
+            var intervals = await _sut.GetBusyIntervalsAsync(1, windowStart, windowEnd);
+
+            // Assert
+            Assert.AreEqual(2, intervals.Count);
+            Assert.IsTrue(intervals.Any(i => i.Start == Start && i.End == End), "Interne afspraak ontbreekt");
+            Assert.IsTrue(intervals.Any(i =>
+                i.Start == new DateTime(2027, 1, 12, 14, 0, 0) &&
+                i.End == new DateTime(2027, 1, 12, 15, 30, 0)), "Extern event niet goed omgerekend naar Nederlandse tijd");
         }
 
         [TestMethod]
-        public async Task IsWithinAvailabilityAsync_OutsideBlock_ReturnsFalse()
+        public async Task GetBusyIntervalsAsync_IgnoresCancelledAppointmentsAndOtherSpecialists()
         {
-            Assert.IsFalse(await _sut.IsWithinAvailabilityAsync(
-                1, new DateTime(2027, 1, 12, 7, 0, 0), new DateTime(2027, 1, 12, 8, 0, 0)), "Voor het blok");
-            Assert.IsFalse(await _sut.IsWithinAvailabilityAsync(
-                1, new DateTime(2027, 1, 12, 16, 30, 0), new DateTime(2027, 1, 12, 17, 30, 0)), "Steekt over het einde");
-            Assert.IsFalse(await _sut.IsWithinAvailabilityAsync(
-                1, new DateTime(2027, 2, 1, 10, 0, 0), new DateTime(2027, 2, 1, 11, 0, 0)), "Dag zonder beschikbaarheid");
-        }
+            // Arrange: Geannuleerde afspraak voor specialist 1 + extern event voor specialist 2
+            await ArrangeAppointmentAsync();
+            var cancelled = await DbContext.Appointments.FirstAsync(a => a.SpecialistId == 1);
+            cancelled.Status = AppointmentStatus.Geannuleerd;
 
-        [TestMethod]
-        public async Task IsWithinAvailabilityAsync_AfterSetUnavailable_ReturnsFalse()
-        {
-            await TestDatabase.ExecuteAsync(
-                "DELETE FROM Availabilities WHERE SpecialistId = 1 AND CAST(StartTime AS date) = '2027-01-12'");
+            DbContext.ExternalCalendarEvents.Add(new ExternalCalendarEvent
+            {
+                SpecialistId = 2,
+                ExternalUid = "ical-other-specialist",
+                Title = "Andere arts",
+                StartUtc = new DateTime(2027, 1, 12, 10, 0, 0, DateTimeKind.Utc),
+                EndUtc = new DateTime(2027, 1, 12, 11, 0, 0, DateTimeKind.Utc)
+            });
+            await DbContext.SaveChangesAsync();
 
-            Assert.IsFalse(await _sut.IsWithinAvailabilityAsync(1, Start, End));
+            var windowStart = new DateTime(2027, 1, 12, 0, 0, 0);
+            var windowEnd = new DateTime(2027, 1, 19, 0, 0, 0);
+
+            // Act
+            var intervals = await _sut.GetBusyIntervalsAsync(1, windowStart, windowEnd);
+
+            // Assert
+            Assert.AreEqual(0, intervals.Count);
         }
     }
 }

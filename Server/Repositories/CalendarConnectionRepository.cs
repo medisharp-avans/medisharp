@@ -13,12 +13,14 @@ namespace Server.Repositories
         {
         }
 
+        /// <inheritdoc />
         public async Task<UserCalendarConnection?> GetConnectionUser(int specialistId)
         {
             return await _context.UserCalendarConnections.FirstOrDefaultAsync(x => x.SpecialistId == specialistId);
         }
 
-        public async Task<UserCalendarConnection> UpdateUserCalendarConnection(UserCalendarConnection connection, int specialistId, string encryptedUrl)
+        /// <inheritdoc />
+        public async Task<UserCalendarConnection> UpdateUserCalendarConnection(UserCalendarConnection? connection, int specialistId, string encryptedUrl)
         {
             if (connection == null)
             {
@@ -30,19 +32,25 @@ namespace Server.Repositories
 
             return connection;
         }
+
+        /// <inheritdoc />
         public async Task DisconnectAsync(int specialistId)
         {
-            await using var tx = await _context.Database.BeginTransactionAsync();
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var tx = await _context.Database.BeginTransactionAsync();
 
-            await _context.ExternalCalendarEvents
-                .Where(e => e.SpecialistId == specialistId)
-                .ExecuteDeleteAsync();
+                await _context.ExternalCalendarEvents
+                    .Where(e => e.SpecialistId == specialistId)
+                    .ExecuteDeleteAsync();
 
-            await _context.UserCalendarConnections
-                .Where(c => c.SpecialistId == specialistId)
-                .ExecuteDeleteAsync();
+                await _context.UserCalendarConnections
+                    .Where(c => c.SpecialistId == specialistId)
+                    .ExecuteDeleteAsync();
 
-            await tx.CommitAsync();
+                await tx.CommitAsync();
+            });
         }
     }
 }

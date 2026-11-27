@@ -12,6 +12,7 @@ namespace Server.Repositories
         {
         }
 
+        /// <inheritdoc />
         public async Task<List<ExternalCalendarEvent>> GetBySpecialistAndRangeAsync(int specialistId, DateTime fromUtc, DateTime toUtc)
         {
             return await _context.ExternalCalendarEvents
@@ -19,6 +20,7 @@ namespace Server.Repositories
                 .ToListAsync();
         }
 
+        /// <inheritdoc />
         public async Task SyncEventsAsync(
             int specialistId,
             DateTime fromUtc,
@@ -53,7 +55,10 @@ namespace Server.Repositories
             }
 
             // 3. Resync and save within one transaction
+            if (_context.Entry(connection).State == EntityState.Detached)
+                _context.UserCalendarConnections.Update(connection);
             connection.LastSyncedUtc = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
         }
     }

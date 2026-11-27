@@ -163,5 +163,20 @@ namespace Server.Tests.Integration
             Assert.AreEqual((0, 0), await CountsAsync(devries));
             Assert.AreEqual((1, 2), await CountsAsync(bakker));
         }
+
+        [TestMethod]
+        public async Task GetConnectionUser_ZonderKoppeling_GeeftNullTerug()
+        {
+            // Arrange
+            var id = await SpecialistIdAsync(DeVries);
+            await using var context = TestDatabase.CreateDbContext();
+            var repository = new CalendarConnectionRepository(context);
+
+            // Act
+            var result = await repository.GetConnectionUser(id);
+
+            // Assert
+            Assert.IsNull(result);
+        }
     }
 }
