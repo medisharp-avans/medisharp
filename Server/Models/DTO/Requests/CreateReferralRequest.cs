@@ -8,7 +8,7 @@ namespace Server.Models.DTO.Requests
     /// <summary>Contains only the patient and medical fields selected for a new referral.</summary>
     /// <remarks>Server-generated values, full dossiers and attachment storage keys are not accepted.</remarks>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-    public class CreateReferralRequest
+    public class CreateReferralRequest : IValidatableObject
     {
         [Required(ErrorMessage = "Vul het BSN in")]
         [StringLength(9, ErrorMessage = "Het BSN mag maximaal 9 tekens bevatten")]
@@ -18,13 +18,13 @@ namespace Server.Models.DTO.Requests
         [StringLength(200, ErrorMessage = "De naam mag maximaal 200 tekens bevatten")]
         public string? PatientName { get; set; }
 
-        [Required(ErrorMessage = "Vul het adres in")]
-        [StringLength(300, ErrorMessage = "Het adres mag maximaal 300 tekens bevatten")]
-        public string? PatientAddress { get; set; }
+        [Required(ErrorMessage = "Vul de postcode in")]
+        [StringLength(12, ErrorMessage = "De postcode mag maximaal 12 tekens bevatten")]
+        public string? PatientPostalCode { get; set; }
 
-        [Required(ErrorMessage = "Vul de woonplaats in")]
-        [StringLength(100, ErrorMessage = "De woonplaats mag maximaal 100 tekens bevatten")]
-        public string? PatientCity { get; set; }
+        [Required(ErrorMessage = "Vul het huisnummer in")]
+        [StringLength(20, ErrorMessage = "Het huisnummer mag maximaal 20 tekens bevatten")]
+        public string? PatientHouseNumber { get; set; }
 
         [StringLength(32, ErrorMessage = "Het telefoonnummer mag maximaal 32 tekens bevatten")]
         public string? PatientPhoneNumber { get; set; }
@@ -60,5 +60,12 @@ namespace Server.Models.DTO.Requests
         [Required(ErrorMessage = "Kies een urgentie")]
         [EnumDataType(typeof(ReferralUrgency), ErrorMessage = "Kies een geldige urgentie")]
         public ReferralUrgency? Urgency { get; set; }
+
+        /// <summary>Checks the exact BSN format after the required fields are validated.</summary>
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (Bsn is not { Length: 9 } || !Bsn.All(char.IsAsciiDigit))
+                yield return new ValidationResult("Vul een BSN van 9 cijfers in", [nameof(Bsn)]);
+        }
     }
 }

@@ -14,8 +14,8 @@ Accept: application/json
 {
   "bsn": "000000000",
   "patientName": "Testpatient",
-  "patientAddress": "Teststraat 1",
-  "patientCity": "Teststad",
+  "patientPostalCode": "1234 AB",
+  "patientHouseNumber": "12A",
   "patientPhoneNumber": "0000000000",
   "patientEmailAddress": "patient@example.test",
   "specialty": "KNO",

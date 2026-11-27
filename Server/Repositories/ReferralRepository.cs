@@ -29,8 +29,47 @@ namespace Server.Repositories
         /// <inheritdoc />
         public async Task AddAsync(Referral referral, CancellationToken cancellationToken)
         {
+            var existingId = await FindPatientIdAsync(referral.Bsn, cancellationToken);
+            if (existingId is not null)
+            {
+                referral.PatientId = existingId;
+                context.Referrals.Add(referral);
+                await context.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
+            var newPatient = new Patient
+            {
+                Bsn = referral.Bsn,
+                FullName = referral.PatientName,
+                PostalCode = referral.PatientPostalCode!,
+                HouseNumber = referral.PatientHouseNumber!,
+                PhoneNumber = referral.PatientPhoneNumber,
+                Email = referral.PatientEmailAddress
+            };
+            referral.Patient = newPatient;
             context.Referrals.Add(referral);
-            await context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                // EF saves both inserts together. The unique BSN index resolves concurrent registration.
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException exception) when
+                (exception.Entries.Any(entry => ReferenceEquals(entry.Entity, newPatient)))
+            {
+                var concurrentlyCreatedId = await FindPatientIdAsync(referral.Bsn, cancellationToken);
+                if (concurrentlyCreatedId is null) throw;
+
+                referral.Patient = null;
+                context.Entry(newPatient).State = EntityState.Detached;
+                referral.PatientId = concurrentlyCreatedId;
+                await context.SaveChangesAsync(cancellationToken);
+            }
         }
+
+        private Task<int?> FindPatientIdAsync(string bsn, CancellationToken cancellationToken) =>
+            context.Patients.Where(patient => patient.Bsn == bsn)
+                .Select(patient => (int?)patient.Id)
+                .SingleOrDefaultAsync(cancellationToken);
     }
 }

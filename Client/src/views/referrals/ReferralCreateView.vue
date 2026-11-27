@@ -4,6 +4,7 @@
 import { reactive, ref, watch, onMounted, onUnmounted } from 'vue'
 import { getSpecialties, getTreatments, type TreatmentChoice } from '@/services/treatmentCatalog'
 import { createReferral } from '@/services/referrals'
+import { findReferralPatient } from '@/services/referralPatients'
 import { RouterLink } from 'vue-router'
 import BaseButton from '@/components/elements/BaseButton.vue'
 import ReferralFormField from '@/components/referrals/ReferralFormField.vue'
@@ -15,8 +16,8 @@ const draft = reactive({
   treatmentCode: '',
   bsn: '',
   patientName: '',
-  patientAddress: '',
-  patientCity: '',
+  patientPostalCode: '',
+  patientHouseNumber: '',
   patientPhoneNumber: '',
   patientEmailAddress: '',
   reasonForReferral: '',
@@ -27,6 +28,61 @@ const draft = reactive({
 })
 
 const attachments = ref<File[]>([])
+const lookingUpPatient = ref(false)
+const lookupMessage = ref('')
+let patientLookup: AbortController | undefined
+let matchedBsn: string | undefined
+
+watch(
+  () => draft.bsn,
+  (bsn) => {
+    patientLookup?.abort()
+    lookingUpPatient.value = false
+    lookupMessage.value = ''
+    if (matchedBsn && matchedBsn !== bsn) {
+      draft.patientName = ''
+      draft.patientPostalCode = ''
+      draft.patientHouseNumber = ''
+      draft.patientPhoneNumber = ''
+      draft.patientEmailAddress = ''
+      matchedBsn = undefined
+    }
+  },
+  { flush: 'sync' },
+)
+
+async function lookupPatient() {
+  const bsn = draft.bsn
+  if (!/^[0-9]{9}$/.test(bsn)) {
+    lookupMessage.value = 'Vul een BSN van 9 cijfers in.'
+    return
+  }
+  patientLookup?.abort()
+  const request = new AbortController()
+  patientLookup = request
+  lookingUpPatient.value = true
+  lookupMessage.value = 'Patiëntgegevens ophalen…'
+  try {
+    const patient = await findReferralPatient(bsn, request.signal)
+    if (request.signal.aborted) return
+    matchedBsn = bsn
+    if (patient) {
+      Object.assign(draft, patient, { patientPhoneNumber: patient.patientPhoneNumber ?? '' })
+      lookupMessage.value = 'Patiënt gevonden. Controleer de ingevulde gegevens.'
+    } else {
+      lookupMessage.value =
+        'Geen patiënt gevonden. Vul de gegevens in om een patiënt aan te maken bij opslaan.'
+    }
+  } catch (error) {
+    if (!request.signal.aborted) {
+      lookupMessage.value = error instanceof Error ? error.message : 'Zoeken is mislukt.'
+    }
+  } finally {
+    if (!request.signal.aborted) lookingUpPatient.value = false
+  }
+}
+onUnmounted(() => patientLookup?.abort())
+
 const attachmentError = ref('')
 function selectAttachments(event: Event) {
   const input = event.target as HTMLInputElement
@@ -55,8 +111,8 @@ const invalidFields = ref<string[]>([])
 const fieldLabels: Record<string, string> = {
   bsn: 'BSN',
   patientName: 'Naam patiënt',
-  patientAddress: 'Adres en huisnummer',
-  patientCity: 'Woonplaats',
+  patientPostalCode: 'Postcode',
+  patientHouseNumber: 'Huisnummer',
   patientPhoneNumber: 'Telefoonnummer',
   patientEmailAddress: 'E-mailadres',
   specialty: 'Specialisme',
@@ -69,7 +125,7 @@ const fieldLabels: Record<string, string> = {
   attachments: 'Bijlagen: controleer bestandstype, aantal en grootte',
 }
 async function saveReferral() {
-  if (saving.value || saved.value || attachmentError.value) return
+  if (saving.value || saved.value || attachmentError.value || lookingUpPatient.value) return
   saveMessage.value = ''
   invalidFields.value = []
   const blank = Object.entries(draft)
@@ -78,6 +134,11 @@ async function saveReferral() {
   if (blank.length) {
     invalidFields.value = blank
     saveMessage.value = 'Vul alle verplichte velden in.'
+    return
+  }
+  if (!/^[0-9]{9}$/.test(draft.bsn)) {
+    invalidFields.value = ['bsn']
+    saveMessage.value = 'Vul een BSN van 9 cijfers in.'
     return
   }
   saving.value = true
@@ -210,6 +271,25 @@ const selectClasses =
         <fieldset :class="fieldsetClasses">
           <legend class="px-2 text-lg font-semibold">Patiëntgegevens</legend>
           <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div class="space-y-2">
+              <ReferralFormField
+                id="patient-bsn"
+                v-model="draft.bsn"
+                label="BSN"
+                inputmode="numeric"
+                :maxlength="9"
+                hint="Neem alle cijfers over, inclusief eventuele nullen aan het begin."
+              />
+              <BaseButton
+                id="patient-lookup"
+                variant="secondary"
+                :disabled="lookingUpPatient"
+                @click="lookupPatient"
+              >
+                Zoek patiënt
+              </BaseButton>
+              <p role="status" class="text-sm text-gray-700">{{ lookupMessage }}</p>
+            </div>
             <ReferralFormField
               id="patient-name"
               v-model="draft.patientName"
@@ -217,24 +297,17 @@ const selectClasses =
               :maxlength="200"
             />
             <ReferralFormField
-              id="patient-bsn"
-              v-model="draft.bsn"
-              label="BSN"
-              inputmode="numeric"
-              :maxlength="9"
-              hint="Neem alle cijfers over, inclusief eventuele nullen aan het begin."
+              id="patient-postal-code"
+              v-model="draft.patientPostalCode"
+              label="Postcode"
+              :maxlength="12"
             />
             <ReferralFormField
-              id="patient-address"
-              v-model="draft.patientAddress"
-              label="Adres en huisnummer"
-              :maxlength="300"
-            />
-            <ReferralFormField
-              id="patient-city"
-              v-model="draft.patientCity"
-              label="Woonplaats"
-              :maxlength="100"
+              id="patient-house-number"
+              v-model="draft.patientHouseNumber"
+              label="Huisnummer"
+              hint="Voeg een eventuele toevoeging toe, bijvoorbeeld 12A."
+              :maxlength="20"
             />
             <ReferralFormField
               id="patient-phone"
@@ -418,7 +491,7 @@ const selectClasses =
           </RouterLink>
           <BaseButton
             type="submit"
-            :disabled="saving || loadingTreatments || !draft.treatmentCode"
+            :disabled="saving || lookingUpPatient || loadingTreatments || !draft.treatmentCode"
             >{{ saving ? 'Bezig met opslaan…' : 'Verwijzing opslaan' }}</BaseButton
           >
         </div>

@@ -53,8 +53,8 @@ namespace Server.Tests.Tests.Integration
             Assert.AreEqual(result.CreatedAtUtc, saved.CreatedAtUtc);
             Assert.AreEqual(request.Bsn, saved.Bsn);
             Assert.AreEqual(request.PatientName, saved.PatientName);
-            Assert.AreEqual(request.PatientAddress, saved.PatientAddress);
-            Assert.AreEqual(request.PatientCity, saved.PatientCity);
+            Assert.AreEqual(request.PatientPostalCode, saved.PatientPostalCode);
+            Assert.AreEqual(request.PatientHouseNumber, saved.PatientHouseNumber);
             Assert.AreEqual(request.PatientPhoneNumber, saved.PatientPhoneNumber);
             Assert.AreEqual(request.PatientEmailAddress, saved.PatientEmailAddress);
             Assert.AreEqual(request.Specialty, saved.Specialty);

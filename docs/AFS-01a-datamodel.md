@@ -1,16 +1,20 @@
 # AFS-01a - Datamodel en verwijzingen aanmaken
 
 Dit model ondersteunt de gegevens uit AFS-01a. Het staat los van het dashboard.
-Het team heeft bevestigd dat er nog geen gezamenlijk patientmodel is afgesproken.
+AFS-01a heeft een patiëntregister voor deze workflow. De koppeling met AFS-03
+wordt afgestemd wanneer de branches samenkomen.
 
 ## Vastgelegde keuzes
 
 - `Referral` bevat een momentopname van de afgesproken patientgegevens en de
   medische informatie die de huisarts voor deze verwijzing selecteert. Het model
   bevat geen volledig huisartsendossier, afspraak of tijdslot.
-- Er is geen aparte `Patient`-tabel. Meerdere verwijzingen met hetzelfde BSN zijn
-  toegestaan en behouden elk hun eigen gegevens. Een eventuele latere koppeling
-  met een gezamenlijk patientmodel vervangt deze momentopname niet automatisch.
+- Een nieuwe verwijzing krijgt een `PatientId`. Eén patiëntrecord per BSN bevat
+  naam, postcode, huisnummer, optioneel telefoonnummer en e-mailadres. Het
+  bestaande patiëntrecord blijft bij een volgende verwijzing ongewijzigd. Elke
+  verwijzing behoudt de gegevens zoals opgegeven bij die aanvraag.
+- De migratie behoudt historische verwijzingen. Hun `PatientId` blijft leeg
+  totdat een koppeling met bestaande patiëntgegevens kan worden vastgesteld.
 - Een nieuwe verwijzing krijgt `Status = Open` en een aanmaaktijd in UTC.
   Status en aanmaaktijd zijn geen invoervelden voor het toekomstige formulier.
 - Alleen de bevestigde urgentie `Regular` (weergave: `Regulier`) is opgenomen.
@@ -20,6 +24,11 @@ Het team heeft bevestigd dat er nog geen gezamenlijk patientmodel is afgesproken
   en codes als momentopname; bestaande verwijzingen worden niet herschreven.
 
 ## Gegevens van een verwijzing
+
+De migratie naar postcode en huisnummer bewaart adres en woonplaats van oudere
+verwijzingen in de bestaande kolommen. Bij nieuwe verwijzingen worden die
+kolommen leeggelaten. De nieuwe velden blijven voor oudere verwijzingen leeg
+totdat de gegevens uit een betrouwbare bron beschikbaar zijn.
 
 Telefoonnummer en bijlagen zijn optioneel. De andere inhoudelijke velden
 zijn verplicht. De maximale lengtes zijn technische ontwerpkeuzes,
@@ -31,8 +40,8 @@ geen aanvullende eisen uit het interview. Medische tekstvelden krijgen
 | Identificatie verwijzing | `Id` | `uniqueidentifier`, primaire sleutel |
 | BSN | `Bsn` | `varchar(9)`, bewaart voorloopnullen; geen unieke sleutel |
 | Naam | `PatientName` | 200 tekens |
-| Adres | `PatientAddress` | 300 tekens |
-| Woonplaats | `PatientCity` | 100 tekens |
+| Postcode | `PatientPostalCode` | Verplicht voor nieuwe verwijzingen, maximaal 12 tekens |
+| Huisnummer | `PatientHouseNumber` | Verplicht voor nieuwe verwijzingen, maximaal 20 tekens inclusief toevoeging |
 | Telefoonnummer | `PatientPhoneNumber` | Optioneel, maximaal 32 tekens |
 | E-mailadres | `PatientEmailAddress` | 254 tekens |
 | Specialisme | `Specialty` | 100 tekens |
@@ -190,6 +199,14 @@ Via **Verwijsbrieven > Nieuwe verwijzing** opent het formulier binnen het dashbo
 Specialismen en behandelingen komen uit de API. Wisselen van specialisme wist de
 behandelkeuze; oudere aanvragen worden geannuleerd. Behandelingen tonen hun code.
 
+Met **Zoek patiënt** kunnen ingelogde huisartsen ieder bekend BSN van negen cijfers
+exact opzoeken via `POST /api/referrals/patient-lookup`. Het BSN staat in de body.
+Het antwoord bevat alleen contactgegevens en wordt niet gecachet. Bij een
+onbekend BSN vult de huisarts de gegevens zelf in en worden bij opslaan de patiënt
+en de verwijzing samen opgeslagen. De API weigert anonieme aanvragen en andere
+rollen. Voor gebruik met echte logins moeten de PRI-03/04-authenticatiemiddleware
+en het doorgeven van het geldige toegangstoken in de frontend worden aangesloten.
+
 Het formulier verstuurt de invoer met POST naar /api/referrals. Tijdens het opslaan
 zijn de invoervelden en verzendknop uitgeschakeld. Alleen HTTP 201 geldt als
 bevestiging; daarna verdwijnt de invoer en verschijnt status Open. Bij een fout
@@ -205,7 +222,7 @@ Bijlagen, accounts en het overzicht voor planners volgen afzonderlijk.
 
 ## Privacy en oplevering
 
-BSN en naam identificeren de patient; adres, woonplaats, telefoonnummer en
+BSN en naam identificeren de patient; postcode, huisnummer, telefoonnummer en
 e-mailadres ondersteunen contact door de ontvangende zorgverlener. De geselecteerde
 medische informatie, medicatie, allergieen, reden en vraagstelling ondersteunen de
 beoordeling van de verwijzing. Specialisme, behandelcode en urgentie ondersteunen

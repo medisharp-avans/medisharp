@@ -13,12 +13,19 @@ namespace Server.Data.Configurations
         {
             builder.ToTable("Referrals");
             builder.HasKey(referral => referral.Id);
+            builder.HasOne(referral => referral.Patient)
+                .WithMany()
+                .HasForeignKey(referral => referral.PatientId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Keep the BSN as text so leading zeroes are preserved.
             builder.Property(referral => referral.Bsn).HasMaxLength(9).IsUnicode(false).IsRequired();
             builder.Property(referral => referral.PatientName).HasMaxLength(200).IsRequired();
-            builder.Property(referral => referral.PatientAddress).HasMaxLength(300).IsRequired();
-            builder.Property(referral => referral.PatientCity).HasMaxLength(100).IsRequired();
+            builder.Property(referral => referral.PatientPostalCode).HasMaxLength(12);
+            builder.Property(referral => referral.PatientHouseNumber).HasMaxLength(20);
+            // Existing snapshots keep their original address data. New requests do not populate these columns.
+            builder.Property<string>("PatientAddress").HasMaxLength(300).IsRequired(false);
+            builder.Property<string>("PatientCity").HasMaxLength(100).IsRequired(false);
             builder.Property(referral => referral.PatientPhoneNumber).HasMaxLength(32);
             builder.Property(referral => referral.PatientEmailAddress).HasMaxLength(254).IsRequired();
 

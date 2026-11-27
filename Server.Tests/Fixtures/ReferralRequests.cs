@@ -11,8 +11,8 @@ namespace Server.Tests.Fixtures
         {
             Bsn = "000000000", // Synthetic; this phase tests presence, not the BSN checksum.
             PatientName = "Testpatient",
-            PatientAddress = "Teststraat 1",
-            PatientCity = "Teststad",
+            PatientPostalCode = "1234 AB",
+            PatientHouseNumber = "12A",
             PatientPhoneNumber = "0000000000",
             PatientEmailAddress = "patient@example.test",
             Specialty = "KNO",

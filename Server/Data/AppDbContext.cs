@@ -10,6 +10,8 @@ namespace Server.Data
     {
         public DbSet<Referral> Referrals => Set<Referral>();
 
+        public DbSet<Patient> Patients => Set<Patient>();
+
         public DbSet<ReferralAttachment> ReferralAttachments => Set<ReferralAttachment>();
 
         public DbSet<Treatment> Treatments => Set<Treatment>();

@@ -9,6 +9,7 @@ public static class RepositoryRegistration
     {
         repositories.AddScoped<IReferralRepository, ReferralRepository>();
         repositories.AddScoped<ReferralRepository>();
+        repositories.AddScoped<PatientLookupRepository>();
         repositories.AddScoped<ITreatmentCatalogRepository, TreatmentCatalogRepository>();
         return repositories;
     }

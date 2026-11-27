@@ -3,16 +3,20 @@ namespace Server.Models
 {
     /// <summary>
     /// A referral containing only the patient and medical information selected by the GP.
-    /// Patient details are a snapshot, independent of any future shared patient record.
+    /// Patient details are a snapshot of what was supplied at the time of referral.
     /// </summary>
     public class Referral
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
+        public int? PatientId { get; set; }
+        public Patient? Patient { get; set; }
+
         public required string Bsn { get; set; }
         public required string PatientName { get; set; }
-        public required string PatientAddress { get; set; }
-        public required string PatientCity { get; set; }
+        // Null is possible only for referrals saved before postcode and house number were collected.
+        public string? PatientPostalCode { get; set; }
+        public string? PatientHouseNumber { get; set; }
         public string? PatientPhoneNumber { get; set; }
         public required string PatientEmailAddress { get; set; }
 

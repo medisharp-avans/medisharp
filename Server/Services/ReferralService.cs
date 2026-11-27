@@ -65,8 +65,8 @@ namespace Server.Services
             {
                 Bsn = request.Bsn!,
                 PatientName = request.PatientName!,
-                PatientAddress = request.PatientAddress!,
-                PatientCity = request.PatientCity!,
+                PatientPostalCode = request.PatientPostalCode!.Trim(),
+                PatientHouseNumber = request.PatientHouseNumber!.Trim(),
                 PatientPhoneNumber = string.IsNullOrWhiteSpace(request.PatientPhoneNumber)
                     ? null
                     : request.PatientPhoneNumber.Trim(),

@@ -66,8 +66,8 @@ namespace Server.Tests.Tests.Unit
 
         [TestMethod]
         [DataRow(nameof(CreateReferralRequest.PatientName), "patientName")]
-        [DataRow(nameof(CreateReferralRequest.PatientAddress), "patientAddress")]
-        [DataRow(nameof(CreateReferralRequest.PatientCity), "patientCity")]
+        [DataRow(nameof(CreateReferralRequest.PatientPostalCode), "patientPostalCode")]
+        [DataRow(nameof(CreateReferralRequest.PatientHouseNumber), "patientHouseNumber")]
         [DataRow(nameof(CreateReferralRequest.PatientEmailAddress), "patientEmailAddress")]
         [DataRow(nameof(CreateReferralRequest.ReasonForReferral), "reasonForReferral")]
         [DataRow(nameof(CreateReferralRequest.Medication), "medication")]
@@ -88,8 +88,8 @@ namespace Server.Tests.Tests.Unit
         [TestMethod]
         [DataRow(nameof(CreateReferralRequest.Bsn), "bsn", 9)]
         [DataRow(nameof(CreateReferralRequest.PatientName), "patientName", 200)]
-        [DataRow(nameof(CreateReferralRequest.PatientAddress), "patientAddress", 300)]
-        [DataRow(nameof(CreateReferralRequest.PatientCity), "patientCity", 100)]
+        [DataRow(nameof(CreateReferralRequest.PatientPostalCode), "patientPostalCode", 12)]
+        [DataRow(nameof(CreateReferralRequest.PatientHouseNumber), "patientHouseNumber", 20)]
         [DataRow(nameof(CreateReferralRequest.PatientPhoneNumber), "patientPhoneNumber", 32)]
         [DataRow(nameof(CreateReferralRequest.PatientEmailAddress), "patientEmailAddress", 254)]
         public async Task ColumnLengthLimitIsAcceptedButLongerValuesAreRejected(

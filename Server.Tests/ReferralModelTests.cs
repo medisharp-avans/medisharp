@@ -1,5 +1,7 @@
 using Server.Models.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Server.Data;
 using Server.Models;
 
@@ -20,20 +22,38 @@ namespace Server.Tests
             StringAssert.Contains(script, "[Bsn] varchar(9) NOT NULL");
             StringAssert.Contains(script, "[Specialty] nvarchar(100) NOT NULL");
             StringAssert.Contains(script, "[TreatmentCode] nvarchar(50) NOT NULL");
+            StringAssert.Contains(script, "[PatientPostalCode] nvarchar(12) NULL");
+            StringAssert.Contains(script, "[PatientHouseNumber] nvarchar(20) NULL");
             StringAssert.Contains(script, "[PatientPhoneNumber] nvarchar(32) NULL");
             StringAssert.Contains(script, "[Status] nvarchar(32) NOT NULL DEFAULT N'Open'");
             StringAssert.Contains(script, "CREATE TABLE [ReferralAttachments]");
             StringAssert.Contains(script, "FOREIGN KEY ([ReferralId]) REFERENCES [Referrals] ([Id])");
 
-            Assert.HasCount(3, context.Model.GetEntityTypes().ToArray());
+            Assert.HasCount(4, context.Model.GetEntityTypes().ToArray());
+        }
+
+        [TestMethod]
+        public void PatientMigrationAddsUniqueBsnAndKeepsExistingReferrals()
+        {
+            using var context = CreateContext();
+
+            Assert.IsFalse(context.Database.HasPendingModelChanges());
+            var script = context.GetService<IMigrator>()
+                .GenerateScript("20261127170000_AddReferralPostalCodeAndHouseNumber");
+
+            StringAssert.Contains(script, "CREATE TABLE [Patients]");
+            StringAssert.Contains(script, "CREATE UNIQUE INDEX [IX_Patients_Bsn] ON [Patients] ([Bsn])");
+            StringAssert.Contains(script, "ALTER TABLE [Referrals] ADD [PatientId] int NULL");
+            StringAssert.Contains(script, "FOREIGN KEY ([PatientId]) REFERENCES [Patients] ([Id])");
+            Assert.IsFalse(script.Contains("DROP", StringComparison.OrdinalIgnoreCase));
         }
 
         [TestMethod]
         public void TwoReferralsForSamePatientKeepSeparateSnapshotsAndAttachmentOwnership()
         {
             using var context = CreateContext();
-            var firstReferral = CreateReferral("Oud adres 1");
-            var secondReferral = CreateReferral("Nieuw adres 2");
+            var firstReferral = CreateReferral("1234 AB");
+            var secondReferral = CreateReferral("5678 CD");
             var attachment = new ReferralAttachment
             {
                 FileName = "uitslag.pdf",
@@ -48,8 +68,8 @@ namespace Server.Tests
             Assert.AreNotEqual(firstReferral.Id, secondReferral.Id);
             Assert.AreEqual("000000000", firstReferral.Bsn);
             Assert.AreEqual(firstReferral.Bsn, secondReferral.Bsn);
-            Assert.AreEqual("Oud adres 1", firstReferral.PatientAddress);
-            Assert.AreEqual("Nieuw adres 2", secondReferral.PatientAddress);
+            Assert.AreEqual("1234 AB", firstReferral.PatientPostalCode);
+            Assert.AreEqual("5678 CD", secondReferral.PatientPostalCode);
             Assert.AreEqual(ReferralStatus.Open, firstReferral.Status);
             Assert.AreEqual(ReferralStatus.Open, secondReferral.Status);
             Assert.IsEmpty(firstReferral.Attachments);
@@ -68,12 +88,12 @@ namespace Server.Tests
             return new AppDbContext(options);
         }
 
-        private static Referral CreateReferral(string address) => new()
+        private static Referral CreateReferral(string postalCode) => new()
         {
             Bsn = "000000000", // Synthetic value; BSN validation belongs to the later API phase.
             PatientName = "Testpatient",
-            PatientAddress = address,
-            PatientCity = "Teststad",
+            PatientPostalCode = postalCode,
+            PatientHouseNumber = "12A",
             PatientPhoneNumber = "0000000000",
             PatientEmailAddress = "patient@example.test",
             Specialty = "KNO",
