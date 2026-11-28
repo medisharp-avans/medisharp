@@ -111,7 +111,7 @@ jobs:
       - run: dotnet build Server.slnx --no-restore --configuration Release
       # Same solution as restore and build, so it is clear which projects are tested.
       # End-to-end tests are skipped here: they run in the e2e job below.
-      - run: dotnet test Server.slnx --no-build --configuration Release --filter "FullyQualifiedName!~EndToEnd"
+      - run: dotnet test Server.slnx --no-build --configuration Release --filter "FullyQualifiedName~Server.Tests.EndToEnd"
 
   e2e:
     # Only when the faster jobs pass, so a broken build does not waste minutes on browser tests.
@@ -162,7 +162,7 @@ jobs:
           (cd Client && npx vite --port 5173 --strictPort > ../client.log 2>&1 &)
           timeout 120 bash -c 'until curl -sk https://localhost:5071 > /dev/null; do sleep 2; done'
           timeout 60 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 2; done'
-      - run: dotnet test Server/Server.slnx --no-build --configuration Release --filter "FullyQualifiedName~EndToEnd"
+      - run: dotnet test Server/Server.slnx --no-build --configuration Release --filter "FullyQualifiedName~Server.Tests.EndToEnd"
       # On failure, the output of the API and client usually tells why.
       - if: failure()
         run: tail -n 50 api.log client.log
