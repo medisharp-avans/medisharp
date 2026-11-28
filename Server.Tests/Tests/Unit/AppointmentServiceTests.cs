@@ -9,7 +9,7 @@ using Server.Repositories.InterFaces;
 using Server.Services;
 using Server.Services.InterFaces;
 
-namespace Server.Tests.Unit
+namespace Server.Tests.Tests.Unit
 {
     /// <summary>
     /// AppointmentService kiest zelf geen specialist of tijdstip meer: dat doet IPlanningService.
@@ -144,7 +144,7 @@ namespace Server.Tests.Unit
 
             var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() => _sut.CreateAppointment(CreateValidDto()));
 
-            StringAssert.Contains(exception.Message, "patiënt");
+            Assert.Contains("patiënt", exception.Message);
             VerifyNothingCreated();
         }
 

@@ -7,7 +7,7 @@ using Server.Services;
 using System.Globalization;
 using System.Net;
 
-namespace Server.Tests.Unit
+namespace Server.Tests.Tests.Unit
 {
     /// <summary>Stuurt elk HTTP-verzoek naar een vaste reactie en onthoudt welke URL's zijn opgevraagd.</summary>
     internal sealed class StubHttpMessageHandler : HttpMessageHandler

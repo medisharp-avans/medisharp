@@ -7,7 +7,7 @@ using Server.Tests.TestDb;
 using Server.Tests.TestDb.QueryHelpers;
 using Server.Tests.Utils;
 
-namespace Server.Tests.EndToEnd
+namespace Server.Tests.Tests.EndToEnd
 {
     [TestClass]
     public class AFS_07_Tests : EndToEndTestBase

@@ -7,7 +7,7 @@ using Server.Repositories.InterFaces;
 using Server.Services;
 using Server.Services.InterFaces;
 
-namespace Server.Tests.Unit
+namespace Server.Tests.Tests.Unit
 {
     /// <summary>
     /// Unit tests for the 3-week automatic scheduling algorithm in PlanningService:
@@ -74,7 +74,7 @@ namespace Server.Tests.Unit
         private void SetupSpecialistsOfSpecialism(params int?[] ids) =>
             _repositoryMock
                 .Setup(r => r.GetSpecialistsBySpecialism("KNO"))
-                .ReturnsAsync(ids.Select(id => new PlanningResponseDTO { SpecialistId = id }).ToList());
+                .ReturnsAsync([.. ids.Select(id => new PlanningResponseDTO { SpecialistId = id })]);
 
         private static DateTime NextWorkday(DateTime date)
         {
@@ -189,7 +189,7 @@ namespace Server.Tests.Unit
             var exception = await Assert.ThrowsAsync<SlotUnavailableException>(
                 () => _sut.SetSpecialistForAppointment(Dto(preferredSpecialistId: 2)));
 
-            StringAssert.Contains(exception.Message, "Geen beschikbare specialist gevonden");
+            Assert.Contains("Geen beschikbare specialist gevonden", exception.Message);
         }
 
         [TestMethod]

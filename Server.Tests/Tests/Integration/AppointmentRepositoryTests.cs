@@ -7,7 +7,7 @@ using Server.Repositories;
 using Server.Repositories.InterFaces;
 using Server.Tests.TestDb;
 
-namespace Server.Tests.Integration
+namespace Server.Tests.Tests.Integration
 {
     /// <summary>
     /// Integratietests voor CreateWithReferralAsync.
@@ -21,7 +21,7 @@ namespace Server.Tests.Integration
         private static readonly DateTime Start = new(2027, 1, 12, 10, 0, 0);
         private static readonly DateTime End = new(2027, 1, 12, 11, 0, 0);
 
-        private IAppointmentRepository _sut = null!;
+        private AppointmentRepository _sut = null!;
 
         protected override Func<DbContext, Task>? GetTestDataInitializer()
         {
@@ -62,7 +62,7 @@ namespace Server.Tests.Integration
 
             var result = await _sut.CreateWithReferralAsync(AppointmentDto(), ReferralDto());
 
-            Assert.IsTrue(result.Id > 0);
+            Assert.IsGreaterThan(0, result.Id);
             Assert.AreEqual(referralsBefore + 1, await CountReferralsAsync());
 
             var rows = await TestDatabase.QueryAsync(@"
@@ -70,7 +70,7 @@ namespace Server.Tests.Integration
                 FROM Appointments a JOIN Referrals r ON r.Id = a.ReferralId
                 WHERE a.Id = @id", new SqlParameter("@id", result.Id));
 
-            Assert.AreEqual(1, rows.Rows.Count);
+            Assert.HasCount(1, rows.Rows);
             Assert.AreEqual("Ingepland", rows.Rows[0]["Status"]);
             Assert.AreEqual("KNO002", rows.Rows[0]["TreatmentCode"]);
             Assert.AreEqual(2, rows.Rows[0]["PatientId"]);
@@ -103,7 +103,7 @@ namespace Server.Tests.Integration
             var exception = await Assert.ThrowsAsync<SlotUnavailableException>(
                 () => second.CreateWithReferralAsync(AppointmentDto(), ReferralDto()));
 
-            StringAssert.Contains(exception.Message, "Dit tijdslot is niet meer beschikbaar");
+            Assert.Contains("Dit tijdslot is niet meer beschikbaar", exception.Message);
             Assert.AreEqual(referralsBefore, await CountReferralsAsync(), "Er is een wees-verwijzing achtergebleven.");
         }
     }

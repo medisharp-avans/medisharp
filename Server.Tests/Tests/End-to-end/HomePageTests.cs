@@ -2,7 +2,7 @@ using OpenQA.Selenium;
 using Server.Tests.PageModels;
 using Server.Tests.Utils;
 
-namespace Server.Tests.EndToEnd
+namespace Server.Tests.Tests.EndToEnd
 {
     /// <summary>Smoke test: checks that the test infrastructure (database, API, client and browser) works.</summary>
     [TestClass]

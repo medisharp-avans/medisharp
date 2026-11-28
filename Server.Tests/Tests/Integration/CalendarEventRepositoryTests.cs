@@ -4,7 +4,7 @@ using Server.Models;
 using Server.Repositories;
 using Server.Tests.TestDb;
 
-namespace Server.Tests.Integration
+namespace Server.Tests.Tests.Integration
 {
     /// <summary>
     /// Integratietests op de echte testdatabase: de synchronisatie van externe agenda-items.

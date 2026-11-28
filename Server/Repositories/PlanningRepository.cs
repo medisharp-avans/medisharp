@@ -7,15 +7,10 @@ using Server.Repositories.InterFaces;
 
 namespace Server.Repositories
 {
-    public class PlanningRepository : Repository<Patient>, IPlanningRepository
+    public class PlanningRepository(AppDbContext context) : Repository<Patient>(context), IPlanningRepository
     {
         private static readonly TimeZoneInfo DutchTimeZone =
             TimeZoneInfo.FindSystemTimeZoneById("Europe/Amsterdam");
-
-        public PlanningRepository(AppDbContext context)
-            : base(context)
-        {
-        }
 
         /// <inheritdoc />
         public async Task<List<PlanningResponseDTO>> GetAllPatientsAsync()
@@ -33,7 +28,7 @@ namespace Server.Repositories
         public async Task<List<TreatmentCode>> GetCodesBySpecialism(string spec)
         {
             if (!Enum.TryParse<Specialism>(spec, true, out var parsed))
-                return new List<TreatmentCode>();
+                return [];
 
             return await _context.TreatmentCodes
                 .Where(t => t.Specialism == parsed && t.IsActive)
@@ -44,7 +39,7 @@ namespace Server.Repositories
         public async Task<List<PlanningResponseDTO>> GetSpecialistsBySpecialism(string spec)
         {
             if (!Enum.TryParse<Specialism>(spec, true, out var parsed))
-                return new List<PlanningResponseDTO>();
+                return [];
 
             return await _context.Specialists
                 .Where(s => s.Specialism == parsed)

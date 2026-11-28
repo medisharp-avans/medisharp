@@ -6,7 +6,7 @@ using Server.Tests.TestDb;
 using Server.Tests.TestDb.QueryHelpers;
 using Server.Tests.Utils;
 
-namespace Server.Tests.EndToEnd
+namespace Server.Tests.Tests.EndToEnd
 {
     [TestClass]
     public class AFS_03_Tests : EndToEndTestBase
@@ -74,9 +74,11 @@ namespace Server.Tests.EndToEnd
         private static void LoginAs(IWebDriver driver, string username)
         {
             // new LoginPage(driver).LoginAs(username);
+            _ = driver; // Discards keep the parameters until the login page exists.
+            _ = username;
         }
 
-        private Task<PlanAppointmentPage> OpenPlanningAsync(
+        private static Task<PlanAppointmentPage> OpenPlanningAsync(
             IWebDriver driver,
             string staffUser)
         {
