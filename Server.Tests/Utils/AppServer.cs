@@ -5,8 +5,7 @@ namespace Server.Tests.Utils
 {
     /// <summary>
     /// Starts the API and the Vue client for the end-to-end tests and stops them after the test run,
-    /// so the tests also work with a plain 'dotnet test'. An app that is already running
-    /// (for example started from Visual Studio) is used as it is and is not stopped afterwards.
+    /// so the tests also work with a plain 'dotnet test'. This requires dedicated test ports.
     /// </summary>
     public static class AppServer
     {
@@ -34,18 +33,27 @@ namespace Server.Tests.Utils
         {
             if (_isStarted) return;
 
-            var root = FindRepositoryRoot();
+            var root = RepositoryRoot;
 
-            // Same as the 'Tests' launch profile in Visual Studio: the URL of ApiUrl and the test database.
-            // '--no-build' because the API is already built together with this test project.
             await StartAsync("API", TestSettings.ApiUrl, Path.Combine(root, "Server"),
-                "dotnet", ["run", "--no-build", "-c", Configuration, "--launch-profile", "Tests"]);
+                "dotnet", ["run", "--no-build", "-c", Configuration, "--no-launch-profile"],
+                new()
+                {
+                    ["ASPNETCORE_ENVIRONMENT"] = "Development",
+                    ["ASPNETCORE_URLS"] = TestSettings.ApiUrl,
+                    ["ConnectionStrings__DefaultConnection"] = TestSettings.ConnectionString,
+                    ["ConnectionStrings__ReferralConnection"] = TestSettings.ReferralConnectionString,
+                    ["Database__SeedDemoData"] = "false",
+                    ["SMTP__PickupDirectory"] = "bin/test-mails"
+                });
 
             // Vite is started with node directly (like 'npm run dev'), because npm.cmd cannot be started reliably
             // without a shell on Windows. Run 'npm install' in Client once before the first test run.
             var port = new Uri(TestSettings.ClientUrl).Port.ToString();
             await StartAsync("Client", TestSettings.ClientUrl, Path.Combine(root, "Client"),
-                "node", [Path.Combine("node_modules", "vite", "bin", "vite.js"), "--port", port, "--strictPort"]);
+                "node", [Path.Combine("node_modules", "vite", "bin", "vite.js"), "--mode", "test", "--port", port, "--strictPort"],
+                // The client must call the test API, not the development API it uses by default
+                new() { ["VITE_API_PROXY_TARGET"] = TestSettings.ApiUrl, ["VITE_API_URL"] = string.Empty });
 
             _isStarted = true;
         }
@@ -68,12 +76,12 @@ namespace Server.Tests.Utils
         /// Starts one app and waits until it answers on its URL.
         /// Fails with the last output of the app when it stops or does not answer within the start timeout.
         /// </summary>
-        private static async Task StartAsync(string name, string url, string workingDirectory, string fileName, string[] arguments)
+        private static async Task StartAsync(string name, string url, string workingDirectory, string fileName, string[] arguments,
+            Dictionary<string, string>? environment = null)
         {
             if (await IsRunningAsync(url))
             {
-                TestLog.Logger.Information("{App} is already running on {Url}, using that one", name, url);
-                return;
+                throw new InvalidOperationException($"The {name} test port is already in use at {url}. Use a free test port.");
             }
 
             TestLog.Logger.Information("Starting {App} on {Url}...", name, url);
@@ -88,6 +96,8 @@ namespace Server.Tests.Utils
                     RedirectStandardError = true,
                 },
             };
+            foreach (var (key, value) in environment ?? [])
+                process.StartInfo.Environment[key] = value;
             // The output must be read, otherwise the app blocks once the output buffer is full
             process.OutputDataReceived += (_, e) => KeepLast(lastOutput, e.Data);
             process.ErrorDataReceived += (_, e) => KeepLast(lastOutput, e.Data);
@@ -123,6 +133,9 @@ namespace Server.Tests.Utils
                 return false;
             }
         }
+
+        /// <summary>The folder with Server and Client.</summary>
+        public static string RepositoryRoot { get; } = FindRepositoryRoot();
 
         /// <summary>The folder with Server and Client, found from the build output of this test project.</summary>
         private static string FindRepositoryRoot()

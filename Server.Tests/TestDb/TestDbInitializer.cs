@@ -1,26 +1,41 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Server.Data;
+using Server.Models;
+using Server.Models.Enums;
 
 namespace Server.Tests.TestDb
 {
-    /// <summary>
-    /// Fills the empty test database with the fixed test data of the test cases.
-    /// Runs before every database and end-to-end test, right after the tables were emptied.
-    /// </summary>
+    /// <summary>Seeds the two fictitious accounts used in the referral workflow test.</summary>
     public static class TestDbInitializer
     {
-        /// <summary>Inserts the seed data. Only use fictitious data here (DoD 19).</summary>
-        public static Task SeedAsync(DbContext context)
-        {
-            // Add the test data here once AppDbContext has entities, make this method 'async' and await the inserts, for example:
-            // await context.Database.ExecuteSqlRawAsync(@"
-            //     SET IDENTITY_INSERT Patients ON;
-            //     INSERT INTO Patients (Id, Name) VALUES (1, 'Jan de Vries');
-            //     SET IDENTITY_INSERT Patients OFF;");
-            // Fixed ids keep the test cases readable ("patient 1"). Use ExecuteSqlAsync (not Raw) for values
-            // such as password hashes, so they are passed as SQL parameters.
+        public const string Password = "Test123!";
+        public const string GpEmail = "visser@example.test";
+        public const string StaffEmail = "medewerker.a@example.test";
 
-            context.ChangeTracker.Clear();
-            return Task.CompletedTask;
+        public static async Task SeedAsync(AppDbContext context)
+        {
+            var gp = new User
+            {
+                SurName = "Dr.",
+                LastName = "Visser",
+                FullName = "Dr. Visser",
+                Email = GpEmail,
+                Role = UserRole.Huisarts
+            };
+            var staff = new User
+            {
+                SurName = "Medewerker",
+                LastName = "A",
+                FullName = "Medewerker A",
+                Email = StaffEmail,
+                Role = UserRole.Ziekenhuismedewerker
+            };
+
+            var passwordHasher = new PasswordHasher<User>();
+            gp.PasswordHash = passwordHasher.HashPassword(gp, Password);
+            staff.PasswordHash = passwordHasher.HashPassword(staff, Password);
+            context.Users.AddRange(gp, staff);
+            await context.SaveChangesAsync();
         }
     }
 }

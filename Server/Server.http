@@ -1,6 +1,53 @@
 @Server_HostAddress = http://localhost:5174
+@HuisartsToken = {{$processEnv MEDISHARP_HUISARTS_TOKEN}}
+@MedewerkerToken = {{$processEnv MEDISHARP_MEDEWERKER_TOKEN}}
 
-GET {{Server_HostAddress}}/weatherforecast/
+# AFS-01a: use an access token from a completed PRI login. All sample data is fictitious.
+POST {{Server_HostAddress}}/api/referrals
+Authorization: Bearer {{HuisartsToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "bsn": "000000000",
+  "patientName": "Testpatient",
+  "patientPostalCode": "1234 AB",
+  "patientHouseNumber": "12A",
+  "patientPhoneNumber": "0000000000",
+  "patientEmailAddress": "patient@example.test",
+  "specialty": "KNO",
+  "treatmentCode": "Z0005",
+  "reasonForReferral": "Aanhoudende oorpijn",
+  "clinicalQuestion": "Wat is de oorzaak?",
+  "medication": "Geen",
+  "medicalInformation": "Alleen geselecteerde relevante gegevens",
+  "allergies": "Geen bekend",
+  "urgency": "Regular"
+}
+
+###
+
+POST {{Server_HostAddress}}/api/referrals/patient-lookup
+Authorization: Bearer {{HuisartsToken}}
+Content-Type: application/json
+
+{ "bsn": "000000000" }
+
+###
+
+GET {{Server_HostAddress}}/api/referrals/open
+Authorization: Bearer {{MedewerkerToken}}
+Accept: application/json
+
+###
+
+# Catalogue reference data; no patient information.
+GET {{Server_HostAddress}}/api/treatments/specialties
+Accept: application/json
+
+###
+
+GET {{Server_HostAddress}}/api/treatments?specialty=KNO
 Accept: application/json
 
 ###

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -7,16 +7,24 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(AFS01aCoverage)' == 'true'">
+    <!-- Include generated async state machines for the selected AFS-01a types. -->
+    <Include>[Server]Server.Controllers.ReferralsController*,[Server]Server.Controllers.ReferralPatientLookupController*,[Server]Server.Controllers.ReferralUploadsController*,[Server]Server.Controllers.OpenReferralsController*,[Server]Server.Controllers.TreatmentsController*,[Server]Server.Services.ReferralIntakeService*,[Server]Server.Services.ReferralUploadService*,[Server]Server.Services.TreatmentCatalogService*,[Server]Server.Services.CreateReferralResult*,[Server]Server.Repositories.ReferralIntakeRepository*,[Server]Server.Repositories.TreatmentCatalogRepository*,[Server]Server.Models.Intake.*,[Server]Server.Models.ReferralAttachment*,[Server]Server.Models.Treatment*,[Server]Server.Models.DTO.Requests.CreateReferralRequest*,[Server]Server.Models.DTO.Requests.PatientLookupRequest*,[Server]Server.Models.DTO.Requests.OpenReferralsRequest*,[Server]Server.Models.DTO.Responses.CreatedReferralResponse*,[Server]Server.Models.DTO.Responses.OpenReferralResponse*,[Server]Server.Models.DTO.Responses.ReferralPatientResponse*,[Server]Server.Models.DTO.Responses.TreatmentResponse*,[Server]Server.Data.ReferralDbContext*,[Server]Server.Data.Configurations.*</Include>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="coverlet.msbuild" Version="10.1.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.15">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Moq" Version="4.21.0" />
     <PackageReference Include="MSTest" Version="4.5.3" />
     <PackageReference Include="Selenium.Support" Version="4.53.0" />
     <PackageReference Include="Selenium.WebDriver" Version="4.53.0" />
@@ -32,13 +40,6 @@
 
   <ItemGroup>
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="PageModels\" />
-    <Folder Include="Tests\Integration\" />
-    <Folder Include="Tests\End-to-end\" />
-    <Folder Include="Tests\Unit\" />
   </ItemGroup>
 
   <ItemGroup>

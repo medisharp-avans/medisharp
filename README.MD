@@ -77,7 +77,9 @@ dotnet restore
 dotnet run --launch-profile http
 ```
 
-The API runs at <http://localhost:5174>. Try <http://localhost:5174/weatherforecast>. In Development mode the OpenAPI document is at <http://localhost:5174/openapi/v1.json>.
+The API runs at <http://localhost:5174>. In Development, Swagger is at <http://localhost:5174/swagger>.
+
+`DefaultConnection` holds the PRI login data. Referral intake uses `ReferralConnection`, which defaults to the database name from `DefaultConnection` with `_AFS01a` appended. To keep an existing AFS-01a database, set `ConnectionStrings:ReferralConnection` to that database and use a separate database for `DefaultConnection`. See [the AFS-01a data model](docs/AFS-01a-datamodel.md#databases-voor-pri-en-afs-01a).
 
 To point the server at the dev database, add a connection string to `Server/appsettings.Development.json` (or use `dotnet user-secrets` so the password stays out of Git):
 
@@ -87,6 +89,27 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost,
 ```
 
 You can also open `Server/Server.slnx` in Visual Studio and press F5.
+
+#### Logging in during development (verification code)
+
+Logging in takes two steps: the password, then a 6-digit code that is emailed to the user. The seeded test users (`dev-huisarts@example.test`, `dev-specialist-1@example.test`, `dev-patient-1@example.test`, …, all with password `DevWachtwoord123!`, see `Server/Data/DevelopmentAccountSeeder.cs`) cannot receive real email. To read the code locally, have the server save every email as a file instead of sending it. Set `SMTP:PickupDirectory` once in `Server/`:
+
+```sh
+dotnet user-secrets set "SMTP:PickupDirectory" "bin/test-mails"
+```
+
+Or set it for a single run only:
+
+```sh
+# PowerShell
+$env:SMTP__PickupDirectory = "bin/test-mails"; dotnet run --launch-profile https
+# bash
+SMTP__PickupDirectory=bin/test-mails dotnet run --launch-profile https
+```
+
+After a login, open the newest `.eml` file in `Server/bin/test-mails/` (any text editor works) and look for `Uw verificatiecode is: ######`. The code is valid for 10 minutes. The path is relative to `Server/`, and the folder is created automatically. The `Tests` launch profile already sets it.
+
+When `PickupDirectory` is set, it takes priority over the real SMTP settings. Without it and without SMTP credentials, Development writes the code to the server console log instead (look for `SMTP not configured`).
 
 ### 1.6 Run the client (frontend)
 
@@ -138,6 +161,10 @@ npm run test:a11y         # reports in a11y-reports/
 Both commands start their own preview server on <http://localhost:4173>, so that port has to be free.
 
 Both checks use your installed Google Chrome. The Lighthouse thresholds live in `lighthouserc.cjs`; the coverage settings live in `vitest.config.ts`. In CI the same checks run in the `client` and `client-quality` jobs, and the reports are uploaded as artifacts on the workflow run.
+
+#### Coverage reports
+
+The CI jobs require at least 90% line coverage for the AFS-01a referral feature on the client and server. Download `afs01a-client-coverage` and `afs01a-server-coverage` from the workflow run. The reports also show branch coverage. The regular test suites still run, and the referral migration tests verify the actual schema against SQL Server.
 
 ### 1.7 Optional: test the production setup locally
 
@@ -273,6 +300,7 @@ MSSQL_PORT=1433
 | Variable            | Required | Default                                      | Description                                                                                                 |
 | ------------------- | -------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `MSSQL_SA_PASSWORD` | **Yes**  | none, the deploy stops if it is missing      | Password of the `sa` user. Also used in the server's connection string.                                     |
+| `JWT_KEY`           | **Yes**  | none, the deploy stops if it is missing      | Secret key that signs the login tokens (JWT). At least 32 characters, e.g. `openssl rand -base64 48`.       |
 | `MSSQL_DB_NAME`     | No       | `Medisharp`                                  | Name of the database the server connects to.                                                                |
 | `CLIENT_PORT`       | No       | `80`                                         | Host port for the website. **On Dokploy, set this to a free port such as `8085`**, because Traefik uses 80. |
 | `MSSQL_IMAGE`       | No       | `mcr.microsoft.com/mssql/server:2022-latest` | SQL Server Docker image.                                                                                    |
@@ -312,5 +340,10 @@ You do not set these in `.env`. `docker-compose.prod.yml` builds them for the se
 | `ASPNETCORE_ENVIRONMENT`               | `Production`                                                                                                     |
 | `ASPNETCORE_HTTP_PORTS`                | `8080`                                                                                                           |
 | `ConnectionStrings__DefaultConnection` | `Server=db,1433;Database=${MSSQL_DB_NAME};User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;` |
+| `JWT__Token`                           | `${JWT_KEY}`                                                                                                     |
+| `SMTP__Username`                       | `${SMTP_USERNAME}` (the Purelymail address that sends the login codes)                                           |
+| `SMTP__Password`                       | `${SMTP_PASSWORD}`                                                                                               |
+
+Locally: `dotnet user-secrets set "SMTP:Username" "..."` and `dotnet user-secrets set "SMTP:Password" "..."` in `Server/`. Without them, Development logs the login code to the console instead of mailing it.
 
 In code you read the connection string with `builder.Configuration.GetConnectionString("DefaultConnection")`.
