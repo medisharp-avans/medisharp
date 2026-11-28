@@ -11,7 +11,13 @@ import { useFetch } from '@/composables/api/useFetch'
 import { useLookup } from '@/composables/forms/useLookup'
 import { useFormMessage } from '@/composables/forms/useFormMessage'
 import { enumOptions } from '@/utils/enumOptions'
-import { Specialism, ReferralUrgency, type Patient, type Specialist, type TreatmentCode } from '@/types/appointment'
+import {
+  Specialism,
+  ReferralUrgency,
+  type Patient,
+  type Specialist,
+  type TreatmentCode,
+} from '@/types/appointment'
 import ContentCard from '@/components/Layout/ContentCard.vue'
 
 const steps = [

@@ -13,11 +13,10 @@ export enum Specialism {
   Algemeen = 11,
 }
 
-export enum ReferralUrgency
-{
+export enum ReferralUrgency {
   Regulier = 0,
   Urgent = 1,
-  Spoed = 2
+  Spoed = 2,
 }
 
 export interface Patient {
