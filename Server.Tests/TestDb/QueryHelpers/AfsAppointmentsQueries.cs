@@ -171,7 +171,7 @@ namespace Server.Tests.TestDb.QueryHelpers
                 preferredSpecialistId = specialistId,
                 reason = "Testafspraak",
                 questionnaire = "",
-                urgency = "Regulier",
+                urgency = (int)ReferralUrgency.Regulier,
                 treatmentCode
             });
 

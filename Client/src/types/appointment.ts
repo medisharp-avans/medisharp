@@ -13,6 +13,13 @@ export enum Specialism {
   Algemeen = 11,
 }
 
+export enum ReferralUrgency
+{
+  Regulier = 0,
+  Urgent = 1,
+  Spoed = 2
+}
+
 export interface Patient {
   patientId: number | null
   patientFullName: string | null

@@ -92,7 +92,7 @@ namespace Server.Tests.EndToEnd
         {
             plan.FillForm(
                 patient,
-                (int)Specialism.KNO,
+                Specialism.KNO,
                 preferredSpecialist);
 
             plan.Submit();
@@ -236,8 +236,8 @@ namespace Server.Tests.EndToEnd
             var planA = await OpenPlanningAsync(Driver, "medewerker.a");
             var planB = await OpenPlanningAsync(driverB, "medewerker.b");
 
-            planA.FillForm(Jan, (int)Specialism.KNO, DeVries);
-            planB.FillForm(Piet, (int)Specialism.KNO, DeVries);
+            planA.FillForm(Jan, Specialism.KNO, DeVries);
+            planB.FillForm(Piet, Specialism.KNO, DeVries);
 
             // Medewerker B bevestigt als eerste -> krijgt FirstSlot (09:00)
             planB.Submit();
@@ -263,7 +263,7 @@ namespace Server.Tests.EndToEnd
                 Specialism.KNO, WindowStart, WindowEnd);
 
             var plan = await OpenPlanningAsync(Driver, "medewerker.a");
-            plan.FillForm(Jan, (int)Specialism.KNO, DeVries);
+            plan.FillForm(Jan, Specialism.KNO, DeVries);
 
             // Act 1: eerste poging mislukt
             plan.Submit();
@@ -299,7 +299,7 @@ namespace Server.Tests.EndToEnd
             Assert.IsTrue(plan.HasField("patient-id"));
             Assert.IsTrue(plan.HasField("specialism"));
 
-            plan.FillPatientStep(Jan, (int)Specialism.KNO).NextStep("care");
+            plan.FillPatientStep(Jan, Specialism.KNO).NextStep("care");
             Assert.IsTrue(plan.HasField("specialist-id"));
             Assert.IsTrue(plan.HasField("treatment-code"));
 

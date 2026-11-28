@@ -11,7 +11,7 @@ import { useFetch } from '@/composables/api/useFetch'
 import { useLookup } from '@/composables/forms/useLookup'
 import { useFormMessage } from '@/composables/forms/useFormMessage'
 import { enumOptions } from '@/utils/enumOptions'
-import { Specialism, type Patient, type Specialist, type TreatmentCode } from '@/types/appointment'
+import { Specialism, ReferralUrgency, type Patient, type Specialist, type TreatmentCode } from '@/types/appointment'
 import ContentCard from '@/components/Layout/ContentCard.vue'
 
 const steps = [
@@ -39,14 +39,14 @@ const emptyForm = () => ({
   specialism: '' as number | '',
   reason: '',
   questionnaire: '',
-  urgency: 'Regulier',
+  urgency: ReferralUrgency.Regulier,
 })
 
 const form = ref(emptyForm())
 const { message, clear: clearMessage, success, error: showError, fail } = useFormMessage()
 
 const specialismOptions = enumOptions(Specialism)
-const urgencyOptions = ['Regulier', 'Urgent', 'Spoed'].map((value) => ({ value, label: value }))
+const urgencyOptions = enumOptions(ReferralUrgency)
 
 const specialismName = computed(() =>
   form.value.specialism === '' ? undefined : Specialism[form.value.specialism],
@@ -133,7 +133,12 @@ const summaryItems = computed(() => [
     value: form.value.questionnaire || 'Geen',
     step: 2,
   },
-  { testid: 'urgency', label: 'Urgentie', value: form.value.urgency, step: 2 },
+  {
+    testid: 'urgency',
+    label: 'Urgentie',
+    value: ReferralUrgency[form.value.urgency],
+    step: 2,
+  },
 ])
 
 async function submit() {

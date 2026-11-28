@@ -57,10 +57,6 @@ namespace Server
                 {
                     options.JsonSerializerOptions.ReferenceHandler =
                         System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-
-                    options.JsonSerializerOptions.Converters.Add(
-                        new JsonStringEnumConverter()
-                    );
                 });
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddSwaggerGen(options =>

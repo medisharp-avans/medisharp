@@ -98,7 +98,7 @@ namespace Server.Tests.EndToEnd
             LoginAs(Driver, "medewerker.a");
 
             var plan = new PlanAppointmentPage(Driver).Open();
-            plan.FillForm(patient, (int)Specialism.KNO, DeVries);
+            plan.FillForm(patient, Specialism.KNO, DeVries);
             plan.Submit();
             plan.WaitForMessage();
             return plan;

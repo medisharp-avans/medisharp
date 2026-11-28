@@ -1,4 +1,5 @@
 ﻿using OpenQA.Selenium;
+using Server.Models.Enums;
 using Server.Tests.Utils;
 
 namespace Server.Tests.PageModels.AppointmentPages
@@ -37,10 +38,10 @@ namespace Server.Tests.PageModels.AppointmentPages
         // =========================================================
 
         /// <summary>Stap "patient": patiënt (op naam) en specialisme.</summary>
-        public PlanAppointmentPage FillPatientStep(string patient, int specialism)
+        public PlanAppointmentPage FillPatientStep(string patient, Specialism specialism)
         {
             TypeInDatalist(TestId("patient-id"), patient, "patiënt");
-            Select(TestId("specialism"), specialism.ToString(), "specialisme");
+            Select(TestId("specialism"), ((int)specialism).ToString(), "specialisme");
             return this;
         }
 
@@ -61,11 +62,11 @@ namespace Server.Tests.PageModels.AppointmentPages
         /// <summary>Stap "details": reden, urgentie en optioneel een vragenlijst.</summary>
         public PlanAppointmentPage FillDetailsStep(
             string reason = "Testafspraak",
-            string urgency = "Regulier",
+            ReferralUrgency urgency = ReferralUrgency.Regulier,
             string? questionnaire = null)
         {
             Type(TestId("reason"), reason, "reden");
-            Select(TestId("urgency"), urgency, "urgentie");
+            Select(TestId("urgency"), ((int)urgency).ToString(), "urgentie");
 
             if (!string.IsNullOrWhiteSpace(questionnaire))
             {
@@ -78,11 +79,11 @@ namespace Server.Tests.PageModels.AppointmentPages
         /// <summary>Vult alle stappen in en stopt op de controle-stap. Daarna kun je Submit() aanroepen.</summary>
         public PlanAppointmentPage FillForm(
             string patient,
-            int specialism,
+            Specialism specialism,
             string? preferredSpecialist = null,
             string treatmentCode = "KNO002",
             string reason = "Testafspraak",
-            string urgency = "Regulier",
+            ReferralUrgency urgency = ReferralUrgency.Regulier,
             string? questionnaire = null)
         {
             FillPatientStep(patient, specialism).NextStep("care");
