@@ -28,6 +28,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/afspraken/nieuw',
+    name: 'NewAppointment',
+    component: () => import('@/views/appointments/AppointmentsForm.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/medisch-dossier',
     name: 'MedicalFile',
     component: () => import('@/views/medicalFiles/MedicalFileView.vue'),

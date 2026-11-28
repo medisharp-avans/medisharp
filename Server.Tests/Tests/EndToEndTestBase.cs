@@ -2,7 +2,7 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using Server.Tests.Utils;
 
-namespace Server.Tests
+namespace Server.Tests.Tests
 {
     /// <summary>
     /// Base of end-to-end tests: a fresh test database, the API and client running, and a new Chrome browser per test.
@@ -40,7 +40,7 @@ namespace Server.Tests
         [TestCleanup]
         public void StopBrowser()
         {
-            if (TestContext.CurrentTestOutcome != UnitTestOutcome.Passed)
+            if (Driver != null && TestContext.CurrentTestOutcome != UnitTestOutcome.Passed)
                 _failureScreenshot = TestLog.FailureScreenshot(Driver, TestContext.TestName!);
 
             Driver?.Quit();

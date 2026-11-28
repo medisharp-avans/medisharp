@@ -111,7 +111,7 @@ jobs:
       - run: dotnet build Server.slnx --no-restore --configuration Release
       # Same solution as restore and build, so it is clear which projects are tested.
       # End-to-end tests are skipped here: they run in the e2e job below.
-      - run: dotnet test Server.slnx --no-build --configuration Release --filter "FullyQualifiedName!~Server.Tests.EndToEnd"
+      - run: dotnet test Server.slnx --no-build --configuration Release --filter "FullyQualifiedName~Server.Tests.EndToEnd"
 
   e2e:
     # Only when the faster jobs pass, so a broken build does not waste minutes on browser tests.

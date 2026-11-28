@@ -2,7 +2,10 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Server.Data;
+using Server.Repositories;
+using Server.Services;
 using System.Reflection;
+using System.Text.Json.Serialization;
 
 namespace Server
 {
@@ -12,8 +15,9 @@ namespace Server
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
+            builder.Services.AddRegisteredRepositories();
+            builder.Services.AddRegisteredServices();
+            
             // Locally via dotnet user-secrets, in Docker via ConnectionStrings__DefaultConnection (see README).
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException(
@@ -22,6 +26,11 @@ namespace Server
 
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
+
+            if (builder.Environment.IsDevelopment())
+            {
+                builder.Services.AddHostedService<DevelopmentDataSeeder>();
+            }
 
             // HTTPS is handled by the reverse proxy; take the scheme and client IP from the X-Forwarded-* headers.
             builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -32,7 +41,23 @@ namespace Server
                 options.KnownProxies.Clear();
             });
 
-            builder.Services.AddControllers();
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("Client", policy =>
+                {
+                    policy.WithOrigins("http://localhost:5173")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+            });
+
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.ReferenceHandler =
+                        System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+                });
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddSwaggerGen(options =>
             {
@@ -76,6 +101,8 @@ namespace Server
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseCors("Client");
 
             app.UseAuthorization();
 

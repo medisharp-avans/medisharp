@@ -1,3 +1,3 @@
 <template>
-  <p>Dit is de afspraken pagina</p>
+  <p>Dit is de algemene afspraken pagina</p>
 </template>

@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { handleKeyboardShortcut } from '@/composables/useKeyboardShortcuts'
+import { handleKeyboardShortcut } from '@/composables/general/useKeyboardShortcuts'
 
 describe('handleKeyboardShortcut', () => {
   beforeEach(() => {
     document.body.innerHTML = `
             <header>
-                <a id="profile-button" href="/profiel">Profiel</a>
+                <a id="profile-button" href="/profiel">Profile</a>
             </header>
             <aside id="main-navigation">
                 <a id="first-nav-link" href="/">Home</a>
-                <a href="/afspraken">Afspraken</a>
+                <a href="/afspraken">Appointments</a>
             </aside>
             <main id="main-content" tabindex="-1">
-                Hoofdinhoud
+                Main content
             </main>
         `
   })
@@ -21,7 +21,7 @@ describe('handleKeyboardShortcut', () => {
     document.body.innerHTML = ''
   })
 
-  it('focust op de eerste link in de navigatie bij Alt + N', () => {
+  it('focuses the first navigation link on Alt + N', () => {
     const event = new KeyboardEvent('keydown', { key: 'n', altKey: true })
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
@@ -32,7 +32,7 @@ describe('handleKeyboardShortcut', () => {
     expect(document.activeElement).toBe(navLink)
   })
 
-  it('focust op de profielknop bij Alt + P', () => {
+  it('focuses the profile button on Alt + P', () => {
     const event = new KeyboardEvent('keydown', { key: 'P', altKey: true })
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
@@ -43,7 +43,7 @@ describe('handleKeyboardShortcut', () => {
     expect(document.activeElement).toBe(profileButton)
   })
 
-  it('focust op de main content bij Alt + M', () => {
+  it('focuses the main content on Alt + M', () => {
     const event = new KeyboardEvent('keydown', { key: 'm', altKey: true })
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 
@@ -54,7 +54,7 @@ describe('handleKeyboardShortcut', () => {
     expect(document.activeElement).toBe(mainContent)
   })
 
-  it('doet niets wanneer Alt niet is ingedrukt', () => {
+  it('does nothing when Alt is not pressed', () => {
     const event = new KeyboardEvent('keydown', { key: 'n', altKey: false })
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
 

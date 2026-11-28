@@ -5,7 +5,7 @@ import AppHeader from '@/components/Layout/AppHeader.vue'
 import AppMain from '@/components/Layout/AppMain.vue'
 import AppNavigation from '@/components/Layout/AppNavigation.vue'
 import { RouterView, useRoute } from 'vue-router'
-import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
+import { useKeyboardShortcuts } from '@/composables/general/useKeyboardShortcuts'
 
 const route = useRoute()
 
